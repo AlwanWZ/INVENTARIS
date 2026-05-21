@@ -1,0 +1,249 @@
+/* Tambahan: styling untuk gambar logo di sidebar */
+.brand-img {
+  height: 80px;
+  width: auto;
+  vertical-align: middle;
+  background: #fff;
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+/* ============================================================
+   InventorySys — nav.css
+   Source of truth untuk sidebar & overlay di semua halaman.
+   Setiap halaman cukup <link href=".../nav.css"> + include nav.php
+   ============================================================ */
+
+/* --- Variabel nav (fallback jika dashboard.css tidak di-load) --- */
+:root {
+  --nav-bg:     #1e1a16;
+  --nav-hover:  rgba(255,255,255,0.055);
+  --nav-active: rgba(232,98,26,0.16);
+  --nav-text:   #c4bdb5;
+  --nav-text2:  #6b6058;
+  --nav-title:  #4a433c;
+  --nav-w:      248px;
+  --accent:     #e8621a;
+  --accent2:    #f97316;
+  --trans:      0.16s ease;
+}
+
+/* ============================================================
+   LAYOUT HOOK
+   ============================================================ */
+.layout { display: flex; }
+
+.main {
+  flex: 1;
+  margin-left: var(--nav-w);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.nav {
+  width: var(--nav-w);
+  background: var(--nav-bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 200;
+  transition: transform var(--trans);
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Header */
+.nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'Inter', sans-serif;
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0;
+  text-decoration: none;
+}
+.brand-icon { color: var(--accent); }
+
+.nav-close {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--nav-text2);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: color var(--trans);
+}
+.nav-close:hover { color: #fff; }
+
+/* Scroll area */
+.nav-menu {
+  flex: 1;
+  padding: 12px 10px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.07) transparent;
+}
+.nav-menu::-webkit-scrollbar { width: 4px; }
+.nav-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 4px; }
+
+/* Nav item */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--nav-text);
+  text-decoration: none;
+  transition: background var(--trans), color var(--trans);
+  margin-bottom: 2px;
+}
+.nav-item i { font-size: 0.95rem; flex-shrink: 0; }
+.nav-item:hover  { background: var(--nav-hover); color: #fff; }
+.nav-item.active { background: var(--nav-active); color: var(--accent2); }
+
+/* Group & title */
+.nav-group  { margin-top: 4px; }
+.nav-title  {
+  display: block;
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: var(--nav-title);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  padding: 10px 10px 4px;
+}
+
+/* Dropdown button */
+.dropdown-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--nav-text);
+  transition: background var(--trans), color var(--trans);
+  margin-bottom: 2px;
+}
+.dropdown-btn:hover { background: var(--nav-hover); color: #fff; }
+.dropdown-btn.open  { color: #fff; }
+
+.dd-left { display: flex; align-items: center; gap: 10px; }
+.dd-left i { font-size: 0.95rem; flex-shrink: 0; }
+
+.arrow {
+  font-size: 0.72rem;
+  color: var(--nav-text2);
+  transition: transform var(--trans);
+  flex-shrink: 0;
+}
+.dropdown-btn.open .arrow { transform: rotate(90deg); }
+
+/* Dropdown items */
+.dropdown {
+  display: none;
+  flex-direction: column;
+  padding: 2px 0 4px 26px;
+}
+.dropdown.open { display: flex; }
+
+.dropdown a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  color: var(--nav-text);
+  text-decoration: none;
+  transition: background var(--trans), color var(--trans);
+}
+.dropdown a i      { font-size: 0.85rem; flex-shrink: 0; }
+.dropdown a:hover  { background: var(--nav-hover); color: #fff; }
+.dropdown a.active { color: var(--accent2); }
+
+/* Footer (logout) */
+.nav-footer {
+  padding: 10px 10px 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--nav-text);
+  cursor: pointer;
+  transition: background var(--trans), color var(--trans);
+}
+.logout-btn:hover { background: rgba(220,38,38,0.10); color: #f87171; }
+.logout-btn i { font-size: 0.95rem; }
+
+/* ============================================================
+   MOBILE OVERLAY
+   ============================================================ */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 199;
+}
+.sidebar-overlay.show { display: block; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+  .nav {
+    transform: translateX(-100%);
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 200;
+    background: var(--nav-bg);
+  }
+  .nav.open {
+    transform: translateX(0);
+    z-index: 200;
+  }
+  .nav-close { display: flex; }
+  .main { margin-left: 0; }
+}

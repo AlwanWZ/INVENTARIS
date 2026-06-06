@@ -4,7 +4,9 @@ if (!isset($_SESSION['user']) || !in_array($_SESSION['user']['role'], ['marketin
     echo "<script>alert('Anda tidak memiliki akses ke halaman ini!'); window.location.href='/Inventaris/public/dashboard.php';</script>";
     exit;
 }
+
 require_once '../../../../src/auth.php';
+require_once '../../../../src/config.php'; // Wajib ada biar $pdo bisa dipake buat motong stok
 require_once '../../../../src/models/PO.php';
 require_once '../../../../src/models/Customer.php';
 require_once '../../../../src/models/Produk.php';
@@ -55,8 +57,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 continue;
             }
 
-            // Get produk data untuk auto-fill kode & nama
-            $produk = !empty($item['produk_id']) ? Produk::find($item['produk_id']) : null;
+            // FIX LOGIKA: Cari data produk langsung dari $produkList yang udah ditarik di awal, 
+            // jangan pakai Produk::find() biar pasti dapat kolom stoknya.
+            $produk = null;
+            if (!empty($item['produk_id'])) {
+                foreach ($produkList as $p) {
+                    if ($p['id'] == $item['produk_id']) {
+                        $produk = $p;
+                        break;
+                    }
+                }
+            }
+            
+            // STRICT VALIDATION: Cek stok vs qty
+            // Paksa casting ke Integer biar nggak ada error string kosong
+            $stok_kotor = $produk['stok_available'] ?? $produk['stok'] ?? 0;
+            $stok_available = (int)$stok_kotor;
+            
+            if ($item['qty'] > $stok_available) {
+                $produk_name = $produk['nama'] ?? 'Unknown';
+                $errors[] = "Baris #$itemCount: Qty ({$item['qty']}) melebihi stok '{$produk_name}' ({$stok_available} pcs). Max: {$stok_available} pcs";
+                continue; // Lanjut cek baris error lainnya
+            }
 
             $dataItems[] = [
                 'produk_id'     => intval($item['produk_id'] ?? 0) ?: null,
@@ -64,6 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'nama_material' => $produk['nama'] ?? trim($item['nama_material'] ?? ''),
                 'uom'           => trim($item['uom'] ?? 'pcs'),
                 'qty'           => intval($item['qty']),
+                'qty_available' => intval($item['qty']), 
+                'qty_pending'   => 0, 
                 'harga_satuan'  => intval(str_replace(['.', ','], '', $item['harga_satuan'] ?? 0)),
                 'diskon'        => floatval($item['diskon'] ?? 0),
                 'keterangan'    => trim($item['keterangan'] ?? ''),
@@ -73,21 +97,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Validate bahwa ada minimal 1 item jika ada error atau tidak ada items
     if (empty($dataItems)) {
-        $errors[] = 'Minimal harus ada 1 item dalam pesanan.';
+        $errors[] = 'Minimal harus ada 1 item dalam pesanan yang valid stoknya.';
     }
 
     // If no errors, create PO with items
     if (!$errors) {
         try {
+            // RULE 3: PO::createWithItems() OTOMATIS HANDLE stock reduction dalam transaction
+            // Jangan manual update stok di sini!
             $poId = PO::createWithItems($dataPO, $dataItems);
+
             $success = true;
             echo "<script>
-                alert('Pesanan berhasil dibuat!');
+                alert('✅ Pesanan berhasil dibuat! Stok otomatis terupdate dalam database.');
                 window.location.href = '../index.php?success=1';
             </script>";
             exit;
         } catch (Exception $e) {
-            $errors[] = 'Gagal menyimpan pesanan: ' . $e->getMessage();
+            $errors[] = '❌ Gagal menyimpan pesanan: ' . $e->getMessage();
         }
     }
 }
@@ -504,15 +531,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       tr.innerHTML = `
         <td class="row-num">${currentRowCount + 1}</td>
         <td>
-          <select name="items[${currentRowCount}][produk_id]" class="form-control select-produk" required>
-            <option value="">-- Pilih Produk --</option>
-            ${produkList.map(p => `<option value="${p.id}" data-harga="${p.harga || 0}" data-satuan="${p.satuan || 'pcs'}" data-kode="${p.kode_produk || p.kode || ''}" data-nama="${p.nama || ''}">${p.nama} (${p.kode_produk || p.kode || ''})</option>`).join('')}
-          </select>
+          <div>
+            <select name="items[${currentRowCount}][produk_id]" class="form-control select-produk" required>
+              <option value="">-- Pilih Produk --</option>
+              ${produkList.map(p => `<option value="${p.id}" data-harga="${p.harga || 0}" data-satuan="${p.satuan || 'pcs'}" data-kode="${p.kode_produk || p.kode || ''}" data-nama="${p.nama || ''}" data-stok="${p.stok || 0}" data-stok-available="${p.stok_available || p.stok || 0}">${p.nama} (${p.kode_produk || p.kode || ''})</option>`).join('')}
+            </select>
+            <div class="stok-info" style="margin-top: 6px; padding: 6px 8px; background: #f8f9fa; border-left: 3px solid #0d6efd; border-radius: 3px; font-size: 0.8rem; display: none; color: #495057;">
+              <strong>📦 Stok:</strong> <strong class="stok-value" style="color: #0d6efd;"></strong> pcs
+            </div>
+          </div>
           <input type="hidden" name="items[${currentRowCount}][kode_material]" class="hidden-kode">
           <input type="hidden" name="items[${currentRowCount}][nama_material]" class="hidden-nama">
           <input type="hidden" name="items[${currentRowCount}][uom]" class="hidden-uom" value="pcs">
         </td>
-        <td><input type="number" name="items[${currentRowCount}][qty]" class="form-control input-qty" min="1" required placeholder="0"></td>
+        <td>
+          <input type="number" name="items[${currentRowCount}][qty]" class="form-control input-qty" min="1" required placeholder="0">
+          <div class="qty-warning" style="margin-top: 4px; font-size: 0.75rem; display: none;"></div>
+        </td>
         <td><input type="text" name="items[${currentRowCount}][harga_satuan]" class="form-control input-harga" required placeholder="Rp 0"></td>
         <td><input type="number" name="items[${currentRowCount}][diskon]" class="form-control input-diskon" min="0" max="100" step="0.01" value="0" placeholder="0"></td>
         <td class="text-subtotal">Rp 0</td>
@@ -524,6 +559,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       // EVENT LISTENERS UNTUK BARIS INI
       // 1. Saat Pilih Produk
       const selectProduk = tr.querySelector('.select-produk');
+      const stokInfo = tr.querySelector('.stok-info');
+      const stokValue = tr.querySelector('.stok-value');
+      
       selectProduk.addEventListener('change', function() {
         const opt = this.options[this.selectedIndex];
         if (opt.value) {
@@ -531,11 +569,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           tr.querySelector('.hidden-nama').value = opt.dataset.nama;
           tr.querySelector('.hidden-uom').value = opt.dataset.satuan;
           tr.querySelector('.input-harga').value = parseInt(opt.dataset.harga).toLocaleString('id-ID');
+          
+          // TAMPILKAN STOK INFO
+          const stok = parseInt(opt.dataset.stokAvailable) || parseInt(opt.dataset.stok) || 0;
+          stokValue.textContent = stok;
+          stokInfo.style.display = 'block';
+          
+          // RESET QTY & WARNING
+          tr.querySelector('.input-qty').value = '';
+          tr.querySelector('.qty-warning').style.display = 'none';
+          tr.querySelector('.qty-warning').innerHTML = '';
+          
           hitungTotal();
+          validateAllRows();
+        } else {
+          stokInfo.style.display = 'none';
+          tr.querySelector('.qty-warning').style.display = 'none';
+          validateAllRows();
         }
       });
 
-      // 2. Saat QTY, Harga, atau Diskon berubah
+      // 2. Saat QTY berubah - VALIDASI KETAT!
+      const qtyInput = tr.querySelector('.input-qty');
+      const qtyWarning = tr.querySelector('.qty-warning');
+      
+      qtyInput.addEventListener('input', function() {
+        const qty = parseInt(this.value) || 0;
+        const opt = selectProduk.options[selectProduk.selectedIndex];
+        const stok = parseInt(opt.dataset.stokAvailable) || parseInt(opt.dataset.stok) || 0;
+        
+        // VALIDASI KETAT
+        if (qty > stok && qty > 0) {
+          // ERROR - QTY LEBIH DARI STOK
+          const kurang = qty - stok;
+          qtyWarning.innerHTML = `<span style="color: #dc3545; font-weight: 600;">❌ Qty melebihi stok! Max: ${stok} pcs</span>`;
+          qtyWarning.style.display = 'block';
+          this.style.borderColor = '#dc3545';
+          this.style.backgroundColor = 'rgba(220, 38, 38, 0.05)';
+        } else if (qty > 0 && qty <= stok) {
+          // OK - HIJAU
+          qtyWarning.innerHTML = `<span style="color: #28a745; font-weight: 600;">✅ OK (${stok - qty} pcs tersisa)</span>`;
+          qtyWarning.style.display = 'block';
+          this.style.borderColor = '#28a745';
+          this.style.backgroundColor = 'rgba(40, 167, 69, 0.05)';
+        } else {
+          // KOSONG
+          qtyWarning.style.display = 'none';
+          this.style.borderColor = '';
+          this.style.backgroundColor = '';
+        }
+        
+        hitungTotal();
+        validateAllRows();
+      });
+
+      // 3. Saat QTY, Harga, atau Diskon berubah (HITUNG SUBTOTAL)
       const hitungTriggers = tr.querySelectorAll('.input-qty, .input-harga, .input-diskon');
       hitungTriggers.forEach(input => {
         input.addEventListener('input', function() {
@@ -556,7 +644,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
       });
 
-      // 3. Tombol Hapus Baris
+      // 4. Tombol Hapus Baris
       const deleteBtn = tr.querySelector('.btn-delete');
       deleteBtn.addEventListener('click', function(e) {
         e.preventDefault();
@@ -567,6 +655,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           hitungTotal();
           // Benerin urutan nomor
           document.querySelectorAll('.row-num').forEach((td, idx) => td.textContent = idx + 1);
+          validateAllRows();
         } else {
           alert('Pesanan harus memiliki minimal 1 barang!');
         }
@@ -576,17 +665,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       rowCount++;
     }
 
+    // FUNGSI VALIDASI SEMUA ROWS - DISABLE SUBMIT JIKA ADA YANG INVALID
+    function validateAllRows() {
+      const submitBtn = poForm.querySelector('button[type="submit"]');
+      let isValid = true;
+      
+      document.querySelectorAll('.item-row').forEach(row => {
+        const select = row.querySelector('.select-produk');
+        const qty = parseInt(row.querySelector('.input-qty').value) || 0;
+        const harga = row.querySelector('.input-harga').value;
+        
+        // Cek: produk dipilih
+        if (!select.value) {
+          isValid = false;
+          return;
+        }
+        
+        // Cek: qty valid & stok cukup
+        const opt = select.options[select.selectedIndex];
+        const stok = parseInt(opt.dataset.stokAvailable) || parseInt(opt.dataset.stok) || 0;
+        
+        if (qty <= 0 || qty > stok) {
+          isValid = false;
+          return;
+        }
+        
+        // Cek: harga diisi
+        if (!harga) {
+          isValid = false;
+          return;
+        }
+      });
+      
+      // DISABLE/ENABLE SUBMIT BUTTON
+      submitBtn.disabled = !isValid;
+      submitBtn.style.opacity = isValid ? '1' : '0.5';
+      submitBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
+    }
+
     // Event listener untuk Tombol Tambah Baris
     if (addItemBtn) {
       addItemBtn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
         createRow();
+        validateAllRows();
       });
     }
 
     // Inisiasi 1 baris kosong pas pertama buka
     createRow();
+    validateAllRows(); // INITIAL STATE: DISABLE BUTTON
 
     // Validasi sebelum submit form
     if (poForm) {
@@ -595,6 +724,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if(rows.length === 0) {
           e.preventDefault();
           alert('Keranjang pesanan masih kosong!');
+          return false;
+        }
+        
+        // VALIDASI FINAL: Cek semua rows valid sebelum submit
+        validateAllRows();
+        const submitBtn = poForm.querySelector('button[type="submit"]');
+        if (submitBtn.disabled) {
+          e.preventDefault();
+          alert('Ada baris yang belum valid! Pastikan:\n✓ Produk dipilih\n✓ Qty terisi & ≤ stok\n✓ Harga terisi');
           return false;
         }
       });

@@ -12,22 +12,36 @@ $errors = [];
 $autoKodeProduk = generateAutoCode('PRODUK');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Get input dari form
+    $stok_input = (int)($_POST['stok'] ?? 0);
+    
+    // RULE 1: Saat create produk baru:
+    // stok_available = stok (input user), stok_reserved = 0
     $data = [
-        'kode' => trim($_POST['kode'] ?? ''),
-        'nama'        => trim($_POST['nama'] ?? ''),
-        'kategori'    => 'PCB',
-        'stok'        => (int)($_POST['stok'] ?? 0),
-        'harga'       => (int)($_POST['harga'] ?? 0),
-        'status'      => $_POST['status'] ?? 'aktif',
+        'kode'       => trim($_POST['kode'] ?? ''),
+        'nama'       => trim($_POST['nama'] ?? ''),
+        'stok'       => $stok_input,
+        'stok_min'   => (int)($_POST['stok_min'] ?? 10),
+        'satuan'     => trim($_POST['satuan'] ?? 'pcs'),
+        'harga'      => (int)($_POST['harga'] ?? 0),
+        'status'     => $_POST['status'] ?? 'aktif',
     ];
     
     if (!$data['kode']) $errors[] = 'Kode produk wajib diisi.';
     if (!$data['nama']) $errors[] = 'Nama produk wajib diisi.';
+    if ($data['stok'] < 0) $errors[] = 'Stok tidak boleh negatif.';
     
     if (!$errors) {
-        Produk::create($data);
-        header('Location: ../index.php?created=1');
-        exit;
+        try {
+            Produk::create($data);
+            echo "<script>
+                alert('✅ Produk berhasil ditambahkan!');
+                window.location.href = '../index.php?success=1';
+            </script>";
+            exit;
+        } catch (Exception $e) {
+            $errors[] = 'Gagal menyimpan produk: ' . $e->getMessage();
+        }
     }
 }
 ?>
@@ -124,9 +138,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </small>
               </div>
               <div class="form-group">
-                <label class="form-label">Stok Awal (pcs)</label>
+                <label class="form-label">Stok Fisik Awal</label>
                 <input type="number" name="stok" class="form-control" placeholder="0" min="0"
                        value="<?= (int)($_POST['stok'] ?? 0) ?>">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Batas Stok Minimum</label>
+                <input type="number" name="stok_min" class="form-control" placeholder="10" min="0"
+                       value="<?= (int)($_POST['stok_min'] ?? 10) ?>">
+                <small class="text-muted" style="display: block; margin-top: 0.25rem;">Peringatan 'Stok Menipis' akan muncul jika stok di bawah angka ini.</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Satuan (UOM)</label>
+                <input type="text" name="satuan" class="form-control" placeholder="pcs, sheet, roll..."
+                       value="<?= htmlspecialchars($_POST['satuan'] ?? 'pcs') ?>" required>
               </div>
             </div>
 
@@ -140,7 +168,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </select>
               </div>
             </div>
-
 
             <div class="form-actions">
               <button type="submit" class="btn-primary"><i class="bi bi-check-lg"></i> Simpan Produk</button>
@@ -156,10 +183,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h4><i class="bi bi-info-circle"></i> Panduan</h4>
           </div>
           <ul class="info-list">
-            <li><i class="bi bi-dot"></i> Kode produk otomatis dihasilkan format PCB-NNN.</li>
-            <li><i class="bi bi-dot"></i> Kategori produk adalah PCB.</li>
-            <li><i class="bi bi-dot"></i> Stok awal dapat diubah melalui modul gudang.</li>
-            <li><i class="bi bi-dot"></i> Produk Tidak Aktif tidak akan muncul di PO baru.</li>
+            <li><i class="bi bi-dot"></i> Kode produk otomatis dihasilkan.</li>
+            <li><i class="bi bi-dot"></i> <strong>Stok Fisik Awal</strong> akan langsung menjadi Stok Tersedia (Available) karena belum ada pesanan.</li>
+            <li><i class="bi bi-dot"></i> Produk Tidak Aktif tidak akan muncul saat membuat pesanan (PO).</li>
           </ul>
         </div>
       </div>

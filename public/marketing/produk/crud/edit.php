@@ -13,28 +13,44 @@ if (!$produk) { header('Location: ../index.php'); exit; }
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $newStok = (int)($_POST['stok'] ?? 0);
+    $stokReserved = (int)($produk['stok_reserved'] ?? 0);
+    
+    // RULE 1b: LOGIKA PENTING saat edit produk
+    // Kalkulasi ulang stok yang bisa dijual (available)
+    // stok_available = stok_fisik - stok_reserved
+    $stokAvailable = $newStok - $stokReserved;
+    if ($stokAvailable < 0) $stokAvailable = 0; // Safety
+
     $data = [
-        'kode'         => trim($_POST['kode'] ?? ''),
-        'nama'         => trim($_POST['nama'] ?? ''),
-        'kategori'     => 'PCB',
-        'stok'         => (int)($_POST['stok'] ?? 0),
-        'harga'        => (int)($_POST['harga'] ?? 0),
-        'status'       => $_POST['status'] ?? 'aktif',
+        'nama'           => trim($_POST['nama'] ?? ''),
+        'stok'           => $newStok,
+        'stok_min'       => (int)($_POST['stok_min'] ?? 10),
+        'satuan'         => trim($_POST['satuan'] ?? 'pcs'),
+        'harga'          => (int)($_POST['harga'] ?? 0),
+        'status'         => $_POST['status'] ?? 'aktif',
     ];
-    if (!$data['kode']) $errors[] = 'Kode produk wajib diisi.';
+    
     if (!$data['nama']) $errors[] = 'Nama produk wajib diisi.';
+    if ($data['stok'] < 0) $errors[] = 'Stok tidak boleh negatif.';
 
     if (!$errors) {
-        Produk::update($produk['id'], $data);
-        header('Location: ../index.php?updated=1');
-        exit;
+        try {
+            Produk::update($produk['id'], $data);
+            echo "<script>
+                alert('✅ Produk berhasil diperbarui!');
+                window.location.href = '../index.php?updated=1';
+            </script>";
+            exit;
+        } catch (Exception $e) {
+            $errors[] = 'Gagal menyimpan produk: ' . $e->getMessage();
+        }
     }
     $produk = array_merge($produk, $data);
 }
 
-$statusCls = match($produk['status']) {
+$statusCls = match(strtolower($produk['status'] ?? '')) {
     'aktif' => 'ok',
-    'Aktif' => 'ok',
     default => 'warn'
 };
 ?>
@@ -61,11 +77,11 @@ $statusCls = match($produk['status']) {
       <div class="top-left">
         <button class="menu-btn" id="menuBtn"><i class="bi bi-list"></i></button>
         <div class="breadcrumb">
-          <a href="/Inventaris/public/marketing/dashboard.php">Dashboard</a>
+          <a href="/Inventaris/public/dashboard.php">Dashboard</a>
           <i class="bi bi-chevron-right"></i>
           <a href="../index.php">Produk PCB</a>
           <i class="bi bi-chevron-right"></i>
-          <a href="detail.php?id=<?= $produk['id'] ?>"><?= htmlspecialchars($produk['kode'] ?? '-') ?></a>
+          <a href="detail.php?id=<?= $produk['id'] ?>"><?= htmlspecialchars($produk['kode_produk'] ?? $produk['kode'] ?? '-') ?></a>
           <i class="bi bi-chevron-right"></i>
           <span>Edit</span>
         </div>
@@ -87,7 +103,7 @@ $statusCls = match($produk['status']) {
         <h1 class="page-title-lg">Edit Produk</h1>
         <p class="page-subtitle">
           Mengedit <strong><?= htmlspecialchars($produk['nama']) ?></strong>
-          &mdash; <span class="badge <?= $statusCls ?>"><?= htmlspecialchars($produk['status']) ?></span>
+          &mdash; <span class="badge <?= $statusCls ?>"><?= htmlspecialchars(ucfirst($produk['status'] ?? '-')) ?></span>
         </p>
       </div>
       <a href="detail.php?id=<?= $produk['id'] ?>" class="btn-ghost-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
@@ -99,7 +115,7 @@ $statusCls = match($produk['status']) {
         <div class="form-card">
           <div class="form-card-header">
             <h4><i class="bi bi-pencil-square"></i> Data Produk</h4>
-            <span class="badge <?= $statusCls ?>"><?= htmlspecialchars($produk['status']) ?></span>
+            <span class="badge <?= $statusCls ?>"><?= htmlspecialchars(ucfirst($produk['status'] ?? '-')) ?></span>
           </div>
 
           <?php if ($errors): ?>
@@ -112,13 +128,13 @@ $statusCls = match($produk['status']) {
           <form method="post" class="po-form">
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Kode Produk <span class="required">*</span></label>
+                <label class="form-label">Kode Produk</label>
                 <input type="text" name="kode" class="form-control"
-                       value="<?= htmlspecialchars($produk['kode'] ?? '') ?>" readonly>
+                       value="<?= htmlspecialchars($produk['kode_produk'] ?? $produk['kode'] ?? '') ?>" readonly style="background:#f3f4f6; cursor:not-allowed;">
               </div>
               <div class="form-group">
                 <label class="form-label">Kategori</label>
-                <input type="text" class="form-control" value="PCB" readonly>
+                <input type="text" class="form-control" value="PCB" readonly style="background:#f3f4f6; cursor:not-allowed;">
               </div>
             </div>
 
@@ -138,9 +154,23 @@ $statusCls = match($produk['status']) {
                 </small>
               </div>
               <div class="form-group">
-                <label class="form-label">Stok (pcs)</label>
+                <label class="form-label">Stok Fisik</label>
                 <input type="number" name="stok" class="form-control" min="0"
                        value="<?= htmlspecialchars((string)($produk['stok'] ?? 0)) ?>">
+                <small class="text-muted" style="display: block; margin-top: 0.25rem;">Perubahan stok fisik akan otomatis menyesuaikan stok yang bisa dijual.</small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Batas Stok Minimum</label>
+                <input type="number" name="stok_min" class="form-control" min="0"
+                       value="<?= htmlspecialchars((string)($produk['stok_min'] ?? 10)) ?>">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Satuan</label>
+                <input type="text" name="satuan" class="form-control"
+                       value="<?= htmlspecialchars($produk['satuan'] ?? 'pcs') ?>" required>
               </div>
             </div>
 
@@ -149,7 +179,7 @@ $statusCls = match($produk['status']) {
                 <label class="form-label">Status</label>
                 <select name="status" class="form-control">
                   <?php foreach (['aktif' => 'Aktif', 'nonaktif' => 'Tidak Aktif'] as $val => $label): ?>
-                    <option value="<?= $val ?>" <?= ($produk['status'] === $val || $produk['status'] === $label) ? 'selected' : '' ?>><?= $label ?></option>
+                    <option value="<?= $val ?>" <?= (strtolower($produk['status'] ?? '') === $val) ? 'selected' : '' ?>><?= $label ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -164,41 +194,31 @@ $statusCls = match($produk['status']) {
       </div>
 
       <div class="form-side">
-
-        <!-- Data sebelumnya -->
         <div class="form-card">
           <div class="form-card-header">
-            <h4><i class="bi bi-clock-history"></i> Data Sebelumnya</h4>
+            <h4><i class="bi bi-clock-history"></i> Data Stok Saat Ini</h4>
           </div>
           <div class="side-info-list">
             <div class="side-info-item">
-              <span class="side-info-label">Kode</span>
-              <span class="side-info-val fw-mid"><?= htmlspecialchars($produk['kode_produk'] ?? $produk['kode'] ?? '-') ?></span>
+              <span class="side-info-label">Stok Fisik Total</span>
+              <span class="side-info-val fw-mid"><?= (int)($produk['stok'] ?? 0) ?> <?= htmlspecialchars($produk['satuan'] ?? 'pcs') ?></span>
             </div>
             <div class="side-info-item">
-              <span class="side-info-label">Nama</span>
-              <span class="side-info-val"><?= htmlspecialchars($produk['nama'] ?? '-') ?></span>
+              <span class="side-info-label" style="color: #dc3545;">Dibooking (Pesanan)</span>
+              <span class="side-info-val" style="color: #dc3545; font-weight: bold;"><?= (int)($produk['stok_reserved'] ?? 0) ?> <?= htmlspecialchars($produk['satuan'] ?? 'pcs') ?></span>
             </div>
             <div class="side-info-item">
-              <span class="side-info-label">Kategori</span>
-              <span class="side-info-val"><?= htmlspecialchars($produk['kategori'] ?? '-') ?></span>
+              <span class="side-info-label" style="color: #059669;">Bisa Dijual (Available)</span>
+              <span class="side-info-val" style="color: #059669; font-weight: bold;"><?= (int)($produk['stok_available'] ?? 0) ?> <?= htmlspecialchars($produk['satuan'] ?? 'pcs') ?></span>
             </div>
+            <hr style="border:0; border-top:1px solid var(--border); margin:10px 0;">
             <div class="side-info-item">
-              <span class="side-info-label">Harga</span>
-              <span class="side-info-val fw-mid">Rp <?= number_format((int)($produk['harga'] ?? 0), 0, ',', '.') ?></span>
-            </div>
-            <div class="side-info-item">
-              <span class="side-info-label">Stok</span>
-              <span class="side-info-val"><?= (int)($produk['stok'] ?? 0) ?> pcs</span>
-            </div>
-            <div class="side-info-item">
-              <span class="side-info-label">Status</span>
-              <span class="side-info-val"><span class="badge <?= $statusCls ?>"><?= htmlspecialchars($produk['status'] ?? '-') ?></span></span>
+              <span class="side-info-label">Batas Minimum</span>
+              <span class="side-info-val"><?= (int)($produk['stok_min'] ?? 10) ?></span>
             </div>
           </div>
         </div>
 
-        <!-- Zona berbahaya -->
         <div class="form-card danger-card">
           <div class="form-card-header">
             <h4><i class="bi bi-shield-exclamation"></i> Zona Berbahaya</h4>
@@ -214,7 +234,6 @@ $statusCls = match($produk['status']) {
       </div>
     </div>
 
-    <!-- DELETE MODAL -->
     <div class="modal-overlay" id="deleteModal">
       <div class="modal-box">
         <div class="modal-icon"><i class="bi bi-exclamation-triangle"></i></div>
@@ -239,17 +258,6 @@ $statusCls = match($produk['status']) {
   document.getElementById('deleteBtn').addEventListener('click',  () => modal.classList.add('show'));
   document.getElementById('cancelDelete').addEventListener('click', () => modal.classList.remove('show'));
   modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
-
-  // Sidebar mobile script
-  const sidebar  = document.getElementById('sidebar');
-  const overlay  = document.getElementById('sidebarOverlay');
-  const menuBtn  = document.getElementById('menuBtn');
-  const closeBtn = document.getElementById('sidebarClose');
-  const openNav  = () => { sidebar?.classList.add('open');  overlay?.classList.add('show'); };
-  const closeNav = () => { sidebar?.classList.remove('open'); overlay?.classList.remove('show'); };
-  menuBtn?.addEventListener('click', openNav);
-  closeBtn?.addEventListener('click', closeNav);
-  overlay?.addEventListener('click', closeNav);
 
   // Format harga dengan separator
   const hargaInput = document.querySelector('input[name="harga"]');

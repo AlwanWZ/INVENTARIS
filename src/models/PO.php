@@ -56,18 +56,24 @@ class PO {
     /**
      * Create PO with multiple items using PDO Transaction
      * 
+     * RULE 3: Pemotongan stok WAJIB di dalam transaction
+     * Saat PO berhasil di-insert, UPDATE produk table:
+     * - stok_reserved = stok_reserved + qty
+     * - stok_available = stok_available - qty
+     * 
      * @param array $dataPO - Master data: nomor_po, tanggal, customer_id, status, notes
-     * @param array $dataItems - Array of items: [['produk_id' => 1, 'qty' => 10, 'harga_satuan' => 5000, ...], ...]
+     * @param array $dataItems - Array of items: [['produk_id' => 1, 'qty' => 10, 'qty_available' => 10, ...], ...]
      * @return int|false - PO ID jika sukses, false jika gagal
      */
     public static function createWithItems($dataPO, $dataItems = []) {
         global $pdo;
+        require_once __DIR__ . '/Produk.php';
 
         try {
-            // Start transaction
+            // START TRANSACTION
             $pdo->beginTransaction();
 
-            // 1. Insert ke tabel po (Master)
+            // 1. INSERT ke tabel po (Master)
             $sqlPO = "INSERT INTO po 
                       (nomor_po, tanggal, customer_id, status, notes, created_at) 
                       VALUES (?, ?, ?, ?, ?, NOW())";
@@ -84,49 +90,79 @@ class PO {
             // Get the last inserted PO ID
             $poId = $pdo->lastInsertId();
 
-            // 2. Insert items ke tabel po_items (Detail)
+            // 2. INSERT items ke tabel po_items + UPDATE stok produk (RULE 3)
             if (!empty($dataItems) && is_array($dataItems)) {
                 $sqlItem = "INSERT INTO po_items 
-                           (po_id, produk_id, kode_material, nama_material, uom, qty, harga_satuan, diskon, amount, keterangan, created_at) 
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+                           (po_id, produk_id, kode_material, nama_material, uom, qty, qty_available, qty_pending, harga_satuan, diskon, amount, keterangan, created_at) 
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
                 
                 $stmtItem = $pdo->prepare($sqlItem);
+                
+                $sqlUpdateStok = "UPDATE produk 
+                                  SET stok_reserved = stok_reserved + ?,
+                                      stok_available = stok_available - ?
+                                  WHERE id = ?";
+                $stmtUpdateStok = $pdo->prepare($sqlUpdateStok);
 
                 foreach ($dataItems as $item) {
                     // Validate item data
-                    if (empty($item['qty']) || empty($item['harga_satuan'])) {
-                        throw new Exception("Qty dan Harga Satuan wajib diisi untuk setiap item");
+                    if (empty($item['qty'])) {
+                        throw new Exception("Qty wajib diisi untuk setiap item");
+                    }
+                    if (empty($item['harga_satuan'])) {
+                        throw new Exception("Harga Satuan wajib diisi untuk setiap item");
+                    }
+                    if (empty($item['produk_id'])) {
+                        throw new Exception("Produk ID wajib diisi untuk setiap item");
                     }
 
+                    $produk_id = (int)$item['produk_id'];
+                    $qty = (int)$item['qty'];
+                    $harga_satuan = (float)$item['harga_satuan'];
+                    
                     // Calculate amount = (qty * harga_satuan) - ((qty * harga_satuan) * (diskon/100))
-                    $subtotal = $item['qty'] * $item['harga_satuan'];
+                    $subtotal = $qty * $harga_satuan;
                     $diskon = floatval($item['diskon'] ?? 0);
                     $diskonAmount = $subtotal * ($diskon / 100);
                     $amount = $subtotal - $diskonAmount;
+                    
+                    // qty_available = qty (semua order STRICT, tidak boleh backorder saat create)
+                    $qty_available = $qty;
+                    $qty_pending = 0;
 
-                    // Execute insert untuk setiap item
+                    // INSERT PO Item
                     $stmtItem->execute([
                         $poId,
-                        $item['produk_id'] ?? null,
+                        $produk_id,
                         $item['kode_material'] ?? '',
                         $item['nama_material'] ?? '',
                         $item['uom'] ?? 'pcs',
-                        $item['qty'],
-                        $item['harga_satuan'],
+                        $qty,
+                        $qty_available,
+                        $qty_pending,
+                        $harga_satuan,
                         $diskon,
                         $amount,
                         $item['keterangan'] ?? null
                     ]);
+                    
+                    // RULE 3: UPDATE stok produk
+                    // stok_reserved += qty, stok_available -= qty
+                    $stmtUpdateStok->execute([
+                        $qty,              // stok_reserved + qty
+                        $qty,              // stok_available - qty
+                        $produk_id
+                    ]);
                 }
             }
 
-            // Commit transaction
+            // COMMIT TRANSACTION
             $pdo->commit();
 
             return $poId;
 
         } catch (Exception $e) {
-            // Rollback jika ada error
+            // ROLLBACK jika ada error
             $pdo->rollBack();
             throw $e;
         }
@@ -192,10 +228,14 @@ class PO {
         $subtotal = $data['qty'] * $data['harga_satuan'];
         $diskonAmount = $subtotal * ($data['diskon'] / 100);
         $amount = $subtotal - $diskonAmount;
+        
+        // BACKORDER LOGIC: Calculate ready vs pending
+        $qty_available = $data['qty_available'] ?? $data['qty'];
+        $qty_pending = $data['qty_pending'] ?? 0;
 
         $sql = "INSERT INTO po_items 
-                (po_id, produk_id, kode_material, nama_material, uom, qty, harga_satuan, diskon, amount, keterangan) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                (po_id, produk_id, kode_material, nama_material, uom, qty, qty_available, qty_pending, harga_satuan, diskon, amount, keterangan) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $pdo->prepare($sql);
 
@@ -206,6 +246,8 @@ class PO {
             $data['nama_material'] ?? '',
             $data['uom'] ?? 'pcs',
             $data['qty'],
+            $qty_available,
+            $qty_pending,
             $data['harga_satuan'],
             $data['diskon'],
             $amount,
@@ -262,5 +304,166 @@ class PO {
         $stmt->execute([$id]);
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * ============ STOK INTEGRATION ============
+     * Auto reserve/unreserve stok saat PO status berubah
+     */
+
+    /**
+     * Reserve stok saat PO di-approve
+     * Kurangi stok_available, nambah stok_reserved
+     */
+    public static function reserveStok($poId, $userId = null) {
+        global $pdo;
+        require_once __DIR__ . '/StokTracking.php';
+        
+        $stokTracking = new StokTracking($pdo);
+        
+        try {
+            $pdo->beginTransaction();
+            
+            // Get PO items
+            $items = self::getItems($poId);
+            if (empty($items)) {
+                throw new Exception("PO tidak memiliki items");
+            }
+            
+            $reserved_count = 0;
+            $errors = [];
+            
+            foreach ($items as $item) {
+                if (empty($item['produk_id'])) continue;
+                
+                $result = $stokTracking->reserveStok(
+                    $item['produk_id'],
+                    $item['qty'],
+                    'po',
+                    $poId,
+                    $userId,
+                    "Reserve untuk PO #{$poId}"
+                );
+                
+                if ($result['success']) {
+                    // Update po_items is_reserved = yes
+                    $stmt = $pdo->prepare("UPDATE po_items SET is_reserved = 'yes' WHERE id = ?");
+                    $stmt->execute([$item['id']]);
+                    $reserved_count++;
+                } else {
+                    $errors[] = $result['message'];
+                }
+            }
+            
+            // Update PO status
+            $stmt = $pdo->prepare("
+                UPDATE po 
+                SET status_stok = 'reserved', approval_date = NOW()
+                WHERE id = ?
+            ");
+            $stmt->execute([$poId]);
+            
+            if (!empty($errors)) {
+                throw new Exception(implode("; ", $errors));
+            }
+            
+            $pdo->commit();
+            return ['success' => true, 'message' => "Stok berhasil di-reserve untuk {$reserved_count} items"];
+            
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Unreserve stok saat PO di-cancel/reject
+     */
+    public static function unreserveStok($poId, $userId = null) {
+        global $pdo;
+        require_once __DIR__ . '/StokTracking.php';
+        
+        $stokTracking = new StokTracking($pdo);
+        
+        try {
+            $pdo->beginTransaction();
+            
+            // Get PO items yang sudah di-reserve
+            $items = $pdo->prepare("
+                SELECT * FROM po_items 
+                WHERE po_id = ? AND is_reserved = 'yes'
+            ");
+            $items->execute([$poId]);
+            $items = $items->fetchAll();
+            
+            $unreserved_count = 0;
+            $errors = [];
+            
+            foreach ($items as $item) {
+                if (empty($item['produk_id'])) continue;
+                
+                $result = $stokTracking->unreserveStok(
+                    $item['produk_id'],
+                    $item['qty'],
+                    'po_cancel',
+                    $poId,
+                    $userId,
+                    "Unreserve karena PO dibatalkan"
+                );
+                
+                if ($result['success']) {
+                    $stmt = $pdo->prepare("UPDATE po_items SET is_reserved = 'no' WHERE id = ?");
+                    $stmt->execute([$item['id']]);
+                    $unreserved_count++;
+                } else {
+                    $errors[] = $result['message'];
+                }
+            }
+            
+            // Update PO status
+            $stmt = $pdo->prepare("UPDATE po SET status_stok = 'draft' WHERE id = ?");
+            $stmt->execute([$poId]);
+            
+            if (!empty($errors)) {
+                throw new Exception(implode("; ", $errors));
+            }
+            
+            $pdo->commit();
+            return ['success' => true, 'message' => "Reserve stok berhasil dibatalkan untuk {$unreserved_count} items"];
+            
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get PO dengan informasi stok realtime
+     */
+    public static function getPOWithStok($poId) {
+        global $pdo;
+        
+        $sql = "
+            SELECT 
+                po.*,
+                c.nama AS customer_name,
+                c.perusahaan,
+                GROUP_CONCAT(
+                    CONCAT(
+                        poi.nama_material, ' (',poi.qty, 'pcs), ',
+                        'Avail: ', COALESCE(p.stok_available, 0)
+                    ) SEPARATOR ' | '
+                ) AS items_detail
+            FROM po
+            LEFT JOIN customers c ON po.customer_id = c.id
+            LEFT JOIN po_items poi ON po.id = poi.po_id
+            LEFT JOIN produk p ON poi.produk_id = p.id
+            WHERE po.id = ?
+            GROUP BY po.id
+        ";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$poId]);
+        return $stmt->fetch();
     }
 }

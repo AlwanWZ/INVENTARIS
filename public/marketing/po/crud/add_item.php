@@ -36,6 +36,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$data['kode_material']) $errors[] = 'Kode material wajib diisi.';
     if (!$data['nama_material']) $errors[] = 'Nama material wajib diisi.';
     
+    // STRICT VALIDATION (BENAR):
+    // Qty harus ≤ stok_available, TIDAK BOLEH BACKORDER
+    if ($produk) {
+        $stok_available = $produk['stok_available'] ?? $produk['stok'] ?? 0;
+        
+        // Jika qty > stok, REJECT!
+        if ($data['qty'] > $stok_available) {
+            $errors[] = "Qty ({$data['qty']}) melebihi stok '{$produk['nama']}' ({$stok_available} pcs). Maksimal: {$stok_available} pcs";
+        } else {
+            // OK - Set qty_available = qty, qty_pending = 0
+            $data['qty_available'] = $data['qty'];
+            $data['qty_pending'] = 0;
+        }
+    }
+    
     if (!$errors) {
         PO::addItem($data);
         header('Location: detail.php?id=' . $po['id'] . '&item_added=1');
@@ -110,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <?php if ($errors): ?>
             <div class="alert-error">
               <i class="bi bi-exclamation-circle"></i>
-              <ul><?php foreach ($errors as $e): ?><li><?= htmlspecialchars($e) ?></li><?php endforeach; ?></ul>
+              <ul><?php foreach ($errors as $e): ?><li><?= $e ?></li><?php endforeach; ?></ul>
             </div>
           <?php endif; ?>
 
@@ -120,13 +135,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <select name="produk_id" class="form-control" id="produkSelect" onchange="autofillProduk()">
                 <option value="">-- Pilih Produk --</option>
                 <?php foreach ($produkList as $prod): ?>
-                  <option value="<?= $prod['id'] ?>" data-kode="<?= htmlspecialchars($prod['kode_produk']) ?>" data-nama="<?= htmlspecialchars($prod['nama']) ?>" data-harga="<?= $prod['harga'] ?>">
+                  <option value="<?= $prod['id'] ?>" 
+                          data-kode="<?= htmlspecialchars($prod['kode_produk']) ?>" 
+                          data-nama="<?= htmlspecialchars($prod['nama']) ?>" 
+                          data-harga="<?= $prod['harga'] ?>"
+                          data-stok="<?= $prod['stok'] ?>"
+                          data-stok-available="<?= $prod['stok_available'] ?? $prod['stok'] ?>"
+                          data-stok-reserved="<?= $prod['stok_reserved'] ?? 0 ?>">
                     <?= htmlspecialchars($prod['kode_produk'] . ' - ' . $prod['nama']) ?>
-                    (Rp <?= number_format($prod['harga'], 0, ',', '.') ?>)
+                    (Rp <?= number_format($prod['harga'], 0, ',', '.') ?>) 
+                    <strong style="color: <?= ($prod['stok_available'] ?? $prod['stok']) > 0 ? '#28a745' : '#dc3545' ?>">
+                      [<?= ($prod['stok_available'] ?? $prod['stok']) ?> pcs]
+                    </strong>
                   </option>
                 <?php endforeach; ?>
               </select>
               <small style="color: #6c757d;">Atau bisa input manual di bawah</small>
+              <!-- Info Stok -->
+              <div id="stokInfo" style="margin-top: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-left: 4px solid #0d6efd; border-radius: 3px; font-size: 0.9rem; display: none;">
+                <div id="stokDisplay"></div>
+              </div>
             </div>
 
             <div class="form-row">
@@ -147,7 +175,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               </div>
               <div class="form-group">
                 <label class="form-label">Qty <span class="required">*</span></label>
-                <input type="number" name="qty" class="form-control" min="1" value="<?= intval($_POST['qty'] ?? '') ?>" placeholder="100" required onchange="calculateAmount()">
+                <input type="number" name="qty" class="form-control" id="qtyInput" min="1" value="<?= intval($_POST['qty'] ?? '') ?>" placeholder="100" required onchange="validateStok(); calculateAmount();" oninput="validateStok(); calculateAmount();">
+                <!-- Stok Warning -->
+                <div id="qtyWarning" style="margin-top: 0.5rem; display: none;"></div>
               </div>
             </div>
 
@@ -221,6 +251,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </main>
 
 <script>
+let selectedStok = 0;
+let selectedStokAvailable = 0;
+let selectedStokReserved = 0;
+let selectedProdukName = '';
+
 function autofillProduk() {
   const select = document.getElementById('produkSelect');
   const option = select.options[select.selectedIndex];
@@ -229,7 +264,84 @@ function autofillProduk() {
     document.getElementById('kodeMaterial').value = option.getAttribute('data-kode');
     document.getElementById('namaMaterial').value = option.getAttribute('data-nama');
     document.getElementById('hargaSatuan').value = option.getAttribute('data-harga');
+    
+    // Simpan stok info
+    selectedStok = parseInt(option.getAttribute('data-stok')) || 0;
+    selectedStokAvailable = parseInt(option.getAttribute('data-stok-available')) || 0;
+    selectedStokReserved = parseInt(option.getAttribute('data-stok-reserved')) || 0;
+    selectedProdukName = option.getAttribute('data-nama');
+    
+    // Tampilkan stok info
+    const stokInfo = document.getElementById('stokInfo');
+    const stokDisplay = document.getElementById('stokDisplay');
+    stokDisplay.innerHTML = `
+      <strong style="color: #0d6efd;">📦 Stok Produk: <strong style="font-size: 1.1em;">${selectedStok} pcs</strong></strong><br>
+      <small>├─ Available: <strong style="color: #28a745;">${selectedStokAvailable} pcs</strong></small><br>
+      <small>└─ Reserved: <strong style="color: #ffc107;">${selectedStokReserved} pcs</strong></small>
+    `;
+    stokInfo.style.display = 'block';
+    
+    validateStok();
     calculateAmount();
+  } else {
+    document.getElementById('stokInfo').style.display = 'none';
+    selectedStok = 0;
+    selectedStokAvailable = 0;
+    selectedStokReserved = 0;
+    selectedProdukName = '';
+    document.getElementById('qtyWarning').style.display = 'none';
+  }
+}
+
+function validateStok() {
+  const qtyInput = document.getElementById('qtyInput');
+  const qtyWarning = document.getElementById('qtyWarning');
+  const qty = parseInt(qtyInput.value) || 0;
+  const submitBtn = document.querySelector('button[type="submit"]');
+  
+  qtyWarning.innerHTML = '';
+  qtyWarning.style.display = 'none';
+  submitBtn.disabled = false;
+  submitBtn.style.opacity = '1';
+  submitBtn.style.cursor = 'pointer';
+  
+  // STRICT VALIDATION (TIDAK BOLEH BACKORDER)
+  if (qty > 0) {
+    if (qty > selectedStokAvailable) {
+      // ERROR - QTY LEBIH DARI STOK
+      const kurang = qty - selectedStokAvailable;
+      qtyWarning.innerHTML = `
+        <div style="padding: 0.75rem; background: #fee; border-left: 4px solid #dc3545; border-radius: 3px; color: #721c24;">
+          <strong>❌ QTY MELEBIHI STOK!</strong><br>
+          <small>├─ Qty pesanan: <strong>${qty} pcs</strong></small><br>
+          <small>├─ Stok tersedia: <strong style="color: #dc3545;">${selectedStokAvailable} pcs</strong></small><br>
+          <small>└─ Kurang: <strong style="color: #dc3545;">${kurang} pcs</strong></small><br>
+          <small style="color: #666; margin-top: 0.5rem;">📌 Maksimal pesanan: <strong>${selectedStokAvailable} pcs</strong></small>
+        </div>
+      `;
+      qtyWarning.style.display = 'block';
+      this.style.borderColor = '#dc3545';
+      this.style.backgroundColor = 'rgba(220, 38, 38, 0.05)';
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.5';
+      submitBtn.style.cursor = 'not-allowed';
+    } else {
+      // OK - HIJAU
+      qtyWarning.innerHTML = `
+        <div style="padding: 0.75rem; background: #d4edda; border-left: 4px solid #28a745; border-radius: 3px; color: #155724;">
+          <strong>✅ OK - SIAP KIRIM!</strong><br>
+          <small>Stok tersedia: <strong>${selectedStokAvailable} pcs</strong> | Sisa: <strong>${selectedStokAvailable - qty} pcs</strong></small>
+        </div>
+      `;
+      qtyWarning.style.display = 'block';
+      this.style.borderColor = '#28a745';
+      this.style.backgroundColor = 'rgba(40, 167, 69, 0.05)';
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '1';
+    }
+  } else {
+    this.style.borderColor = '';
+    this.style.backgroundColor = '';
   }
 }
 

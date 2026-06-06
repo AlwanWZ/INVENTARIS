@@ -10,12 +10,19 @@ require_once '../../../../src/models/Produk.php';
 $produk = Produk::find($_GET['id'] ?? null);
 if (!$produk) { header('Location: ../index.php'); exit; }
 
-$statusCls = match($produk['status']) {
-    'aktif', 'Aktif' => 'ok',
+$statusCls = match(strtolower($produk['status'] ?? '')) {
+    'aktif' => 'ok',
     default => 'warn'
 };
-$stokCls   = (isset($produk['stok']) && $produk['stok'] === 0) ? 'danger' : ((isset($produk['stok']) && $produk['stok'] < 20) ? 'warn' : 'ok');
-$stokLabel = (isset($produk['stok']) && $produk['stok'] === 0) ? 'Habis' : ((isset($produk['stok']) && $produk['stok'] < 20) ? 'Menipis' : 'Tersedia');
+
+$stokAktif = $produk['stok_available'] ?? $produk['stok'] ?? 0;
+$stokFisik = $produk['stok'] ?? 0;
+$stokBooking = $produk['stok_reserved'] ?? 0;
+$batasMin = $produk['stok_min'] ?? 10;
+$satuan = htmlspecialchars($produk['satuan'] ?? 'pcs');
+
+$stokCls   = ($stokAktif <= 0) ? 'danger' : (($stokAktif <= $batasMin) ? 'warn' : 'ok');
+$stokLabel = ($stokAktif <= 0) ? 'Habis' : (($stokAktif <= $batasMin) ? 'Menipis' : 'Tersedia');
 ?>
 <!doctype html>
 <html lang="id" data-theme="light">
@@ -42,9 +49,9 @@ $stokLabel = (isset($produk['stok']) && $produk['stok'] === 0) ? 'Habis' : ((iss
         <div class="breadcrumb">
           <a href="/Inventaris/public/dashboard.php">Dashboard</a>
           <i class="bi bi-chevron-right"></i>
-          <a href="index.php">Produk</a>
+          <a href="../index.php">Produk</a>
           <i class="bi bi-chevron-right"></i>
-          <span><?= htmlspecialchars($produk['kode_produk'] ?? '-') ?></span>
+          <span><?= htmlspecialchars($produk['kode_produk'] ?? $produk['kode'] ?? '-') ?></span>
         </div>
       </div>
       <div class="top-right">
@@ -64,7 +71,7 @@ $stokLabel = (isset($produk['stok']) && $produk['stok'] === 0) ? 'Habis' : ((iss
         <h1 class="page-title-lg">Detail Produk</h1>
         <p class="page-subtitle">
           <strong><?= htmlspecialchars($produk['nama'] ?? '-') ?></strong>
-          &mdash; <span class="badge <?= $statusCls ?>"><?= htmlspecialchars($produk['status'] ?? '-') ?></span>
+          &mdash; <span class="badge <?= $statusCls ?>"><?= htmlspecialchars(ucfirst($produk['status'] ?? '-')) ?></span>
         </p>
       </div>
       <div class="header-actions">
@@ -79,16 +86,16 @@ $stokLabel = (isset($produk['stok']) && $produk['stok'] === 0) ? 'Habis' : ((iss
         <div class="form-card">
           <div class="form-card-header">
             <h4><i class="bi bi-box-seam"></i> Informasi Produk</h4>
-            <span class="badge <?= $statusCls ?>"><?= htmlspecialchars($produk['status'] ?? '-') ?></span>
+            <span class="badge <?= $statusCls ?>"><?= htmlspecialchars(ucfirst($produk['status'] ?? '-')) ?></span>
           </div>
           <div class="detail-grid">
             <div class="detail-item">
               <span class="detail-label">Kode Produk</span>
-              <span class="detail-val fw-mid"><?= htmlspecialchars($produk['kode_produk'] ?? '-') ?></span>
+              <span class="detail-val fw-mid"><?= htmlspecialchars($produk['kode_produk'] ?? $produk['kode'] ?? '-') ?></span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Status</span>
-              <span class="detail-val"><span class="badge <?= $statusCls ?>"><?= htmlspecialchars($produk['status'] ?? '-') ?></span></span>
+              <span class="detail-val"><span class="badge <?= $statusCls ?>"><?= htmlspecialchars(ucfirst($produk['status'] ?? '-')) ?></span></span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Nama Produk</span>
@@ -97,6 +104,14 @@ $stokLabel = (isset($produk['stok']) && $produk['stok'] === 0) ? 'Habis' : ((iss
             <div class="detail-item">
               <span class="detail-label">Kategori</span>
               <span class="detail-val"><?= htmlspecialchars($produk['kategori'] ?? '-') ?></span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Satuan (UOM)</span>
+              <span class="detail-val"><?= $satuan ?></span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Batas Minimum Stok</span>
+              <span class="detail-val"><?= $batasMin ?> <?= $satuan ?></span>
             </div>
             <?php if (!empty($produk['deskripsi'] ?? '')): ?>
             <div class="detail-item detail-item-full">
@@ -110,31 +125,41 @@ $stokLabel = (isset($produk['stok']) && $produk['stok'] === 0) ? 'Habis' : ((iss
 
       <div class="detail-side">
 
-        <!-- Stok & Harga -->
         <div class="form-card total-card">
           <div class="form-card-header">
             <h4><i class="bi bi-cash-stack"></i> Harga &amp; Stok</h4>
           </div>
           <div class="total-display">
-            <span class="total-label">Harga Satuan</span>
+            <span class="total-label">Harga Jual Satuan</span>
             <span class="total-val">Rp <?= number_format($produk['harga'], 0, ',', '.') ?></span>
           </div>
           <div class="total-divider"></div>
-          <div class="total-meta">
-            <span>Stok Tersedia</span>
-            <span class="fw-mid"><?= $produk['stok'] ?> pcs</span>
+          
+          <div style="background: var(--surface2); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                  <span style="color: var(--text2); font-size: 0.9rem;">Stok Fisik Gudang</span>
+                  <span style="font-weight: 600;"><?= $stokFisik ?> <?= $satuan ?></span>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom: 8px; border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
+                  <span style="color: #dc3545; font-size: 0.9rem;">Dibooking Pesanan</span>
+                  <span style="color: #dc3545; font-weight: 600;">- <?= $stokBooking ?> <?= $satuan ?></span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="color: #059669; font-weight: bold;">Bisa Dijual (Available)</span>
+                  <span style="color: #059669; font-size: 1.2rem; font-weight: 800;"><?= $stokAktif ?> <?= $satuan ?></span>
+              </div>
           </div>
+
           <div class="total-meta">
             <span>Kondisi Stok</span>
             <span class="badge <?= $stokCls ?>"><?= $stokLabel ?></span>
           </div>
           <div class="total-meta">
-            <span>ID Produk</span>
+            <span>ID System</span>
             <span class="text-muted">#<?= $produk['id'] ?></span>
           </div>
         </div>
 
-        <!-- Aksi -->
         <div class="form-card action-card">
           <div class="form-card-header">
             <h4><i class="bi bi-lightning"></i> Tindakan</h4>
@@ -155,6 +180,18 @@ $stokLabel = (isset($produk['stok']) && $produk['stok'] === 0) ? 'Habis' : ((iss
   </div>
 </main>
 
+<script>
+// Dark mode toggle bawaan
+const html = document.documentElement;
+const themeBtn = document.getElementById('themeToggle');
+if (themeBtn) {
+  themeBtn.addEventListener('click', () => {
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    themeBtn.querySelector('i').className = isDark ? 'bi bi-sun' : 'bi bi-moon';
+  });
+}
+</script>
 
 </body>
 </html>

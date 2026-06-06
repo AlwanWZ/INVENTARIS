@@ -7,6 +7,18 @@ if (!isset($_SESSION['user']) || !in_array($_SESSION['user']['role'], ['marketin
 require_once '../../../src/auth.php';
 require_once '../../../src/models/Produk.php';
 $produkList = Produk::all();
+
+// LOGIKA BARU: Pakai stok_available (atau stok) dan bandingkan dengan stok_min dari database
+$stokMenipis = array_filter($produkList, function($p) {
+    $stokAktif = $p['stok_available'] ?? $p['stok'] ?? 0;
+    $batasMin = $p['stok_min'] ?? 10;
+    return $stokAktif > 0 && $stokAktif <= $batasMin;
+});
+
+$stokHabis = array_filter($produkList, function($p) {
+    $stokAktif = $p['stok_available'] ?? $p['stok'] ?? 0;
+    return $stokAktif <= 0;
+});
 ?>
 <!doctype html>
 <html lang="id" data-theme="light">
@@ -29,7 +41,6 @@ $produkList = Produk::all();
 <main class="main">
   <div class="content">
 
-    <!-- TOPBAR -->
     <div class="topbar">
       <div class="top-left">
         <button class="menu-btn"><i class="bi bi-list"></i></button>
@@ -52,7 +63,6 @@ $produkList = Produk::all();
       </div>
     </div>
 
-    <!-- NOTIFIKASI -->
     <?php if (isset($_GET['success'])): ?>
       <div class="alert-success"><i class="bi bi-check-circle"></i> Produk berhasil ditambahkan.</div>
     <?php elseif (isset($_GET['updated'])): ?>
@@ -61,7 +71,31 @@ $produkList = Produk::all();
       <div class="alert-success"><i class="bi bi-check-circle"></i> Produk berhasil dihapus.</div>
     <?php endif; ?>
 
-    <!-- STAT ROW -->
+    <?php if (!empty($stokHabis)): ?>
+      <div style="background: #fee; border-left: 4px solid #dc3545; padding: 1rem; margin-bottom: 1rem; border-radius: 4px; color: #721c24;">
+        <strong style="font-size: 1.1rem;">🔴 STOK HABIS (Atau Full Dibooking)!</strong>
+        <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+          <?php foreach ($stokHabis as $produk): ?>
+            <div>• <strong><?= htmlspecialchars($produk['nama']) ?></strong> (<?= htmlspecialchars($produk['kode_produk'] ?? $produk['kode']) ?>)</div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    <?php endif; ?>
+    
+    <?php if (!empty($stokMenipis)): ?>
+      <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; margin-bottom: 1rem; border-radius: 4px; color: #856404;">
+        <strong style="font-size: 1.1rem;">⚠️ STOK MENIPIS - PERLU RESTOK!</strong>
+        <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+          <?php foreach ($stokMenipis as $produk): 
+            $sisa = $produk['stok_available'] ?? $produk['stok'] ?? 0;
+            $satuan = $produk['satuan'] ?? 'pcs';
+          ?>
+            <div>• <strong><?= htmlspecialchars($produk['nama']) ?></strong> - Tersisa: <strong><?= $sisa ?> <?= htmlspecialchars($satuan) ?></strong> (Batas: <?= $produk['stok_min'] ?? 10 ?>)</div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    <?php endif; ?>
+
     <div class="stat-row">
       <div class="stat-pill">
         <span class="stat-pill-label">Total Produk</span>
@@ -71,26 +105,21 @@ $produkList = Produk::all();
       <div class="stat-pill">
         <span class="stat-pill-label">Aktif</span>
         <span class="stat-pill-val ok">
-          <?= count(array_filter($produkList, fn($p) => isset($p['status']) && ($p['status'] === 'Aktif' || $p['status'] === 'aktif'))) ?>
-        </span>
-      </div>
-
-      <div class="stat-pill">
-        <span class="stat-pill-label">Tidak Aktif</span>
-        <span class="stat-pill-val warn">
-          <?= count(array_filter($produkList, fn($p) => isset($p['status']) && ($p['status'] === 'Tidak Aktif' || $p['status'] === 'nonaktif'))) ?>
+          <?= count(array_filter($produkList, fn($p) => isset($p['status']) && strtolower($p['status']) === 'aktif')) ?>
         </span>
       </div>
 
       <div class="stat-pill">
         <span class="stat-pill-label">Stok Habis</span>
-        <span class="stat-pill-val danger">
-          <?= count(array_filter($produkList, fn($p) => isset($p['stok']) && $p['stok'] == 0)) ?>
-        </span>
+        <span class="stat-pill-val danger"><?= count($stokHabis) ?></span>
+      </div>
+
+      <div class="stat-pill">
+        <span class="stat-pill-label">Stok Menipis</span>
+        <span class="stat-pill-val warn"><?= count($stokMenipis) ?></span>
       </div>
     </div>
 
-    <!-- PAGE HEADER -->
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-title-lg">Produk PCB</h1>
@@ -101,7 +130,6 @@ $produkList = Produk::all();
       </a>
     </div>
 
-    <!-- TABLE CARD -->
     <div class="table-card">
       <div class="table-header">
         <h4><i class="bi bi-box-seam"></i> Daftar Produk</h4>
@@ -121,7 +149,7 @@ $produkList = Produk::all();
               <th>Kode Produk</th>
               <th>Nama Produk</th>
               <th>Kategori</th>
-              <th>Stok</th>
+              <th>Stok (Bisa Dijual)</th>
               <th>Harga</th>
               <th>Status</th>
               <th>Aksi</th>
@@ -139,44 +167,61 @@ $produkList = Produk::all();
             <?php else: ?>
 
               <?php foreach ($produkList as $i => $p):
-                $statusCls = match($p['status'] ?? '') {
-                  'Aktif', 'aktif' => 'ok',
+                $statusCls = match(strtolower($p['status'] ?? '')) {
+                  'aktif' => 'ok',
                   default => 'warn'
                 };
-                $stokCls   = (isset($p['stok']) && $p['stok'] == 0) ? 'danger' : ((isset($p['stok']) && $p['stok'] < 20) ? 'warn' : '');
+                
+                // Ambil data stok sesuai database
+                $stokAktif = $p['stok_available'] ?? $p['stok'] ?? 0;
+                $stokFisik = $p['stok'] ?? 0;
+                $stokBooking = $p['stok_reserved'] ?? 0;
+                $batasMin = $p['stok_min'] ?? 10;
+                $satuan = htmlspecialchars($p['satuan'] ?? 'pcs');
               ?>
 
               <tr>
                 <td class="text-muted"><?= $i + 1 ?></td>
-                <td class="fw-mid"><?= htmlspecialchars($p['kode_produk'] ?? '-') ?></td>
-                <td><?= htmlspecialchars($p['nama'] ?? '-') ?></td>
+                <td class="fw-mid"><?= htmlspecialchars($p['kode_produk'] ?? $p['kode'] ?? '-') ?></td>
+                <td style="font-weight: 500; color: #111827;"><?= htmlspecialchars($p['nama'] ?? '-') ?></td>
                 <td class="text-muted"><?= htmlspecialchars($p['kategori'] ?? '-') ?></td>
-                <td class="<?= $stokCls ? 'stok-' . $stokCls : '' ?>">
-                  <?= isset($p['stok']) ? $p['stok'] . ' pcs' : '-' ?>
+                
+                <td>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                    <span><?= $stokAktif ?> <?= $satuan ?></span>
+                    <?php if ($stokAktif <= 0): ?>
+                      <span class="badge danger" style="padding: 2px 6px; font-size: 0.7rem;">Habis</span>
+                    <?php elseif ($stokAktif <= $batasMin): ?>
+                      <span class="badge warn" style="padding: 2px 6px; font-size: 0.7rem;">Menipis</span>
+                    <?php endif; ?>
+                  </div>
+                  <?php if ($stokBooking > 0): ?>
+                  <div style="font-size: 0.75rem; color: #6b7280; margin-top: 4px;">
+                    Fisik: <?= $stokFisik ?> | Dibooking: <span style="color:#dc3545; font-weight:bold;"><?= $stokBooking ?></span>
+                  </div>
+                  <?php endif; ?>
                 </td>
-                <td class="fw-mid">
+
+                <td class="fw-mid" style="color: #059669;">
                   Rp <?= number_format((int)($p['harga'] ?? 0), 0, ',', '.') ?>
                 </td>
+                
                 <td>
                   <span class="badge <?= $statusCls ?>">
-                    <?= htmlspecialchars($p['status'] ?? '-') ?>
+                    <?= htmlspecialchars(ucfirst($p['status'] ?? '-')) ?>
                   </span>
                 </td>
+                
                 <td>
                   <div class="action-btns">
-                    <!-- ROW 1: VIEW & EDIT -->
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="display: flex; gap: 0.5rem;">
                       <a href="crud/detail.php?id=<?= $p['id'] ?>" class="btn-icon" title="Detail">
                         <i class="bi bi-eye"></i>
                       </a>
                       <a href="crud/edit.php?id=<?= $p['id'] ?>" class="btn-icon edit" title="Edit">
                         <i class="bi bi-pencil"></i>
                       </a>
-                    </div>
-
-                    <!-- ROW 2: DELETE -->
-                    <div>
-                      <a href="crud/delete.php?id=<?= $p['id'] ?>" class="btn-icon" style="color:#dc3545;" title="Hapus" onclick="return confirm('Hapus produk ini?')">
+                      <a href="crud/delete.php?id=<?= $p['id'] ?>" class="btn-icon danger" title="Hapus" onclick="return confirm('Hapus produk ini?')">
                         <i class="bi bi-trash"></i>
                       </a>
                     </div>
@@ -201,8 +246,6 @@ $produkList = Produk::all();
   </div>
 </main>
 
-
-
 <script>
 const searchInput = document.getElementById('searchInput');
 const tableCount  = document.getElementById('tableCount');
@@ -219,6 +262,17 @@ searchInput.addEventListener('input', function () {
 
   tableCount.textContent = `Menampilkan ${visible} data`;
 });
+
+// Dark mode toggle
+const html = document.documentElement;
+const themeBtn = document.getElementById('themeToggle');
+if (themeBtn) {
+  themeBtn.addEventListener('click', () => {
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    themeBtn.querySelector('i').className = isDark ? 'bi bi-sun' : 'bi bi-moon';
+  });
+}
 </script>
 
 </body>

@@ -62,6 +62,9 @@ class Verifikasi {
 
     public function add($data, $items) {
         try {
+            require_once __DIR__ . '/StokTracking.php';
+            $stokTracking = new StokTracking($this->pdo);
+            
             $this->pdo->beginTransaction();
             // Ensure status is lowercase
             $status = strtolower($data['status'] ?? 'draft');
@@ -77,13 +80,19 @@ class Verifikasi {
                 $stmt->execute([
                     $verif_id, $item['produk_id'], (int)($item['qty_ok'] ?? 0), $item['keterangan'] ?? ''
                 ]);
-                // Update stok produk jika status bukan draft
+                // Update stok produk jika status bukan draft (MENGGUNAKAN STOKTRACKING)
                 if ($status !== 'draft') {
-                    $updateStok = $this->pdo->prepare("UPDATE produk SET stok = stok + ? WHERE id = ?");
-                    $updateStok->execute([
+                    $result = $stokTracking->addStok(
+                        $item['produk_id'],
                         (int)($item['qty_ok'] ?? 0),
-                        $item['produk_id']
-                    ]);
+                        'verifikasi',
+                        $verif_id,
+                        $data['pic'] ?? null,
+                        "Penerimaan barang dari produksi"
+                    );
+                    if (!$result['success']) {
+                        throw new Exception($result['message']);
+                    }
                 }
             }
             $this->pdo->commit();
@@ -118,6 +127,9 @@ class Verifikasi {
 
     public function update($data, $items = []) {
         try {
+            require_once __DIR__ . '/StokTracking.php';
+            $stokTracking = new StokTracking($this->pdo);
+            
             $this->pdo->beginTransaction();
             
             // Get old status to compare
@@ -148,17 +160,36 @@ class Verifikasi {
             }
             
             // Update Stok Barang (Kalau pindah dari draft ke verified atau sebaliknya)
+            // MENGGUNAKAN STOKTRACKING untuk consistency
             if ($statusChanged && $oldStatus === 'draft' && $newStatus === 'verified') {
                 $currentItems = $this->getItems($data['id']);
                 foreach ($currentItems as $item) {
-                    $updateStok = $this->pdo->prepare("UPDATE produk SET stok = stok + ? WHERE id = ?");
-                    $updateStok->execute([(int)($item['qty_ok'] ?? 0), $item['produk_id']]);
+                    $result = $stokTracking->addStok(
+                        $item['produk_id'],
+                        (int)($item['qty_ok'] ?? 0),
+                        'verifikasi',
+                        $data['id'],
+                        $data['pic'] ?? null,
+                        "Penerimaan barang dari produksi - Update"
+                    );
+                    if (!$result['success']) {
+                        throw new Exception($result['message']);
+                    }
                 }
             } elseif ($statusChanged && $oldStatus === 'verified' && $newStatus === 'draft') {
                 $currentItems = $this->getItems($data['id']);
                 foreach ($currentItems as $item) {
-                    $updateStok = $this->pdo->prepare("UPDATE produk SET stok = stok - ? WHERE id = ?");
-                    $updateStok->execute([(int)($item['qty_ok'] ?? 0), $item['produk_id']]);
+                    $result = $stokTracking->reduceStok(
+                        $item['produk_id'],
+                        (int)($item['qty_ok'] ?? 0),
+                        'verifikasi_rollback',
+                        $data['id'],
+                        $data['pic'] ?? null,
+                        "Rollback penerimaan barang"
+                    );
+                    if (!$result['success']) {
+                        throw new Exception($result['message']);
+                    }
                 }
             }
             

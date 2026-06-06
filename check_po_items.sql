@@ -1,1 +1,0 @@
-DESCRIBE po_items;

@@ -187,9 +187,47 @@ class Pengeluaran {
     }
 
     public function delete($id) {
-        $this->pdo->beginTransaction();
-        $this->pdo->prepare("DELETE FROM pengeluaran_items WHERE pengeluaran_id=?")->execute([$id]);
-        $this->pdo->prepare("DELETE FROM pengeluaran WHERE id=?")->execute([$id]);
-        $this->pdo->commit();
+        try {
+            $this->pdo->beginTransaction();
+
+            // 1. Ambil info pengeluaran dan items sebelum dihapus
+            $pengeluaran = $this->getById($id);
+            $items = $this->getItems($id);
+
+            // 2. Jika pengeluaran sudah 'completed', kembalikan stoknya ke gudang dulu
+            if ($pengeluaran && $pengeluaran['status'] === 'completed') {
+                require_once __DIR__ . '/StokTracking.php';
+                $stokTracking = new StokTracking($this->pdo);
+
+                foreach ($items as $item) {
+                    $result = $stokTracking->addStok(
+                        $item['produk_id'],
+                        $item['qty'],
+                        'pengeluaran_cancel',
+                        $id,
+                        $pengeluaran['pic'] ?? null,
+                        "Pembatalan/Hapus pengeluaran - " . ($pengeluaran['nomor_pengeluaran'] ?? 'No Ref')
+                    );
+                    if (!$result['success']) {
+                        throw new Exception("Gagal mengembalikan stok: " . $result['message']);
+                    }
+                }
+            }
+
+            // 3. Hapus data anak (items)
+            $this->pdo->prepare("DELETE FROM pengeluaran_items WHERE pengeluaran_id=?")->execute([$id]);
+            
+            // 4. Hapus data induk (pengeluaran)
+            $this->pdo->prepare("DELETE FROM pengeluaran WHERE id=?")->execute([$id]);
+
+            $this->pdo->commit();
+            return true;
+
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            // Lempar errornya biar bisa ditangkap dan ditampilkan ke user
+            throw $e; 
+        }
     }
 }
+?>

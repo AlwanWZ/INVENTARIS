@@ -28,7 +28,8 @@ $nomor_sj       = $suratJalan['nomor_sj'] ?? '-';
 $tanggal_kirim  = $suratJalan['tanggal_kirim'] ?? date('Y-m-d');
 $driver         = $suratJalan['driver'] ?? '-';
 $kendaraan      = $suratJalan['kendaraan'] ?? '-';
-$customer       = $suratJalan['nama_customer'] ?? 'Customer';
+$customer       = $suratJalan['customer_nama'] ?? 'Customer';
+$perusahaan     = $suratJalan['perusahaan'] ?? '-';
 $alamat_kirim   = $suratJalan['alamat_kirim'] ?? '-';
 $catatan        = $suratJalan['catatan'] ?? 'Tidak ada catatan khusus.';
 $totalQty       = 0;
@@ -124,7 +125,11 @@ $totalQty       = 0;
     </tr>
     <tr>
       <td>Customer / Penerima</td><td>:</td>
-      <td><?= htmlspecialchars($customer) ?></td>
+      <td><strong><?= htmlspecialchars($customer) ?></strong></td>
+    </tr>
+    <tr>
+      <td>Perusahaan Penerima</td><td>:</td>
+      <td><?= htmlspecialchars($perusahaan) ?></td>
     </tr>
     <tr>
       <td>Alamat Kirim</td><td>:</td>

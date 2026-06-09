@@ -18,8 +18,8 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
         header('Content-Type: application/vnd.ms-excel');
         header('Content-Disposition: attachment; filename="laporan_persediaan.xls"');
         echo "<table border='1'>";
-        echo "<tr><th>No</th><th>Kode</th><th>Nama Produk</th><th>Kategori</th><th>Satuan</th><th>Stok</th><th>Stok Min</th><th>Status</th></tr>";
-        $sql = "SELECT p.id, p.kode, p.nama, p.satuan, p.stok, COALESCE(p.stok_min, 10) AS stok_min, k.nama_kategori FROM produk p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE 1=1";
+        echo "<tr><th>No</th><th>Kode</th><th>Nama Produk</th><th>Kategori</th><th>Satuan</th><th>Stok Fisik</th><th>Stok Dipesan</th><th>Stok Tersedia</th><th>Stok Min</th><th>Status</th></tr>";
+        $sql = "SELECT p.id, p.kode, p.nama, p.satuan, p.stok, p.stok_reserved, p.stok_available, COALESCE(p.stok_min, 10) AS stok_min, k.nama_kategori FROM produk p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE 1=1";
         $params = [];
         if ($search) {
                 $sql .= " AND (p.nama LIKE ? OR p.kode LIKE ?)";
@@ -35,14 +35,19 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
         $stmt->execute($params);
         $listProduk = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach ($listProduk as $i => $row) {
-                $status = ($row['stok'] <= 0) ? 'Habis' : (($row['stok'] <= $row['stok_min']) ? 'Kritis' : 'OK');
+                $stok_fisik = $row['stok'] ?? 0;
+                $stok_dipesan = $row['stok_reserved'] ?? 0;
+                $stok_tersedia = $row['stok_available'] ?? 0;
+                $status = ($stok_tersedia <= 0) ? 'Habis' : (($stok_tersedia <= $row['stok_min']) ? 'Kritis' : 'OK');
                 echo "<tr>";
                 echo "<td>".($i+1)."</td>";
                 echo "<td>".htmlspecialchars($row['kode'] ?? '')."</td>";
                 echo "<td>".htmlspecialchars($row['nama'] ?? '')."</td>";
                 echo "<td>".htmlspecialchars($row['nama_kategori'] ?? 'Tanpa Kategori')."</td>";
                 echo "<td>".htmlspecialchars($row['satuan'] ?? '')."</td>";
-                echo "<td>".number_format($row['stok'])."</td>";
+                echo "<td>".number_format($stok_fisik)."</td>";
+                echo "<td>".number_format($stok_dipesan)."</td>";
+                echo "<td>".number_format($stok_tersedia)."</td>";
                 echo "<td>".number_format($row['stok_min'])."</td>";
                 echo "<td>".$status."</td>";
                 echo "</tr>";
@@ -51,7 +56,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
         exit;
 }
 
-$sql = "SELECT p.id, p.kode, p.nama, p.satuan, p.stok, COALESCE(p.stok_min, 10) AS stok_min, k.nama_kategori FROM produk p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE 1=1";
+$sql = "SELECT p.id, p.kode, p.nama, p.satuan, p.stok, p.stok_reserved, p.stok_available, COALESCE(p.stok_min, 10) AS stok_min, k.nama_kategori FROM produk p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE 1=1";
 $params = [];
 if ($search) {
         $sql .= " AND (p.nama LIKE ? OR p.kode LIKE ?)";
@@ -74,21 +79,21 @@ $totalFG     = array_sum(array_column($listProduk, 'stok'));
 $kritisItems = array_filter($listProduk, fn($p) => $p['stok'] <= $p['stok_min']);
 $maxStok     = $totalProduk > 0 ? max(array_column($listProduk, 'stok')) : 1;
 
-// --- Chart Data: Stok per Kategori ---
+// --- Chart Data: Stok per Kategori (Stok Tersedia) ---
 $byKategori = [];
 foreach ($listProduk as $p) {
     $kat = $p['nama_kategori'] ?: 'Tanpa Kategori';
     if (!isset($byKategori[$kat])) $byKategori[$kat] = 0;
-    $byKategori[$kat] += $p['stok'];
+    $byKategori[$kat] += ($p['stok_available'] ?? 0);
 }
 arsort($byKategori);
 $chartKatLabels = json_encode(array_keys($byKategori));
 $chartKatData   = json_encode(array_values($byKategori));
 
-// --- Top 5 Produk (Stok Terbanyak) ---
+// --- Top 5 Produk (Stok Tersedia Terbanyak) ---
 $topProduk = $listProduk;
 usort($topProduk, function($a, $b) {
-    return $b['stok'] <=> $a['stok'];
+    return ($b['stok_available'] ?? 0) <=> ($a['stok_available'] ?? 0);
 });
 $top5Produk = array_slice($topProduk, 0, 5);
 
@@ -169,34 +174,7 @@ function levelCls($stok, $min) {
             </div>
         </div>
 
-        <div class="form-card filter-card">
-            <div class="form-card-header">
-                <h4><i class="bi bi-funnel"></i> Filter Laporan</h4>
-                <?php if ($hasFilter): ?>
-                <a href="index.php" class="btn-ghost-xs"><i class="bi bi-x"></i> Reset</a>
-                <?php endif; ?>
-            </div>
-            <form method="get" class="filter-form">
-                <div class="filter-group filter-search">
-                    <label class="form-label">Cari Nama / Kode</label>
-                    <input type="text" name="search" class="form-control" placeholder="Cari produk..." value="<?= htmlspecialchars($search ?? '') ?>">
-                </div>
-                <div class="filter-group">
-                    <label class="form-label">Kategori</label>
-                    <select name="kategori" class="form-control">
-                        <option value="">Semua Kategori</option>
-                        <?php foreach ($listKategori as $kat): ?>
-                        <option value="<?= $kat['id'] ?>" <?= $kategori == $kat['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($kat['nama_kategori'] ?? '') ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="filter-actions">
-                    <button type="submit" class="btn-primary"><i class="bi bi-funnel"></i> Terapkan</button>
-                </div>
-            </form>
-        </div>
+       
 
         <div class="section-label">Ringkasan</div>
         <div class="kpi-row">
@@ -242,10 +220,10 @@ function levelCls($stok, $min) {
                 </div>
                 <div class="top-customer-list">
                     <?php
-                    $maxValProduk = max(array_column($top5Produk, 'stok') ?: [1]);
+                    $maxValProduk = max(array_column($top5Produk, 'stok_available') ?: [1]);
                     $rank = 1;
                     foreach ($top5Produk as $prod):
-                        $val = $prod['stok'];
+                        $val = $prod['stok_available'] ?? 0;
                         $pct = $maxValProduk > 0 ? round($val / $maxValProduk * 100) : 0;
                     ?>
                     <div class="tc-item">
@@ -285,7 +263,9 @@ function levelCls($stok, $min) {
                             <th>Nama Produk</th>
                             <th>Kategori</th>
                             <th>Satuan</th>
-                            <th class="col-right">Stok</th>
+                            <th class="col-right">Fisik</th>
+                            <th class="col-right">Dipesan</th>
+                            <th class="col-right">Tersedia</th>
                             <th class="col-right">Stok Min</th>
                             <th class="col-center">Status</th>
                             <th class="col-center">Aksi</th>
@@ -294,15 +274,18 @@ function levelCls($stok, $min) {
                     <tbody>
                         <?php if (empty($listProduk)): ?>
                         <tr>
-                            <td colspan="10" class="empty-state">
+                            <td colspan="11" class="empty-state">
                                 <i class="bi bi-inboxes"></i>
                                 <span>Tidak ada data produk.</span>
                             </td>
                         </tr>
                         <?php else: ?>
                         <?php foreach ($listProduk as $i => $row):
-                            $cls  = levelCls($row['stok'], $row['stok_min']);
-                            $status = ($row['stok'] <= 0) ? 'Habis' : (($row['stok'] <= $row['stok_min']) ? 'Kritis' : 'OK');
+                            $stok_fisik = $row['stok'] ?? 0;
+                            $stok_dipesan = $row['stok_reserved'] ?? 0;
+                            $stok_tersedia = $row['stok_available'] ?? 0;
+                            $cls  = ($stok_tersedia <= 0) ? 'danger' : (($stok_tersedia <= $row['stok_min']) ? 'danger' : (($stok_tersedia <= $row['stok_min']*3) ? 'warn' : 'ok'));
+                            $status = ($stok_tersedia <= 0) ? 'Habis' : (($stok_tersedia <= $row['stok_min']) ? 'Kritis' : 'OK');
                         ?>
                         <tr class="<?= $cls === 'danger' ? 'row-kritis' : '' ?>">
                             <td class="text-muted"><?= $i + 1 ?></td>
@@ -313,7 +296,13 @@ function levelCls($stok, $min) {
                             </td>
                             <td class="text-muted"><?= htmlspecialchars($row['satuan'] ?? '') ?></td>
                             <td class="col-right">
-                                <?= number_format($row['stok']) ?>
+                                <?= number_format($stok_fisik) ?>
+                            </td>
+                            <td class="col-right" style="color: #dc3545;">
+                                <?= number_format($stok_dipesan) ?>
+                            </td>
+                            <td class="col-right" style="color: #10b981; font-weight: 600;">
+                                <?= number_format($stok_tersedia) ?>
                             </td>
                             <td class="col-right">
                                 <?= number_format($row['stok_min']) ?>

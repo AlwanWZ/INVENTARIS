@@ -15,19 +15,59 @@ if (!$po) {
     exit;
 }
 
-// Konfirmasi delete via POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (PO::delete($id)) {
+    try {
+        // 1. CEK DULU APAKAH SUDAH MASUK GUDANG (PENGELUARAN)
+        $stmtCekGudang = $pdo->prepare("
+            SELECT COUNT(p.id) 
+            FROM spk s 
+            JOIN pengeluaran p ON p.spk_id = s.id 
+            WHERE s.po_id = ?
+        ");
+        $stmtCekGudang->execute([$id]);
+        $sudahDiGudang = $stmtCekGudang->fetchColumn();
+
+        if ($sudahDiGudang > 0) {
+            // Kalau udah di gudang, tolak penghapusan!
+            echo "<script>
+                alert('GAGAL: Pesanan ini tidak bisa dihapus karena sudah diproses menjadi Pengeluaran oleh tim Gudang. Hubungi Gudang/Manager untuk membatalkan pengeluaran terlebih dahulu.');
+                window.location.href = '../index.php';
+            </script>";
+            exit;
+        }
+
+        // --- 2. JALANKAN UNRESERVE STOK DI LUAR TRANSAKSI DELETE ---
+        // Karena fungsi unreserveStok sudah memiliki beginTransaction & commit sendiri
+        PO::unreserveStok($id); 
+
+        // --- 3. BARU BUKA TRANSAKSI UNTUK HAPUS DATA ---
+        $pdo->beginTransaction(); 
+
+        // Hapus SPK terkait
+        $stmtSpk = $pdo->prepare("DELETE FROM spk WHERE po_id = ?");
+        $stmtSpk->execute([$id]);
+
+        // Hapus item-item PO
+        $stmtItems = $pdo->prepare("DELETE FROM po_items WHERE po_id = ?");
+        $stmtItems->execute([$id]);
+
+        // Hapus PO-nya
+        $stmtPo = $pdo->prepare("DELETE FROM po WHERE id = ?");
+        $stmtPo->execute([$id]);
+
+        $pdo->commit(); 
         header('Location: ../index.php?deleted=1');
         exit;
-    } else {
-        header('Location: ../index.php?deleted=0');
-        exit;
+
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        die("Gagal menghapus: " . $e->getMessage());
     }
 }
-
-// Tampilkan form konfirmasi
 ?>
+
 <!doctype html>
 <html lang="id" data-theme="light">
 <head>
@@ -47,7 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <main class="main">
   <div class="content">
     
-    <!-- TOPBAR -->
     <div class="topbar">
       <div class="top-left">
         <button class="menu-btn" id="menuBtn"><i class="bi bi-list"></i></button>
@@ -71,7 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </div>
 
-    <!-- PAGE HEADER -->
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-title-lg">Hapus Pesanan</h1>
@@ -80,10 +118,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <a href="../index.php" class="btn-ghost-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
     </div>
 
-    <!-- KONFIRMASI -->
     <div class="form-layout">
       <div class="form-main">
-        <!-- WARNING SECTION -->
         <div class="form-card" style="border: 2px solid #dc3545; background: #fff5f5;">
           <div class="form-card-header">
             <h4 style="color: #dc3545;"><i class="bi bi-exclamation-triangle-fill"></i> Konfirmasi Penghapusan Pesanan</h4>
@@ -92,7 +128,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Anda akan menghapus pesanan secara permanen. Tindakan ini <strong>TIDAK DAPAT DIBATALKAN</strong> dan akan menghapus semua data pesanan dari sistem.
           </p>
 
-          <!-- DETAIL SECTION -->
           <div style="background: white; padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid #ffe0e0;">
             <h5 style="margin-bottom: 1rem; color: #333; font-size: 0.95rem;">Data Pesanan yang akan Dihapus:</h5>
             <div class="detail-grid">
@@ -115,7 +150,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
           </div>
 
-          <!-- ACTION BUTTONS -->
           <div style="display: flex; gap: 1rem;">
             <form method="post" style="flex: 1;">
               <input type="hidden" name="id" value="<?= $id ?>">
@@ -131,7 +165,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
       <div class="form-side">
-        <!-- CHECKLIST BEFORE DELETE -->
         <div class="form-card" style="border-left: 4px solid #dc3545;">
           <div class="form-card-header">
             <h4><i class="bi bi-clipboard-check"></i> Sebelum Menghapus</h4>
@@ -143,7 +176,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </ul>
         </div>
 
-        <!-- WARNING CARD -->
         <div class="form-card" style="background: #fff3cd; border-left: 4px solid #ff9800;">
           <div class="form-card-header">
             <h4 style="color: #ff9800;"><i class="bi bi-exclamation-circle-fill"></i> Peringatan</h4>

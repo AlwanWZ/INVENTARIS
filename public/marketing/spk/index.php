@@ -194,6 +194,10 @@ function badgeLabel($s) {
             </tr>
             <?php else: ?>
             <?php foreach ($spks as $i => $spk):
+            $spk['nomor_spk'] = $spk['nomor_spk'] ?? '-';
+            $spk['nomor_po']  = $spk['nomor_po'] ?? '-';
+            $spk['perusahaan'] = $spk['perusahaan'] ?? '-';
+            $spk['pic_username'] = $spk['pic_username'] ?? '-';
               $isLate = $spk['status'] !== 'completed' && strtotime($spk['deadline']) < time();
               $prog   = (int)$spk['progress'];
             ?>

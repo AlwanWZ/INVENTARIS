@@ -60,15 +60,20 @@ class Produk {
         $stok_available = $stok;
         $stok_reserved = 0;
         
+        // FIX: Support both kategori_id (FK) dan kategori (string) untuk backward compatibility
+        $kategori_id = (int)($data['kategori_id'] ?? 0);
+        $kategori_str = $data['kategori'] ?? ($data['kategori_id'] ? null : 'PCB');
+        
         $sql = 'INSERT INTO produk 
-                (kode_produk, nama, kategori, stok, stok_reserved, stok_available, stok_min, satuan, harga, status, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
+                (kode_produk, nama, kategori_id, kategori, stok, stok_reserved, stok_available, stok_min, satuan, harga, status, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             $data['kode'] ?? '',
             $data['nama'] ?? '',
-            $data['kategori'] ?? 'PCB',
+            $kategori_id > 0 ? $kategori_id : null,
+            $kategori_str,
             $stok,
             $stok_reserved,
             $stok_available,

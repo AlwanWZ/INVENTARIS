@@ -16,9 +16,22 @@ if (!$item) {
 $po = PO::find($item['po_id']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (PO::deleteItem($item['id'])) {
+    try {
+        $pdo->beginTransaction();
+
+        // 1. Kembalikan stok (Unreserve item ini saja)
+        $stmtUpdateStok = $pdo->prepare("UPDATE produk SET stok_reserved = stok_reserved - ?, stok_available = stok_available + ? WHERE id = ?");
+        $stmtUpdateStok->execute([$item['qty'], $item['qty'], $item['produk_id']]);
+
+        // 2. Hapus item
+        PO::deleteItem($item['id']);
+
+        $pdo->commit();
         header('Location: detail.php?id=' . $item['po_id'] . '&item_deleted=1');
         exit;
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        die("Gagal menghapus item: " . $e->getMessage());
     }
 }
 ?>

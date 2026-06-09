@@ -147,17 +147,13 @@ $poList = array_map(function($po) {
             <?php else: ?>
 
               <?php foreach ($poList as $i => $po): 
-
-                $status = $po['status'];
-                $badge = match($status) {
-                  'approved' => 'ok',
-                  'completed' => 'ok',
-                  'rejected' => 'danger',
-                  'draft' => 'neutral',
-                  default => 'neutral'
-                };
+                  $status = $po['status'] ?? 'draft'; 
+                  $badge = match($status) {
+                      'approved', 'completed' => 'ok',
+                      'rejected'              => 'danger',
+                      default                 => 'neutral'
+                  };
               ?>
-
               <tr>
                 <td><?= $i + 1 ?></td>
 
@@ -189,7 +185,7 @@ $poList = array_map(function($po) {
 
                 <td>
                   <span class="badge <?= $badge ?>">
-                    <?= htmlspecialchars($status) ?>
+                    <?= htmlspecialchars((string)$status) ?>
                   </span>
                 </td>
 

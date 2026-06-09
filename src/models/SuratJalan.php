@@ -6,7 +6,7 @@ class SuratJalan {
     }
 
     public function getAll($filters = []) {
-        $sql = "SELECT sj.*, p.nomor_pengeluaran, c.nama AS customer_nama, u.username AS created_by_name
+        $sql = "SELECT sj.*, p.nomor_pengeluaran, c.nama AS customer_nama, c.perusahaan, u.username AS created_by_name
                 FROM surat_jalan sj
                 LEFT JOIN pengeluaran p ON sj.pengeluaran_id = p.id
                 LEFT JOIN customers c ON sj.customer_id = c.id
@@ -36,7 +36,7 @@ class SuratJalan {
     }
 
     public function getById($id) {
-        $sql = "SELECT sj.*, p.nomor_pengeluaran, c.nama AS customer_nama, u.username AS created_by_name
+        $sql = "SELECT sj.*, p.nomor_pengeluaran, c.nama AS customer_nama, c.perusahaan, u.username AS created_by_name
                 FROM surat_jalan sj
                 LEFT JOIN pengeluaran p ON sj.pengeluaran_id = p.id
                 LEFT JOIN customers c ON sj.customer_id = c.id

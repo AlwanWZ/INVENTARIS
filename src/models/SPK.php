@@ -6,13 +6,17 @@ class SPK {
     public static function all($filter = []) {
         global $pdo;
         
-        $sql = "SELECT spk.*, po.nomor_po, customers.perusahaan, users.username AS pic_username, spk.pic AS pic_id
-            FROM spk
-            LEFT JOIN po ON spk.po_id = po.id
-            LEFT JOIN customers ON po.customer_id = customers.id
-            LEFT JOIN users ON spk.pic = users.id
-            WHERE 1=1";
+        // 1. Kueri dasar dengan WHERE 1=1 agar filter mudah disambung
+        $sql = "SELECT spk.*, po.nomor_po, customers.perusahaan, users.username as pic_username 
+                FROM spk 
+                LEFT JOIN po ON spk.po_id = po.id 
+                LEFT JOIN customers ON po.customer_id = customers.id 
+                LEFT JOIN users ON spk.pic = users.id
+                WHERE 1=1";
+        
         $params = [];
+
+        // 2. Tambahkan filter jika ada
         if (!empty($filter['tanggal'])) {
             $sql .= " AND spk.tanggal = :tanggal";
             $params['tanggal'] = $filter['tanggal'];
@@ -25,7 +29,14 @@ class SPK {
             $sql .= " AND spk.pic = :pic";
             $params['pic'] = $filter['pic'];
         }
-        $sql .= " ORDER BY spk.tanggal DESC";
+        if (!empty($filter['search'])) {
+            $sql .= " AND (spk.nomor_spk LIKE :search OR po.nomor_po LIKE :search OR customers.perusahaan LIKE :search)";
+            $params['search'] = '%' . $filter['search'] . '%';
+        }
+
+        // 3. SATU KALI ORDER BY DI PALING BAWAH
+        $sql .= " ORDER BY spk.id DESC";
+
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -36,6 +47,8 @@ class SPK {
         
         $sql = "SELECT spk.*, 
                        po.nomor_po, 
+                       customers.id as customer_id,
+                       customers.nama as customer_nama, 
                        customers.perusahaan, 
                        users.username AS pic_username,
                        spk.pic AS pic_id
@@ -117,12 +130,46 @@ class SPK {
         ]);
     }
 
+    // --- FUNGSI DELETE YANG SUDAH DIPERBAIKI ---
     public static function delete($id) {
         global $pdo;
         
-        $stmt = $pdo->prepare("DELETE FROM spk WHERE id = ?");
-        $stmt->execute([$id]);
+        try {
+            $pdo->beginTransaction();
+
+            // 1. Cek apakah SPK sudah masuk tahap Pengeluaran di Gudang
+            $stmtCekPengeluaran = $pdo->prepare("SELECT COUNT(id) FROM pengeluaran WHERE spk_id = ?");
+            $stmtCekPengeluaran->execute([$id]);
+            if ($stmtCekPengeluaran->fetchColumn() > 0) {
+                throw new Exception("GAGAL: SPK tidak bisa dihapus karena sudah diproses menjadi Pengeluaran oleh Gudang.");
+            }
+
+            // 2. Cek apakah SPK masuk tahap Penerimaan (Opsional, buat jaga-jaga)
+            $stmtCekPenerimaan = $pdo->prepare("SELECT COUNT(id) FROM penerimaan WHERE spk_id = ?");
+            $stmtCekPenerimaan->execute([$id]);
+            if ($stmtCekPenerimaan->fetchColumn() > 0) {
+                throw new Exception("GAGAL: SPK tidak bisa dihapus karena terkait dengan data Penerimaan di Gudang.");
+            }
+
+            // 3. Hapus item-item SPK terlebih dahulu (Anak Data)
+            $stmtItems = $pdo->prepare("DELETE FROM spk_items WHERE spk_id = ?");
+            $stmtItems->execute([$id]);
+
+            // 4. Hapus data SPK (Induk Data)
+            $stmtSpk = $pdo->prepare("DELETE FROM spk WHERE id = ?");
+            $stmtSpk->execute([$id]);
+
+            $pdo->commit();
+        } catch (Exception $e) {
+            // Batalkan semua query jika ada yang gagal
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            // Lempar pesan error ke halaman delete.php
+            throw $e;
+        }
     }
+    // -------------------------------------------
 
     public static function getItems($spkId) {
         global $pdo;
@@ -214,3 +261,4 @@ class SPK {
         return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'pic_id');
     }
 }
+?>

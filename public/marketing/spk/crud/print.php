@@ -26,12 +26,13 @@ if ($spkId) {
 }
 
 // 3. Mapping data Induk ke Variabel Header SPK
-$nomor_spk  = $spk['nomor_spk'] ?? '-';
-$tanggal    = $spk['tanggal'] ?? date('Y-m-d');
-$deadline   = $spk['deadline'] ?? '-';
-$customer   = $spk['perusahaan'] ?? "Customer ID: " . ($spk['customer_id'] ?? '-'); 
-$pic        = $spk['pic_username'] ?? 'Tim Produksi'; 
-$catatan    = $spk['notes'] ?? 'Tidak ada catatan khusus.';
+$nomor_spk      = $spk['nomor_spk'] ?? '-';
+$tanggal        = $spk['tanggal'] ?? date('Y-m-d');
+$deadline       = $spk['deadline'] ?? '-';
+$customer_nama  = $spk['customer_nama'] ?? 'N/A';
+$perusahaan     = $spk['perusahaan'] ?? 'N/A'; 
+$pic            = $spk['pic_username'] ?? 'Tim Produksi'; 
+$catatan        = $spk['notes'] ?? 'Tidak ada catatan khusus.';
 ?>
 <!doctype html>
 <html lang="id">
@@ -122,8 +123,12 @@ $catatan    = $spk['notes'] ?? 'Tidak ada catatan khusus.';
       <td><?= htmlspecialchars($tanggal) ?></td>
     </tr>
     <tr>
-      <td>Untuk Customer</td><td>:</td>
-      <td><?= htmlspecialchars($customer) ?></td>
+      <td>Nama Pelanggan</td><td>:</td>
+      <td><strong><?= htmlspecialchars($customer_nama) ?></strong></td>
+    </tr>
+    <tr>
+      <td>Perusahaan Penerima</td><td>:</td>
+      <td><?= htmlspecialchars($perusahaan) ?></td>
     </tr>
     <tr>
       <td>Target Selesai (Deadline)</td><td>:</td>

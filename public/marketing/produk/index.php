@@ -136,7 +136,6 @@ $stokHabis = array_filter($produkList, function($p) {
         <div class="table-actions">
           <div class="search-wrap">
             <i class="bi bi-search"></i>
-            <input type="text" class="search-input" id="searchInput" placeholder="Cari produk atau kategori...">
           </div>
         </div>
       </div>
@@ -148,7 +147,6 @@ $stokHabis = array_filter($produkList, function($p) {
               <th>No</th>
               <th>Kode Produk</th>
               <th>Nama Produk</th>
-              <th>Kategori</th>
               <th>Stok (Bisa Dijual)</th>
               <th>Harga</th>
               <th>Status</th>
@@ -184,7 +182,7 @@ $stokHabis = array_filter($produkList, function($p) {
                 <td class="text-muted"><?= $i + 1 ?></td>
                 <td class="fw-mid"><?= htmlspecialchars($p['kode_produk'] ?? $p['kode'] ?? '-') ?></td>
                 <td style="font-weight: 500; color: #111827;"><?= htmlspecialchars($p['nama'] ?? '-') ?></td>
-                <td class="text-muted"><?= htmlspecialchars($p['kategori'] ?? '-') ?></td>
+            
                 
                 <td>
                   <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">

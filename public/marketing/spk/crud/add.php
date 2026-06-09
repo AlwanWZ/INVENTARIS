@@ -1,34 +1,68 @@
 <?php
 session_start();
 require_once '../../../../src/auth.php';
+require_once '../../../../src/config.php';
 require_once '../../../../src/models/SPK.php';
 require_once '../../../../src/models/PO.php';
 require_once '../../../../src/models/User.php';
 require_once '../../../../src/functions.php';
 
 $errors = [];
-$autoNomorSPK = generateAutoCode('SPK'); // Auto-generate SPK code
-$poList = PO::all();
+
+// --- LOGIKA NOMOR SPK OTOMATIS TAHUNAN ---
+$tahun = date('Y');
+$prefixSPK = "SPK-" . $tahun . "-";
+$stmtSPK = $pdo->prepare("SELECT nomor_spk FROM spk WHERE nomor_spk LIKE ? ORDER BY id DESC LIMIT 1");
+$stmtSPK->execute([$prefixSPK . '%']);
+$lastSPK = $stmtSPK->fetchColumn();
+
+if ($lastSPK) {
+    $urutan = (int)substr($lastSPK, strlen($prefixSPK)) + 1;
+    $autoNomorSPK = $prefixSPK . str_pad($urutan, 3, '0', STR_PAD_LEFT);
+} else {
+    $autoNomorSPK = $prefixSPK . '001';
+}
+// -----------------------------------------
+
+// --- KUERI PO + CUSTOMER (DI-JOIN MANUAL AGAR PASTI DAPAT PERUSAHAAN) ---
+$poList = $pdo->query("
+    SELECT po.id, po.nomor_po, 
+           COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan
+    FROM po
+    LEFT JOIN customers c ON po.customer_id = c.id
+    ORDER BY po.id DESC
+")->fetchAll(PDO::FETCH_ASSOC);
+
 $users  = User::getAll();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $po_id = !empty($_POST['po_id']) ? (int)$_POST['po_id'] : '';
+    $customer_id = null;
+    
+    if ($po_id) {
+        $stmtCust = $pdo->prepare("SELECT customer_id FROM po WHERE id = ?");
+        $stmtCust->execute([$po_id]);
+        $customer_id = $stmtCust->fetchColumn() ?: null;
+    }
+
     $data = [
-        'nomor_spk' => trim($_POST['nomor_spk'] ?? ''),
-        'po_id'     => !empty($_POST['po_id']) ? (int)$_POST['po_id'] : '',
-        'tanggal'   => $_POST['tanggal']   ?? '',
-        'deadline'  => $_POST['deadline']  ?? '',
-        'pic_id'    => !empty($_POST['pic_id']) ? (int)$_POST['pic_id'] : null,
-        'status'    => $_POST['status']    ?? 'draft',
-        'notes'     => trim($_POST['notes'] ?? ''),
-        'progress'  => (int)($_POST['progress'] ?? 0),
+        'nomor_spk'   => trim($_POST['nomor_spk'] ?? ''),
+        'po_id'       => $po_id,
+        'customer_id' => $customer_id,
+        'tanggal'     => $_POST['tanggal']   ?? '',
+        'deadline'    => $_POST['deadline']  ?? '',
+        'pic_id'      => !empty($_POST['pic_id']) ? (int)$_POST['pic_id'] : null,
+        'status'      => $_POST['status']    ?? 'draft',
+        'notes'       => trim($_POST['notes'] ?? ''),
+        'progress'    => (int)($_POST['progress'] ?? 0),
     ];
+    
     if (!$data['nomor_spk']) $errors[] = 'Nomor SPK wajib diisi.';
     if (!$data['po_id'])     $errors[] = 'PO wajib dipilih.';
     if (!$data['tanggal'])   $errors[] = 'Tanggal wajib diisi.';
     if (!$data['deadline'])  $errors[] = 'Deadline wajib diisi.';
     if (!$data['pic_id'])    $errors[] = 'PIC wajib dipilih.';
     
-    // Validate that selected pic_id exists in users table (refresh list to catch deleted users)
     if ($data['pic_id']) {
         $currentUsers = User::getAll();
         if (!array_filter($currentUsers, fn($u) => $u['id'] == $data['pic_id'])) {
@@ -102,7 +136,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <?php if ($errors): ?>
           <div class="alert-error">
             <i class="bi bi-exclamation-circle"></i>
-            <ul><?php foreach ($errors as $e): ?><li><?= htmlspecialchars($e) ?></li><?php endforeach; ?></ul>
+            <ul style="margin:0; padding-left:20px;">
+              <?php foreach ($errors as $e): ?>
+                <li><?= htmlspecialchars($e) ?></li>
+              <?php endforeach; ?>
+            </ul>
           </div>
           <?php endif; ?>
 
@@ -113,14 +151,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="text" name="nomor_spk" class="form-control"
                        value="<?= htmlspecialchars($_POST['nomor_spk'] ?? $autoNomorSPK) ?>" readonly>
               </div>
-              </div>
               <div class="form-group">
                 <label class="form-label">Pilih PO <span class="required">*</span></label>
                 <select name="po_id" class="form-control" required id="poSelect">
                   <option value="">-- Pilih PO --</option>
                   <?php foreach ($poList as $po): ?>
                     <option value="<?= $po['id'] ?>"
-                            data-customer="<?= htmlspecialchars($po['perusahaan'] ?? '') ?>"
+                            data-customer="<?= htmlspecialchars($po['perusahaan']) ?>"
                             <?= ($_POST['po_id'] ?? '') == $po['id'] ? 'selected' : '' ?>>
                       <?= htmlspecialchars($po['nomor_po']) ?>
                     </option>
@@ -133,8 +170,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <div class="form-group">
                 <label class="form-label">Customer (otomatis)</label>
                 <input type="text" id="customerField" class="form-control"
-                       value="<?= htmlspecialchars($_POST['perusahaan'] ?? '') ?>" readonly
-                       placeholder="Terisi otomatis dari PO">
+                       value="— Pilih PO Dahulu —" readonly
+                       placeholder="Terisi otomatis dari PO" style="background-color: #f8f9fa; cursor: not-allowed;">
               </div>
               <div class="form-group">
                 <label class="form-label">Tanggal <span class="required">*</span></label>
@@ -180,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="form-group">
               <label class="form-label">Notes</label>
-              <textarea name="notes" class="form-control form-textarea"
+              <textarea name="notes" class="form-control form-textarea" style="min-height: 80px; padding: 10px;"
                         placeholder="Catatan tambahan (opsional)"><?= htmlspecialchars($_POST['notes'] ?? '') ?></textarea>
             </div>
 
@@ -192,38 +229,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
       </div>
 
-      <div class="form-side">
-        <div class="form-card info-card">
-          <div class="form-card-header">
-            <h4><i class="bi bi-info-circle"></i> Panduan</h4>
-          </div>
-          <ul class="info-list">
-            <li><i class="bi bi-dot"></i> Pilih PO terlebih dahulu — customer akan terisi otomatis.</li>
-            <li><i class="bi bi-dot"></i> Gunakan format <strong>SPK-YYYY-NNN</strong> untuk konsistensi.</li>
-            <li><i class="bi bi-dot"></i> Progress diisi 0–100 (persen penyelesaian).</li>
-            <li><i class="bi bi-dot"></i> SPK <em>Cancelled</em> tidak akan tampil di monitoring aktif.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
   </div>
 </main>
 
-<?php include '../../../../templates/nav-script.php'; ?>
 <script>
-  document.getElementById('poSelect')?.addEventListener('change', function () {
-    const opt = this.options[this.selectedIndex];
-    document.getElementById('customerField').value = opt.getAttribute('data-customer') || '';
-  });
-  // Trigger saat ada POST error (set customer dari selected option)
-  window.addEventListener('DOMContentLoaded', () => {
-    const sel = document.getElementById('poSelect');
-    if (sel?.value) {
-      document.getElementById('customerField').value =
-        sel.options[sel.selectedIndex].getAttribute('data-customer') || '';
+document.addEventListener('DOMContentLoaded', function() {
+    const poSelect = document.getElementById('poSelect');
+    const customerField = document.getElementById('customerField');
+
+    function syncCustomer() {
+        if (poSelect.value === "") {
+            customerField.value = "— Pilih PO Dahulu —";
+        } else {
+            const selectedOpt = poSelect.options[poSelect.selectedIndex];
+            customerField.value = selectedOpt.getAttribute('data-customer');
+        }
     }
-  });
+
+    poSelect.addEventListener('change', syncCustomer);
+    // Initial call in case form has old values
+    syncCustomer();
+});
 </script>
 </body>
 </html>

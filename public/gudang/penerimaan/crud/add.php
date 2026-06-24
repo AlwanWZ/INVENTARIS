@@ -7,20 +7,20 @@ require_once '../../../../src/functions.php';
 
 // Ambil tahun saat ini
 $tahun = date('Y');
-$prefixRCV = "RCV-" . $tahun . "-";
+$prefixBM = "BM-" . $tahun . "-";
 
-// Cari kode penerimaan terakhir di tahun ini
+// Cari kode penerimaan terakhir dengan prefix BM di tahun ini
 $stmtKode = $pdo->prepare("SELECT nomor_penerimaan FROM penerimaan WHERE nomor_penerimaan LIKE ? ORDER BY id DESC LIMIT 1");
-$stmtKode->execute([$prefixRCV . '%']);
+$stmtKode->execute([$prefixBM . '%']);
 $lastKode = $stmtKode->fetchColumn();
 
 if ($lastKode) {
-    // Ambil 3 digit terakhir (setelah RCV-YYYY-), lalu tambah 1
-    $urutan = (int)substr($lastKode, strlen($prefixRCV)) + 1;
-    $autoNomorPenerimaan = $prefixRCV . str_pad($urutan, 3, '0', STR_PAD_LEFT);
+    // Ambil 3 digit terakhir (setelah BM-YYYY-), lalu tambah 1
+    $urutan = (int)substr($lastKode, strlen($prefixBM)) + 1;
+    $autoNomorPenerimaan = $prefixBM . str_pad($urutan, 3, '0', STR_PAD_LEFT);
 } else {
-    // Kalau belum ada penerimaan sama sekali di tahun ini
-    $autoNomorPenerimaan = $prefixRCV . '001';
+    // Kalau belum ada penerimaan berawalan BM sama sekali di tahun ini
+    $autoNomorPenerimaan = $prefixBM . '001';
 }
 
 $penerimaanModel = new Penerimaan($pdo);
@@ -353,9 +353,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="top-right">
         <button id="themeToggle" class="theme-btn"><i class="bi bi-moon"></i></button>
         <div class="user-box">
-          <div class="user-avatar"><?= strtoupper(substr($_SESSION['user']['username'], 0, 1)) ?></div>
+          <div class="user-avatar"><?= strtoupper(substr($_SESSION['user']['username'] ?? 'U', 0, 1)) ?></div>
           <div class="user-info">
-            <span class="user-name"><?= htmlspecialchars($_SESSION['user']['username']) ?></span>
+            <span class="user-name"><?= htmlspecialchars($_SESSION['user']['username'] ?? 'User') ?></span>
             <span class="user-role">Gudang</span>
           </div>
         </div>

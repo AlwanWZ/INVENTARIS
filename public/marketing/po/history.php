@@ -7,17 +7,25 @@ if (!isset($_SESSION['user']) || !in_array($_SESSION['user']['role'], ['marketin
 require_once '../../../src/auth.php';
 require_once '../../../src/models/PO.php';
 
-$poList = array_map(function($po) {
-    $po['total'] = PO::calculateTotal($po['id']); // Assuming calculateTotal is a method in the PO model
+// Mengambil semua PO dan memfilter hanya untuk status riwayat/final
+$allPos = PO::all();
+$historyList = array_filter($allPos, function($po) {
+    // Menampilkan pesanan yang sudah disetujui, selesai, atau ditolak
+    return in_array($po['status'], ['approved', 'completed', 'rejected']);
+});
+
+// Hitung total harga untuk masing-masing PO di dalam riwayat
+$historyList = array_map(function($po) {
+    $po['total'] = PO::calculateTotal($po['id']);
     return $po;
-}, PO::all());
+}, $historyList);
 ?>
 <!doctype html>
 <html lang="id" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pesanan PCB | InventorySys</title>
+  <title>Riwayat Pesanan PCB | InventorySys</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
@@ -39,7 +47,9 @@ $poList = array_map(function($po) {
         <div class="breadcrumb">
           <a href="/Inventaris/public/dashboard.php">Dashboard</a>
           <i class="bi bi-chevron-right"></i>
-          <span>Pesanan PCB</span>
+          <a href="index.php">Pesanan PCB</a>
+          <i class="bi bi-chevron-right"></i>
+          <span>Riwayat Pesanan</span>
         </div>
       </div>
 
@@ -62,96 +72,80 @@ $poList = array_map(function($po) {
 
     <div class="page-header">
       <div class="page-header-left">
-        <h1 class="page-title-lg">Pesanan PCB</h1>
-        <p class="page-subtitle">Kelola pesanan PCB dari customer - lihat detail items (qty, PCB, harga) dan track status produksi.</p>
+        <h1 class="page-title-lg">Riwayat Pesanan PCB</h1>
+        <p class="page-subtitle">Arsip log data pesanan yang telah diproses (Approved, Completed, dan Rejected) untuk pemantauan performa penjualan.</p>
       </div>
       
-      <div class="page-header-actions" style="display: flex; gap: 0.6rem; align-items: center;">
-        <a href="history.php" class="btn-history" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.2rem; background: #ffffff; border: 1px solid #dcdcdc; border-radius: 6px; color: #444444; font-size: 0.9rem; font-weight: 500; text-decoration: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;">
-          <i class="bi bi-clock-history"></i> Riwayat Pesanan
-        </a>
-        
-        <a href="crud/add.php" class="btn-primary">
-          <i class="bi bi-plus-lg"></i> Buat Pesanan Baru
+      <div class="page-header-actions">
+        <a href="index.php" class="btn-history" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.2rem; background: #ffffff; border: 1px solid #dcdcdc; border-radius: 6px; color: #444444; font-size: 0.9rem; font-weight: 500; text-decoration: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;">
+          <i class="bi bi-arrow-left"></i> Kembali ke Pesanan
         </a>
       </div>
     </div>
 
     <div class="stat-row">
       <div class="stat-pill">
-        <span class="stat-pill-label">Total Pesanan</span>
-        <span class="stat-pill-val"><?= count($poList) ?></span>
+        <span class="stat-pill-label">Total Arsip</span>
+        <span class="stat-pill-val"><?= count($historyList) ?></span>
       </div>
 
       <div class="stat-pill">
-        <span class="stat-pill-label">Draft</span>
-        <span class="stat-pill-val neutral">
-          <?= count(array_filter($poList, fn($p) => $p['status'] === 'draft')) ?>
-        </span>
-      </div>
-
-      <div class="stat-pill">
-        <span class="stat-pill-label">Pending</span>
-        <span class="stat-pill-val" style="color: #ff9800;">
-          <?= count(array_filter($poList, fn($p) => $p['status'] === 'pending_review')) ?>
-        </span>
-      </div>
-
-      <div class="stat-pill">
-        <span class="stat-pill-label">Approved</span>
-        <span class="stat-pill-val ok">
-          <?= count(array_filter($poList, fn($p) => $p['status'] === 'approved')) ?>
+        <span class="stat-pill-label">Completed</span>
+        <span class="stat-pill-val ok" style="color: #28a745;">
+          <?= count(array_filter($historyList, fn($p) => ($p['status'] === 'completed' || $p['status'] === 'approved'))) ?>
         </span>
       </div>
 
       <div class="stat-pill">
         <span class="stat-pill-label">Rejected</span>
         <span class="stat-pill-val danger">
-          <?= count(array_filter($poList, fn($p) => $p['status'] === 'rejected')) ?>
+          <?= count(array_filter($historyList, fn($p) => $p['status'] === 'rejected')) ?>
         </span>
       </div>
     </div>
 
     <div class="table-card">
       <div class="table-header">
-        <h4><i class="bi bi-file-earmark-text"></i> Daftar Pesanan PCB</h4>
+        <h4><i class="bi bi-clock-history"></i> Log Arsip Pesanan</h4>
 
         <div class="table-actions">
           <div class="search-wrap">
             <i class="bi bi-search"></i>
-            <input type="text" id="searchInput" placeholder="Cari nomor pesanan, customer, atau PCB...">
+            <input type="text" id="searchInput" placeholder="Cari riwayat nomor pesanan, customer...">
           </div>
         </div>
       </div>
 
       <div class="table-wrap">
-        <table id="poTable">
+        <table id="historyTable">
           <thead>
             <tr>
               <th>No</th>
               <th>Nomor Pesanan</th>
               <th>Customer</th>
               <th>Item Pesanan</th>
-              <th>Dibuat</th>
+              <th>Tanggal PO</th>
               <th>Pengiriman</th>
-              <th>Status</th>
-              <th>Total</th>
+              <th>Status Akhir</th>
+              <th>Total Pendapatan</th>
               <th>Aksi</th>
             </tr>
           </thead>
 
           <tbody>
-            <?php if (empty($poList)): ?>
+            <?php if (empty($historyList)): ?>
               <tr>
                 <td colspan="9" class="empty-state">
-                  <i class="bi bi-file-earmark"></i>
-                  <span>Belum ada pesanan PCB. <a href="crud/add.php" style="color: #007bff; font-weight: 500;">Buat Pesanan Baru</a></span>
+                  <i class="bi bi-archive"></i>
+                  <span>Tidak ada riwayat pesanan yang ditemukan.</span>
                 </td>
               </tr>
             <?php else: ?>
 
-              <?php foreach ($poList as $i => $po): 
-                  $status = $po['status'] ?? 'draft'; 
+              <?php 
+              $idx = 1;
+              foreach ($historyList as $po): 
+                  $status = $po['status'] ?? 'completed'; 
                   $badge = match($status) {
                       'approved', 'completed' => 'ok',
                       'rejected'              => 'danger',
@@ -159,7 +153,7 @@ $poList = array_map(function($po) {
                   };
               ?>
               <tr>
-                <td><?= $i + 1 ?></td>
+                <td><?= $idx++ ?></td>
 
                 <td class="fw-mid">
                   <?= htmlspecialchars($po['nomor_po']) ?>
@@ -174,7 +168,7 @@ $poList = array_map(function($po) {
                     <?php 
                       $items = PO::getItems($po['id']);
                       if (empty($items)) {
-                        echo '<em>Belum ada items</em>';
+                        echo '<em>Tidak ada data item</em>';
                       } else {
                         $itemNames = array_map(fn($it) => htmlspecialchars($it['nama_material'] ?? '') . ' (' . intval($it['qty']) . ' pcs)', $items);
                         echo implode(', ', $itemNames);
@@ -213,25 +207,13 @@ $poList = array_map(function($po) {
                 </td>
 
                 <td>
-                  <div class="action-btns" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-                    <a href="crud/detail.php?id=<?= $po['id'] ?>" class="btn-icon" title="Lihat detail & items" style="color: #007bff;">
-                      <i class="bi bi-eye"></i>
+                  <div class="action-btns">
+                    <a href="crud/detail.php?id=<?= $po['id'] ?>" class="btn-icon" title="Lihat detail & riwayat item" style="color: #007bff;">
+                      <i class="bi bi-eye"></i> Detail
                     </a>
-                    <a href="crud/edit.php?id=<?= $po['id'] ?>" class="btn-icon" title="Edit pesanan" style="color: #28a745;">
-                      <i class="bi bi-pencil"></i>
-                    </a>
-                    <a href="crud/print.php?id=<?= $po['id'] ?>" class="btn-icon" title="Cetak PO Masuk" style="color: #fd7e14;" target="_blank">
-                      <i class="bi bi-printer"></i>
-                    </a>
-                    <?php if ($po['status'] === 'draft'): ?>
-                    <a href="crud/delete.php?id=<?= $po['id'] ?>" class="btn-icon" title="Hapus" style="color: #dc3545;" onclick="return confirm('Hapus pesanan ini?')">
-                      <i class="bi bi-trash"></i>
-                    </a>
-                    <?php endif; ?>
                   </div>
                 </td>
               </tr>
-
               <?php endforeach; ?>
 
             <?php endif; ?>
@@ -240,7 +222,7 @@ $poList = array_map(function($po) {
       </div>
 
       <div class="table-footer">
-        Menampilkan <?= count($poList) ?> pesanan
+        Menampilkan <?= count($historyList) ?> arsip pesanan selesai
       </div>
     </div>
 
@@ -248,19 +230,23 @@ $poList = array_map(function($po) {
 </main>
 
 <script>
+// Realtime Search Filter
 document.getElementById('searchInput').addEventListener('input', function() {
   const q = this.value.toLowerCase();
 
-  document.querySelectorAll('#poTable tbody tr').forEach(row => {
-    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  document.querySelectorAll('#historyTable tbody tr').forEach(row => {
+    // Jangan sembunyikan jika baris data kosong
+    if(!row.querySelector('.empty-state')) {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    }
   });
 });
 
-// Efek Hover Efisiens untuk tombol riwayat pesanan (Menyesuaikan dengan tema)
-const btnHist = document.querySelector('.btn-history');
-if(btnHist) {
-  btnHist.addEventListener('mouseover', () => { btnHist.style.background = '#f5f5f5'; });
-  btnHist.addEventListener('mouseout', () => { btnHist.style.background = '#ffffff'; });
+// Hover Effect matching the standard theme
+const btnBack = document.querySelector('.btn-history');
+if(btnBack) {
+  btnBack.addEventListener('mouseover', () => { btnBack.style.background = '#f5f5f5'; });
+  btnBack.addEventListener('mouseout', () => { btnBack.style.background = '#ffffff'; });
 }
 </script>
 

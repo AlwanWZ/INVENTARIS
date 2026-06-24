@@ -43,9 +43,9 @@ $role = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
     <?php if ($role === 'manager'): ?>
     <div class="nav-group">
       <span class="nav-title">Menu Manager</span>
-      <a href="/Inventaris/public/marketing/po/index.php" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Order dari Customer</span></a>
+      <a href="/Inventaris/public/marketing/po/index.php" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Pesanan</span></a>
       <a href="/Inventaris/public/gudang/laporan_persediaan/index.php" class="nav-item"><i class="bi bi-clipboard-data"></i><span>Laporan Persediaan</span></a>
-      <a href="/Inventaris/public/marketing/laporan_order/index.php" class="nav-item"><i class="bi bi-journal-text"></i><span>Laporan Order</span></a>
+      <a href="/Inventaris/public/marketing/laporan_order/index.php" class="nav-item"><i class="bi bi-journal-text"></i><span>Laporan Pesanan</span></a>
     </div>
     <?php endif; ?>
 

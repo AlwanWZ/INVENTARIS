@@ -7,12 +7,10 @@
  * - stok: Stok fisik di gudang
  * - stok_reserved: Stok yang di-booking via PO (belum dikirim)
  * - stok_available: Stok yang bisa dijual (stok - stok_reserved)
- * 
- * Rule 1: Saat create produk baru:
- *   stok_available = stok, stok_reserved = 0
- * 
- * Rule 1b: Saat edit produk (ubah stok fisik):
- *   stok_available = stok - stok_reserved
+ * * Rule 1: Saat create produk baru:
+ * stok_available = stok, stok_reserved = 0
+ * * Rule 1b: Saat edit produk (ubah stok fisik):
+ * stok_available = stok - stok_reserved
  */
 
 require_once __DIR__ . '/../config.php';
@@ -20,14 +18,15 @@ require_once __DIR__ . '/../config.php';
 class Produk {
     
     /**
-     * Get all products
+     * Get all products (Hanya mengambil yang aktif)
      */
     public static function all() {
         global $pdo;
-        $stmt = $pdo->query('
+        $stmt = $pdo->query("
             SELECT * FROM produk 
+            WHERE status = 'aktif'
             ORDER BY id DESC
-        ');
+        ");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -47,8 +46,7 @@ class Produk {
 
     /**
      * Create new product
-     * 
-     * Rule 1: stok_available = stok (awal), stok_reserved = 0
+     * * Rule 1: stok_available = stok (awal), stok_reserved = 0
      */
     public static function create($data) {
         global $pdo;
@@ -83,33 +81,29 @@ class Produk {
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
         
         $stmt = $pdo->prepare($sql);
-       $stmt->execute([
-    $data['kode'] ?? '',
-    $data['nama'] ?? '',
-    $kategori_id > 0 ? $kategori_id : null,
-    $kategori_str,
-    $stok,
-    $stok_reserved,
-    $stok_available,
-    (int)($data['stok_min'] ?? 10),
-    $data['satuan'] ?? 'pcs',
-
-    (int)($data['harga'] ?? 0),        // HPP
-    (float)($data['harga_jual'] ?? 0), // Harga Jual
-
-    $data['status'] ?? 'aktif'
-]);
+        $stmt->execute([
+            $data['kode'] ?? '',
+            $data['nama'] ?? '',
+            $kategori_id > 0 ? $kategori_id : null,
+            $kategori_str,
+            $stok,
+            $stok_reserved,
+            $stok_available,
+            (int)($data['stok_min'] ?? 10),
+            $data['satuan'] ?? 'pcs',
+            (int)($data['harga'] ?? 0),        // HPP
+            (float)($data['harga_jual'] ?? 0), // Harga Jual
+            $data['status'] ?? 'aktif'
+        ]);
         
         return $pdo->lastInsertId();
     }
 
     /**
      * Update product
-     * 
-     * Rule 1b: Saat edit stok fisik, harus recalculate:
-     *   stok_available = stok - stok_reserved (jangan sampai negatif)
-     * 
-     * FORMULA UTAMA (WAJIB DIPATUHI):
+     * * Rule 1b: Saat edit stok fisik, harus recalculate:
+     * stok_available = stok - stok_reserved (jangan sampai negatif)
+     * * FORMULA UTAMA (WAJIB DIPATUHI):
      * stok_available = stok_fisik - stok_reserved
      */
     public static function update($id, $data) {
@@ -134,40 +128,39 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
             $stok_available = 0; // Safety: jangan sampai negatif
         }
         
-$sql = 'UPDATE produk SET
-        nama = ?,
-        stok = ?,
-        stok_available = ?,
-        stok_min = ?,
-        satuan = ?,
-        harga = ?,
-        harga_jual = ?,
-        status = ?,
-        updated_at = NOW()
-        WHERE id = ?';
+        $sql = 'UPDATE produk SET
+                nama = ?,
+                stok = ?,
+                stok_available = ?,
+                stok_min = ?,
+                satuan = ?,
+                harga = ?,
+                harga_jual = ?,
+                status = ?,
+                updated_at = NOW()
+                WHERE id = ?';
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
-    $data['nama'] ?? $produk['nama'],
-    $stok_baru,
-    $stok_available,
-    (int)($data['stok_min'] ?? $produk['stok_min'] ?? 10),
-    $data['satuan'] ?? $produk['satuan'] ?? 'pcs',
-
-    (int)($data['harga'] ?? $produk['harga'] ?? 0),
-    (float)($data['harga_jual'] ?? $produk['harga_jual'] ?? 0),
-
-    $data['status'] ?? $produk['status'] ?? 'aktif',
-    $id
-]);
+            $data['nama'] ?? $produk['nama'],
+            $stok_baru,
+            $stok_available,
+            (int)($data['stok_min'] ?? $produk['stok_min'] ?? 10),
+            $data['satuan'] ?? $produk['satuan'] ?? 'pcs',
+            (int)($data['harga'] ?? $produk['harga'] ?? 0),
+            (float)($data['harga_jual'] ?? $produk['harga_jual'] ?? 0),
+            $data['status'] ?? $produk['status'] ?? 'aktif',
+            $id
+        ]);
     }
 
     /**
-     * Delete product
+     * Delete product (SOFT DELETE)
+     * Mengubah status menjadi nonaktif agar riwayat log_stok tidak rusak
      */
     public static function delete($id) {
         global $pdo;
-        $stmt = $pdo->prepare('DELETE FROM produk WHERE id = ?');
+        $stmt = $pdo->prepare("UPDATE produk SET status = 'nonaktif', updated_at = NOW() WHERE id = ?");
         $stmt->execute([$id]);
     }
 

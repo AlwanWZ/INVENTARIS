@@ -15,5 +15,6 @@
             "username": "root",
             "password": ""
         }
-    ]
+    ],
+    "DockerRun.DisableDockerrc": true
 }

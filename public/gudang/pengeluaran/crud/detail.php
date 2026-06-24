@@ -94,25 +94,39 @@ $lowStok  = array_filter($items, fn($i) => ($i['stok'] - $i['qty']) < 10);
           </div>
           <div class="detail-grid">
             <div class="detail-item">
-              <span class="detail-label">Nomor Pengeluaran</span>
-              <span class="detail-val fw-mid"><?= htmlspecialchars($data['nomor_pengeluaran']) ?></span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Tanggal</span>
-              <span class="detail-val"><?= htmlspecialchars($data['tanggal']) ?></span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Nomor SPK</span>
-              <span class="detail-val"><?= htmlspecialchars($data['nomor_spk'] ?: '—') ?></span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">PIC</span>
-              <span class="detail-val"><?= htmlspecialchars($data['pic_name']) ?></span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Status</span>
-              <span class="detail-val"><span class="badge <?= badgeCls($data['status']) ?>"><?= badgeLabel($data['status']) ?></span></span>
-            </div>
+    <span class="detail-label">Nomor Surat Jalan</span>
+    <span class="detail-val fw-mid">
+        <?= htmlspecialchars($data['nomor_sj'] ?? '-') ?>
+    </span>
+</div>
+
+<div class="detail-item">
+    <span class="detail-label">Driver</span>
+    <span class="detail-val">
+        <?= htmlspecialchars($data['driver'] ?? '-') ?>
+    </span>
+</div>
+
+<div class="detail-item">
+    <span class="detail-label">Kendaraan</span>
+    <span class="detail-val">
+        <?= htmlspecialchars($data['kendaraan'] ?? '-') ?>
+    </span>
+</div>
+
+<div class="detail-item">
+    <span class="detail-label">Customer</span>
+    <span class="detail-val">
+        <?= htmlspecialchars($data['customer_nama'] ?? '-') ?>
+    </span>
+</div>
+
+<div class="detail-item detail-item-full">
+    <span class="detail-label">Alamat Kirim</span>
+    <span class="detail-val">
+        <?= htmlspecialchars($data['alamat_kirim'] ?? '-') ?>
+    </span>
+</div>
             <?php if (!empty($data['notes'])): ?>
             <div class="detail-item detail-item-full">
               <span class="detail-label">Catatan</span>
@@ -199,6 +213,14 @@ $lowStok  = array_filter($items, fn($i) => ($i['stok'] - $i['qty']) < 10);
           </div>
           <div class="action-body">
             <a href="edit.php?id=<?= $data['id'] ?>" class="btn-primary full"><i class="bi bi-pencil"></i> Edit Pengeluaran</a>
+             <?php if (!empty($data['sj_id'])): ?>
+              <a href="../../surat_jln/crud/print_list.php?id=<?= $data['sj_id'] ?>"
+                target="_blank"
+                class="btn-primary full">
+                  <i class="bi bi-printer-fill"></i>
+                  Cetak Surat Jalan
+              </a>
+              <?php endif; ?>
             <a href="../index.php" class="btn-outline full"><i class="bi bi-arrow-left"></i> Kembali ke Daftar</a>
           </div>
         </div>

@@ -129,7 +129,8 @@ $poList = array_map(function($po) {
               <th>Nomor Pesanan</th>
               <th>Customer</th>
               <th>Item Pesanan</th>
-              <th>Tanggal</th>
+              <th>Dibuat</th>
+              <th>Pengiriman</th>
               <th>Status</th>
               <th>Total</th>
               <th>Aksi</th>
@@ -139,7 +140,7 @@ $poList = array_map(function($po) {
           <tbody>
             <?php if (empty($poList)): ?>
               <tr>
-                <td colspan="8" class="empty-state">
+                <td colspan="9" class="empty-state">
                   <i class="bi bi-file-earmark"></i>
                   <span>Belum ada pesanan PCB. <a href="crud/add.php" style="color: #007bff; font-weight: 500;">Buat Pesanan Baru</a></span>
                 </td>
@@ -179,9 +180,24 @@ $poList = array_map(function($po) {
                   </small>
                 </td>
 
-                <td class="text-muted" style="font-size: 0.9rem;">
-                  <?= htmlspecialchars($po['tanggal']) ?>
-                </td>
+                <td class="text-muted" style="font-size: 0.85rem;">
+  <div><?= htmlspecialchars($po['tanggal']) ?></div>
+  <?php if (!empty($po['created_at'])): ?>
+    <small style="color: #aaa;">
+      <?= date('H:i', strtotime($po['created_at'])) ?> WIB
+    </small>
+  <?php endif; ?>
+</td>
+
+<td class="text-muted" style="font-size: 0.85rem;">
+  <?php if (!empty($po['tanggal_pengiriman'])): ?>
+    <span style="color: #007bff; font-weight: 500;">
+      <?= htmlspecialchars($po['tanggal_pengiriman']) ?>
+    </span>
+  <?php else: ?>
+    <span style="color: #ccc;">—</span>
+  <?php endif; ?>
+</td>
 
                 <td>
                   <span class="badge <?= $badge ?>">

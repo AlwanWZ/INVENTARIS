@@ -7,36 +7,101 @@ class Pengeluaran {
 
     // List pengeluaran dengan relasi
     public function getAll($search = '', $status = '') {
-        $sql = "SELECT p.*, spk.nomor_spk, u.username as pic_name
-                FROM pengeluaran p
-                LEFT JOIN spk ON p.spk_id = spk.id
-                LEFT JOIN users u ON p.pic = u.id
-                WHERE 1";
-        $params = [];
-        if ($search) {
-            $sql .= " AND (p.nomor_pengeluaran LIKE :search OR spk.nomor_spk LIKE :search)";
-            $params['search'] = "%$search%";
-        }
-        if ($status) {
-            $sql .= " AND p.status = :status";
-            $params['status'] = $status;
-        }
-        $sql .= " ORDER BY p.tanggal DESC, p.id DESC";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $sql = "
+        SELECT
+            p.*,
+            spk.nomor_spk,
+
+            sj.id AS sj_id,
+            sj.nomor_sj,
+            sj.driver,
+            sj.kendaraan,
+
+            COALESCE(
+                NULLIF(c.perusahaan,''),
+                NULLIF(c.nama,''),
+                '-'
+            ) AS customer_nama
+
+        FROM pengeluaran p
+
+        LEFT JOIN spk
+            ON p.spk_id = spk.id
+
+        LEFT JOIN surat_jalan sj
+            ON sj.pengeluaran_id = p.id
+
+        LEFT JOIN customers c
+            ON sj.customer_id = c.id
+
+        WHERE 1
+    ";
+
+    $params = [];
+
+    if ($search) {
+        $sql .= " AND (
+            p.nomor_pengeluaran LIKE :search
+            OR spk.nomor_spk LIKE :search
+            OR sj.nomor_sj LIKE :search
+            OR sj.driver LIKE :search
+        )";
+
+        $params['search'] = "%$search%";
     }
 
-    public function getById($id) {
-        $sql = "SELECT p.*, spk.nomor_spk, u.username as pic_name
-                FROM pengeluaran p
-                LEFT JOIN spk ON p.spk_id = spk.id
-                LEFT JOIN users u ON p.pic = u.id
-                WHERE p.id = ?";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($status) {
+        $sql .= " AND p.status = :status";
+        $params['status'] = $status;
     }
+
+    $sql .= " ORDER BY p.id DESC";
+
+    $stmt = $this->pdo->prepare($sql);
+    $stmt->execute($params);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+  public function getById($id) {
+    $sql = "
+        SELECT
+            p.*,
+            spk.nomor_spk,
+
+            sj.id AS sj_id,
+            sj.nomor_sj,
+            sj.driver,
+            sj.kendaraan,
+            sj.tanggal_kirim,
+            sj.alamat_kirim,
+            sj.status AS status_sj,
+
+            COALESCE(
+                NULLIF(c.perusahaan,''),
+                NULLIF(c.nama,''),
+                '-'
+            ) AS customer_nama
+
+        FROM pengeluaran p
+
+        LEFT JOIN spk
+            ON p.spk_id = spk.id
+
+        LEFT JOIN surat_jalan sj
+            ON sj.pengeluaran_id = p.id
+
+        LEFT JOIN customers c
+            ON sj.customer_id = c.id
+
+        WHERE p.id = ?
+    ";
+
+    $stmt = $this->pdo->prepare($sql);
+    $stmt->execute([$id]);
+
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
 
     public function getItems($pengeluaran_id) {
         $sql = "SELECT pi.*, pr.nama, pr.stok
@@ -186,48 +251,76 @@ class Pengeluaran {
         }
     }
 
-    public function delete($id) {
-        try {
-            $this->pdo->beginTransaction();
+   public function delete($id) {
+    try {
+        $this->pdo->beginTransaction();
 
-            // 1. Ambil info pengeluaran dan items sebelum dihapus
-            $pengeluaran = $this->getById($id);
-            $items = $this->getItems($id);
+        // Ambil data pengeluaran
+        $pengeluaran = $this->getById($id);
+        $items = $this->getItems($id);
 
-            // 2. Jika pengeluaran sudah 'completed', kembalikan stoknya ke gudang dulu
-            if ($pengeluaran && $pengeluaran['status'] === 'completed') {
-                require_once __DIR__ . '/StokTracking.php';
-                $stokTracking = new StokTracking($this->pdo);
+        // Kembalikan stok jika status completed
+        if ($pengeluaran && $pengeluaran['status'] === 'completed') {
 
-                foreach ($items as $item) {
-                    $result = $stokTracking->addStok(
-                        $item['produk_id'],
-                        $item['qty'],
-                        'pengeluaran_cancel',
-                        $id,
-                        $pengeluaran['pic'] ?? null,
-                        "Pembatalan/Hapus pengeluaran - " . ($pengeluaran['nomor_pengeluaran'] ?? 'No Ref')
-                    );
-                    if (!$result['success']) {
-                        throw new Exception("Gagal mengembalikan stok: " . $result['message']);
-                    }
+            require_once __DIR__ . '/StokTracking.php';
+            $stokTracking = new StokTracking($this->pdo);
+
+            foreach ($items as $item) {
+
+                $result = $stokTracking->addStok(
+                    $item['produk_id'],
+                    $item['qty'],
+                    'pengeluaran_cancel',
+                    $id,
+                    null,
+                    'Pembatalan Pengeluaran - ' . ($pengeluaran['nomor_pengeluaran'] ?? '-')
+                );
+
+                if (!$result['success']) {
+                    throw new Exception($result['message']);
                 }
             }
-
-            // 3. Hapus data anak (items)
-            $this->pdo->prepare("DELETE FROM pengeluaran_items WHERE pengeluaran_id=?")->execute([$id]);
-            
-            // 4. Hapus data induk (pengeluaran)
-            $this->pdo->prepare("DELETE FROM pengeluaran WHERE id=?")->execute([$id]);
-
-            $this->pdo->commit();
-            return true;
-
-        } catch (Exception $e) {
-            $this->pdo->rollBack();
-            // Lempar errornya biar bisa ditangkap dan ditampilkan ke user
-            throw $e; 
         }
+
+        // Hapus surat jalan items
+        $stmt = $this->pdo->prepare("
+            DELETE sji
+            FROM surat_jalan_items sji
+            INNER JOIN surat_jalan sj
+                ON sj.id = sji.surat_jalan_id
+            WHERE sj.pengeluaran_id = ?
+        ");
+        $stmt->execute([$id]);
+
+        // Hapus surat jalan
+        $stmt = $this->pdo->prepare("
+            DELETE FROM surat_jalan
+            WHERE pengeluaran_id = ?
+        ");
+        $stmt->execute([$id]);
+
+        // Hapus pengeluaran items
+        $stmt = $this->pdo->prepare("
+            DELETE FROM pengeluaran_items
+            WHERE pengeluaran_id = ?
+        ");
+        $stmt->execute([$id]);
+
+        // Hapus pengeluaran
+        $stmt = $this->pdo->prepare("
+            DELETE FROM pengeluaran
+            WHERE id = ?
+        ");
+        $stmt->execute([$id]);
+
+        $this->pdo->commit();
+        return true;
+
+    } catch (Exception $e) {
+
+        $this->pdo->rollBack();
+        throw $e;
     }
+}
 }
 ?>

@@ -2,7 +2,6 @@
 $role = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
 ?>
 
-
 <aside class="nav" id="sidebar">
 
   <div class="nav-header">
@@ -20,49 +19,42 @@ $role = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
       <i class="bi bi-grid-1x2"></i><span>Dashboard</span>
     </a>
 
+    <?php if ($role === 'marketing'): ?>
     <div class="nav-group">
-      <span class="nav-title">Marketing</span>
-      <button class="dropdown-btn">
-        <span class="dd-left"><i class="bi bi-briefcase"></i> Menu Marketing</span>
-        <i class="bi bi-chevron-right arrow"></i>
-      </button>
-      <div class="dropdown">
-        <a href="/Inventaris/public/marketing/produk/index.php"><i class="bi bi-box"></i> Produk</a>
-        <a href="/Inventaris/public/marketing/customer/index.php"><i class="bi bi-people"></i> Customer</a>
-        <a href="/Inventaris/public/marketing/po/index.php"><i class="bi bi-file-earmark-text"></i>Pesanan PCB</a>
-        <a href="/Inventaris/public/marketing/laporan_order/index.php"><i class="bi bi-journal-text"></i> Laporan Pesanan PCB</a>
-        <a href="/Inventaris/public/marketing/user/index.php"><i class="bi bi-person-lines-fill"></i> Users</a>
-        <a href="/Inventaris/public/marketing/spk/index.php"><i class="bi bi-file-earmark-check"></i> SPK</a>
-      </div>
+      <span class="nav-title">Menu Marketing</span>
+      <a href="/Inventaris/public/marketing/produk/index.php" class="nav-item"><i class="bi bi-box"></i><span>Barang</span></a>
+      <a href="/Inventaris/public/marketing/customer/index.php" class="nav-item"><i class="bi bi-people"></i><span>Customer</span></a>
+      <a href="/Inventaris/public/marketing/po/index.php" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Pesanan</span></a>
+      <a href="/Inventaris/public/marketing/laporan_order/index.php" class="nav-item"><i class="bi bi-journal-text"></i><span>Laporan Pesanan</span></a>
+      <a href="/Inventaris/public/marketing/user/index.php" class="nav-item"><i class="bi bi-person-lines-fill"></i><span>User</span></a>
+      <a href="/Inventaris/public/marketing/spk/index.php" class="nav-item"><i class="bi bi-file-earmark-check"></i><span>SPK</span></a>
     </div>
+    <?php endif; ?>
 
+    <?php if ($role === 'gudang'): ?>
     <div class="nav-group">
-      <span class="nav-title">Gudang</span>
-      <button class="dropdown-btn">
-        <span class="dd-left"><i class="bi bi-box-seam"></i> Menu Warehouse</span>
-        <i class="bi bi-chevron-right arrow"></i>
-      </button>
-      <div class="dropdown">
-        <a href="/Inventaris/public/gudang/penerimaan/index.php"><i class="bi bi-box-arrow-in-down"></i> Penerimaan Barang</a>
-        <a href="/Inventaris/public/gudang/verif/finish-good/index.php"><i class="bi bi-check-circle"></i> Finish Good</a>
-        <a href="/Inventaris/public/gudang/stok/index.php"><i class="bi bi-archive"></i> Stok Barang</a>
-        <a href="/Inventaris/public/gudang/pengeluaran/index.php"><i class="bi bi-box-arrow-up"></i> Pengeluaran Barang</a>
-        <a href="/Inventaris/public/gudang/surat_jln/index.php"><i class="bi bi-truck"></i> Surat Jalan</a>
-        <a href="/Inventaris/public/gudang/laporan_persediaan/index.php"><i class="bi bi-clipboard-data"></i> Laporan Persediaan</a>
-      </div>
+      <span class="nav-title">Menu Gudang</span>
+      <a href="/Inventaris/public/gudang/verif/finish-good/index.php" class="nav-item"><i class="bi bi-check-circle"></i><span>Finish Good</span></a>
+      <a href="/Inventaris/public/gudang/pengeluaran/index.php" class="nav-item"><i class="bi bi-box-arrow-up"></i><span>Pengeluaran Barang</span></a>
+      <a href="/Inventaris/public/gudang/laporan_persediaan/index.php" class="nav-item"><i class="bi bi-clipboard-data"></i><span>Laporan Persediaan</span></a>
     </div>
+    <?php endif; ?>
 
+    <?php if ($role === 'manager'): ?>
     <div class="nav-group">
-      <span class="nav-title">Manager</span>
-      <button class="dropdown-btn">
-        <span class="dd-left"><i class="bi bi-bar-chart"></i> Menu Manager</span>
-        <i class="bi bi-chevron-right arrow"></i>
-      </button>
-      <div class="dropdown">
-        <a href="/Inventaris/public/marketing/po/index.php"><i class="bi bi-file-earmark-text"></i> Order dari Customer</a>
-        <a href="/Inventaris/public/gudang/laporan_persediaan/index.php"><i class="bi bi-clipboard-data"></i> Laporan Persediaan</a>
-        <a href="/Inventaris/public/marketing/laporan_order/index.php"><i class="bi bi-journal-text"></i> Laporan Order</a>
-      </div>
+      <span class="nav-title">Menu Manager</span>
+      <a href="/Inventaris/public/marketing/po/index.php" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Order dari Customer</span></a>
+      <a href="/Inventaris/public/gudang/laporan_persediaan/index.php" class="nav-item"><i class="bi bi-clipboard-data"></i><span>Laporan Persediaan</span></a>
+      <a href="/Inventaris/public/marketing/laporan_order/index.php" class="nav-item"><i class="bi bi-journal-text"></i><span>Laporan Order</span></a>
+    </div>
+    <?php endif; ?>
+
+    <!-- 🚀 MENU UNIVERSAL (SEMUA ROLE BISA MENGAKSES INI) -->
+    <div class="nav-group" style="margin-top: 25px; padding-top: 12px; border-top: 1px solid var(--border);">
+      <span class="nav-title">Akun Saya</span>
+      <a href="/Inventaris/public/ganti_sandi.php" class="nav-item <?= basename($_SERVER['PHP_SELF']) === 'ganti_sandi.php' ? 'active' : '' ?>">
+        <i class="bi bi-shield-lock"></i><span>Ganti Sandi</span>
+      </a>
     </div>
 
   </div>
@@ -128,12 +120,6 @@ $role = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
       font-size: 22px;
       padding: 4px;
     }
-    .nav-group .dropdown {
-      font-size: 14px;
-    }
-    .nav-group .dropdown a {
-      padding: 8px 12px;
-    }
   }
   @media (max-width: 480px) {
     .nav {
@@ -146,14 +132,10 @@ $role = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
     .nav-menu {
       font-size: 13px;
     }
-    .nav-group .dropdown a {
-      font-size: 13px;
-      padding: 6px 8px;
-    }
   }
 </style>
+
 <script>
-  // ── Theme ─────────────────────────────────────────────────
   const html      = document.documentElement;
   const themeBtn  = document.getElementById('themeToggle');
   const themeIcon = themeBtn?.querySelector('i');
@@ -165,20 +147,19 @@ $role = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
   applyTheme(localStorage.getItem('theme') === 'dark');
   themeBtn?.addEventListener('click', () => applyTheme(html.getAttribute('data-theme') !== 'dark'));
  
-  // ── Sidebar mobile ────────────────────────────────────────
   const sidebar  = document.getElementById('sidebar');
   const overlay  = document.getElementById('sidebarOverlay');
-  // Burger menu: support dynamically loaded buttons
+  
   function openSidebar() {
     sidebar?.classList.add('open');
     overlay?.classList.add('show');
   }
-  // Attach event for existing menu-btn
+  
   document.querySelectorAll('.menu-btn').forEach(btn => {
-    btn.removeEventListener('click', openSidebar); // Remove old if any
+    btn.removeEventListener('click', openSidebar);
     btn.addEventListener('click', openSidebar);
   });
-  // Support dynamically added menu-btn
+  
   const observer = new MutationObserver(() => {
     document.querySelectorAll('.menu-btn').forEach(btn => {
       if (!btn.hasAttribute('data-burger-init')) {
@@ -188,63 +169,18 @@ $role = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
     });
   });
   observer.observe(document.body, { childList: true, subtree: true });
+  
   const closeBtn = document.getElementById('sidebarClose');
   const closeNav = () => { sidebar?.classList.remove('open'); overlay?.classList.remove('show'); };
   closeBtn?.addEventListener('click', closeNav);
   overlay?.addEventListener('click', closeNav);
  
-  // ── Dropdown ─────────────────────────────────────────────
-  document.querySelectorAll('.dropdown-btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      // Untuk nested dropdown (Verifikasi Barang), cegah bubbling ke parent
-      if (btn.classList.contains('verif-btn')) e.stopPropagation();
-      const dd   = btn.nextElementSibling;
-      const open = dd?.classList.contains('open');
-      // Jika nested, hanya toggle dropdown di level ini
-      if (btn.classList.contains('verif-btn')) {
-        dd?.classList.toggle('open');
-        btn.classList.toggle('open');
-        return;
-      }
-      // Untuk dropdown utama, tutup semua kecuali yang diklik
-      // HANYA tutup dropdown di level utama (nav-group > .dropdown), jangan nested
-      const parentNavGroup = btn.closest('.nav-group');
-      parentNavGroup?.querySelectorAll(':scope > .dropdown').forEach(d => d.classList.remove('open'));
-      parentNavGroup?.querySelectorAll(':scope > .dropdown-btn').forEach(b => b.classList.remove('open'));
-      if (!open) { dd?.classList.add('open'); btn.classList.add('open'); }
-    });
-  });
- 
-  // ── Auto-open dropdown & highlight active link ─────────────────────
-  // Ambil URL sekarang, buang query parameter (kayak ?id=1) biar menu tetep aktif pas di halaman detail/edit
   const currentUrl = window.location.href.split('?')[0]; 
 
-  let dropdownOpened = false;
-  document.querySelectorAll('.dropdown a').forEach(a => {
-    if (dropdownOpened) return; // Jika sudah ada yang dibuka, skip sisanya
+  document.querySelectorAll('.nav-menu a').forEach(a => {
     const linkUrl = a.href.split('?')[0];
     if (currentUrl === linkUrl || currentUrl.startsWith(linkUrl.replace('/index.php', ''))) {
       a.classList.add('active');
-
-      // Temukan nav-group terdekat (Marketing, Gudang, Manager)
-      const navGroup = a.closest('.nav-group');
-      // Tutup semua dropdown utama dulu
-      document.querySelectorAll('.nav-group > .dropdown').forEach(d => d.classList.remove('open'));
-      document.querySelectorAll('.nav-group > .dropdown-btn').forEach(b => b.classList.remove('open'));
-
-      // Buka hanya dropdown di grup yang sesuai
-      if (navGroup) {
-        let parentDropdown = a.closest('.dropdown');
-        while (parentDropdown && navGroup.contains(parentDropdown)) {
-          parentDropdown.classList.add('open');
-          const parentBtn = parentDropdown.previousElementSibling;
-          if (parentBtn && parentBtn.classList.contains('dropdown-btn')) {
-            parentBtn.classList.add('open');
-          }
-          parentDropdown = parentDropdown.parentElement.closest('.dropdown');
-        }
-        dropdownOpened = true; // Set flag agar tidak buka di grup lain
-      }
     }
   });
 </script>

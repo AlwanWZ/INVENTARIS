@@ -65,23 +65,40 @@ class Produk {
         $kategori_str = $data['kategori'] ?? ($data['kategori_id'] ? null : 'PCB');
         
         $sql = 'INSERT INTO produk 
-                (kode_produk, nama, kategori_id, kategori, stok, stok_reserved, stok_available, stok_min, satuan, harga, status, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
+(
+    kode_produk,
+    nama,
+    kategori_id,
+    kategori,
+    stok,
+    stok_reserved,
+    stok_available,
+    stok_min,
+    satuan,
+    harga,
+    harga_jual,
+    status,
+    created_at
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
         
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            $data['kode'] ?? '',
-            $data['nama'] ?? '',
-            $kategori_id > 0 ? $kategori_id : null,
-            $kategori_str,
-            $stok,
-            $stok_reserved,
-            $stok_available,
-            (int)($data['stok_min'] ?? 10),
-            $data['satuan'] ?? 'pcs',
-            (int)($data['harga'] ?? 0),
-            $data['status'] ?? 'aktif'
-        ]);
+       $stmt->execute([
+    $data['kode'] ?? '',
+    $data['nama'] ?? '',
+    $kategori_id > 0 ? $kategori_id : null,
+    $kategori_str,
+    $stok,
+    $stok_reserved,
+    $stok_available,
+    (int)($data['stok_min'] ?? 10),
+    $data['satuan'] ?? 'pcs',
+
+    (int)($data['harga'] ?? 0),        // HPP
+    (float)($data['harga_jual'] ?? 0), // Harga Jual
+
+    $data['status'] ?? 'aktif'
+]);
         
         return $pdo->lastInsertId();
     }
@@ -117,28 +134,32 @@ class Produk {
             $stok_available = 0; // Safety: jangan sampai negatif
         }
         
-        $sql = 'UPDATE produk SET 
-                nama = ?, 
-                stok = ?, 
-                stok_available = ?, 
-                stok_min = ?, 
-                satuan = ?, 
-                harga = ?, 
-                status = ?,
-                updated_at = NOW()
-                WHERE id = ?';
+$sql = 'UPDATE produk SET
+        nama = ?,
+        stok = ?,
+        stok_available = ?,
+        stok_min = ?,
+        satuan = ?,
+        harga = ?,
+        harga_jual = ?,
+        status = ?,
+        updated_at = NOW()
+        WHERE id = ?';
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
-            $data['nama'] ?? $produk['nama'],
-            $stok_baru,
-            $stok_available,  // HASIL PERHITUNGAN, bukan dari input
-            (int)($data['stok_min'] ?? $produk['stok_min'] ?? 10),
-            $data['satuan'] ?? $produk['satuan'] ?? 'pcs',
-            (int)($data['harga'] ?? $produk['harga'] ?? 0),
-            $data['status'] ?? $produk['status'] ?? 'aktif',
-            $id
-        ]);
+    $data['nama'] ?? $produk['nama'],
+    $stok_baru,
+    $stok_available,
+    (int)($data['stok_min'] ?? $produk['stok_min'] ?? 10),
+    $data['satuan'] ?? $produk['satuan'] ?? 'pcs',
+
+    (int)($data['harga'] ?? $produk['harga'] ?? 0),
+    (float)($data['harga_jual'] ?? $produk['harga_jual'] ?? 0),
+
+    $data['status'] ?? $produk['status'] ?? 'aktif',
+    $id
+]);
     }
 
     /**

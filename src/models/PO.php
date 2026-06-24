@@ -1,12 +1,11 @@
 <?php
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/StokLog.php'; // Panggil CCTV Mutasi
+require_once __DIR__ . '/StokLog.php';
 
 class PO {
 
     public static function all() {
         global $pdo;
-        // MENGUBAH ORDER BY menjadi po.id DESC agar yang terbaru selalu di atas
         $sql = "SELECT po.*, customers.perusahaan 
                 FROM po 
                 LEFT JOIN customers ON po.customer_id = customers.id 
@@ -17,7 +16,10 @@ class PO {
 
     public static function find($id) {
         global $pdo;
-        $sql = "SELECT po.*, customers.perusahaan FROM po LEFT JOIN customers ON po.customer_id = customers.id WHERE po.id = ?";
+        $sql = "SELECT po.*, customers.perusahaan 
+                FROM po 
+                LEFT JOIN customers ON po.customer_id = customers.id 
+                WHERE po.id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -25,9 +27,17 @@ class PO {
 
     public static function create($data) {
         global $pdo;
-        $sql = "INSERT INTO po (nomor_po, tanggal, customer_id, status, notes) VALUES (?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO po (nomor_po, tanggal, tanggal_pengiriman, customer_id, status, notes, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, NOW())";
         $stmt = $pdo->prepare($sql);
-        return $stmt->execute([$data['nomor_po'], $data['tanggal'], $data['customer_id'], $data['status'], $data['notes'] ?? null]);
+        return $stmt->execute([
+            $data['nomor_po'],
+            $data['tanggal'],
+            $data['tanggal_pengiriman'] ?? null,
+            $data['customer_id'],
+            $data['status'],
+            $data['notes'] ?? null
+        ]);
     }
 
     public static function createWithItems($dataPO, $dataItems = []) {
@@ -36,17 +46,27 @@ class PO {
         try {
             $pdo->beginTransaction();
 
-            $sqlPO = "INSERT INTO po (nomor_po, tanggal, customer_id, status, notes, created_at) VALUES (?, ?, ?, ?, ?, NOW())";
+            $sqlPO = "INSERT INTO po (nomor_po, tanggal, tanggal_pengiriman, customer_id, status, notes, created_at) 
+                      VALUES (?, ?, ?, ?, ?, ?, NOW())";
             $stmtPO = $pdo->prepare($sqlPO);
-            $stmtPO->execute([$dataPO['nomor_po'], $dataPO['tanggal'], $dataPO['customer_id'], $dataPO['status'] ?? 'draft', $dataPO['notes'] ?? null]);
+            $stmtPO->execute([
+                $dataPO['nomor_po'],
+                $dataPO['tanggal'],
+                $dataPO['tanggal_pengiriman'] ?? null,
+                $dataPO['customer_id'],
+                $dataPO['status'] ?? 'draft',
+                $dataPO['notes'] ?? null
+            ]);
             $poId = $pdo->lastInsertId();
 
             if (!empty($dataItems) && is_array($dataItems)) {
-                $sqlItem = "INSERT INTO po_items (po_id, produk_id, kode_material, nama_material, uom, qty, qty_available, qty_pending, harga_satuan, diskon, amount, keterangan, is_reserved, created_at) 
+                $sqlItem = "INSERT INTO po_items 
+                            (po_id, produk_id, kode_material, nama_material, uom, qty, qty_available, qty_pending, 
+                             harga_satuan, diskon, amount, keterangan, is_reserved, created_at) 
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'yes', NOW())";
                 $stmtItem = $pdo->prepare($sqlItem);
-                
-                $stmtCekStok = $pdo->prepare("SELECT stok, stok_reserved, stok_available FROM produk WHERE id = ?");
+
+                $stmtCekStok    = $pdo->prepare("SELECT stok, stok_reserved, stok_available FROM produk WHERE id = ?");
                 $stmtUpdateStok = $pdo->prepare("UPDATE produk SET stok_reserved = stok_reserved + ?, stok_available = stok_available - ? WHERE id = ?");
 
                 foreach ($dataItems as $item) {
@@ -54,19 +74,20 @@ class PO {
                         throw new Exception("Data item tidak lengkap!");
                     }
 
-                    $produk_id = (int)$item['produk_id'];
-                    $qty = (int)$item['qty'];
-                    
-                    $subtotal = $qty * (float)$item['harga_satuan'];
+                    $produk_id    = (int)$item['produk_id'];
+                    $qty          = (int)$item['qty'];
+                    $subtotal     = $qty * (float)$item['harga_satuan'];
                     $diskonAmount = $subtotal * ((float)($item['diskon'] ?? 0) / 100);
-                    $amount = $subtotal - $diskonAmount;
+                    $amount       = $subtotal - $diskonAmount;
 
                     $stmtItem->execute([
-                        $poId, $produk_id, $item['kode_material'] ?? '', $item['nama_material'] ?? '',
-                        $item['uom'] ?? 'pcs', $qty, $qty, 0, $item['harga_satuan'], $item['diskon'] ?? 0, 
+                        $poId, $produk_id,
+                        $item['kode_material'] ?? '', $item['nama_material'] ?? '',
+                        $item['uom'] ?? 'pcs', $qty, $qty, 0,
+                        $item['harga_satuan'], $item['diskon'] ?? 0,
                         $amount, $item['keterangan'] ?? null
                     ]);
-                    
+
                     $stmtCekStok->execute([$produk_id]);
                     $prod = $stmtCekStok->fetch(PDO::FETCH_ASSOC);
 
@@ -75,14 +96,14 @@ class PO {
                     }
 
                     $res_before = $prod['stok_reserved'];
-                    $res_after = $res_before + $qty;
+                    $res_after  = $res_before + $qty;
 
                     $stmtUpdateStok->execute([$qty, $qty, $produk_id]);
 
                     StokLog::record(
-                        $produk_id, 'po_reserve', $qty, 
-                        $prod['stok'], $prod['stok'], 
-                        $res_before, $res_after, 
+                        $produk_id, 'po_reserve', $qty,
+                        $prod['stok'], $prod['stok'],
+                        $res_before, $res_after,
                         'PO', $poId, "Booking stok untuk PO #" . $dataPO['nomor_po']
                     );
                 }
@@ -99,9 +120,19 @@ class PO {
 
     public static function update($id, $data) {
         global $pdo;
-        $sql = "UPDATE po SET nomor_po = ?, tanggal = ?, customer_id = ?, status = ?, notes = ? WHERE id = ?";
+        $sql = "UPDATE po 
+                SET nomor_po = ?, tanggal = ?, tanggal_pengiriman = ?, customer_id = ?, status = ?, notes = ?, updated_at = NOW() 
+                WHERE id = ?";
         $stmt = $pdo->prepare($sql);
-        return $stmt->execute([$data['nomor_po'], $data['tanggal'], $data['customer_id'] ?? null, $data['status'], $data['notes'] ?? null, $id]);
+        return $stmt->execute([
+            $data['nomor_po'],
+            $data['tanggal'],
+            $data['tanggal_pengiriman'] ?? null,
+            $data['customer_id'] ?? null,
+            $data['status'],
+            $data['notes'] ?? null,
+            $id
+        ]);
     }
 
     public static function delete($id) {
@@ -128,28 +159,37 @@ class PO {
     public static function addItem($data) {
         global $pdo;
         $subtotal = $data['qty'] * $data['harga_satuan'];
-        $amount = $subtotal - ($subtotal * ($data['diskon'] / 100));
-        
-        $sql = "INSERT INTO po_items (po_id, produk_id, kode_material, nama_material, uom, qty, qty_available, qty_pending, harga_satuan, diskon, amount, keterangan) 
+        $amount   = $subtotal - ($subtotal * ($data['diskon'] / 100));
+
+        $sql = "INSERT INTO po_items 
+                (po_id, produk_id, kode_material, nama_material, uom, qty, qty_available, qty_pending, 
+                 harga_satuan, diskon, amount, keterangan) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
         return $stmt->execute([
-            $data['po_id'], $data['produk_id'] ?? null, $data['kode_material'] ?? '', $data['nama_material'] ?? '',
-            $data['uom'] ?? 'pcs', $data['qty'], $data['qty_available'] ?? $data['qty'], $data['qty_pending'] ?? 0,
-            $data['harga_satuan'], $data['diskon'], $amount, $data['keterangan'] ?? null
+            $data['po_id'], $data['produk_id'] ?? null,
+            $data['kode_material'] ?? '', $data['nama_material'] ?? '',
+            $data['uom'] ?? 'pcs', $data['qty'],
+            $data['qty_available'] ?? $data['qty'], $data['qty_pending'] ?? 0,
+            $data['harga_satuan'], $data['diskon'], $amount,
+            $data['keterangan'] ?? null
         ]);
     }
 
     public static function updateItem($id, $data) {
         global $pdo;
         $subtotal = $data['qty'] * $data['harga_satuan'];
-        $amount = $subtotal - ($subtotal * ($data['diskon'] / 100));
+        $amount   = $subtotal - ($subtotal * ($data['diskon'] / 100));
 
-        $sql = "UPDATE po_items SET kode_material=?, nama_material=?, uom=?, qty=?, harga_satuan=?, diskon=?, amount=?, keterangan=? WHERE id=?";
+        $sql = "UPDATE po_items 
+                SET kode_material=?, nama_material=?, uom=?, qty=?, harga_satuan=?, diskon=?, amount=?, keterangan=? 
+                WHERE id=?";
         $stmt = $pdo->prepare($sql);
         return $stmt->execute([
-            $data['kode_material'] ?? '', $data['nama_material'] ?? '', $data['uom'] ?? 'pcs', 
-            $data['qty'], $data['harga_satuan'], $data['diskon'], $amount, $data['keterangan'] ?? null, $id
+            $data['kode_material'] ?? '', $data['nama_material'] ?? '',
+            $data['uom'] ?? 'pcs', $data['qty'],
+            $data['harga_satuan'], $data['diskon'], $amount,
+            $data['keterangan'] ?? null, $id
         ]);
     }
 
@@ -170,34 +210,37 @@ class PO {
         global $pdo;
         try {
             $pdo->beginTransaction();
+
             $items = $pdo->prepare("SELECT * FROM po_items WHERE po_id = ? AND is_reserved = 'yes'");
             $items->execute([$poId]);
             $items = $items->fetchAll();
-            
-            $stmtCekStok = $pdo->prepare("SELECT stok, stok_reserved FROM produk WHERE id = ?");
+
+            $stmtCekStok    = $pdo->prepare("SELECT stok, stok_reserved FROM produk WHERE id = ?");
             $stmtUpdateStok = $pdo->prepare("UPDATE produk SET stok_reserved = stok_reserved - ?, stok_available = stok_available + ? WHERE id = ?");
             $stmtUpdateItem = $pdo->prepare("UPDATE po_items SET is_reserved = 'no' WHERE id = ?");
-            
+
             foreach ($items as $item) {
                 if (empty($item['produk_id'])) continue;
                 $stmtCekStok->execute([$item['produk_id']]);
                 $prod = $stmtCekStok->fetch(PDO::FETCH_ASSOC);
-                
+
                 $res_before = $prod['stok_reserved'];
-                $res_after = $res_before - $item['qty'];
+                $res_after  = $res_before - $item['qty'];
 
                 $stmtUpdateStok->execute([$item['qty'], $item['qty'], $item['produk_id']]);
                 $stmtUpdateItem->execute([$item['id']]);
 
                 StokLog::record(
-                    $item['produk_id'], 'po_unreserve', -$item['qty'], 
-                    $prod['stok'], $prod['stok'], 
-                    $res_before, $res_after, 
+                    $item['produk_id'], 'po_unreserve', -$item['qty'],
+                    $prod['stok'], $prod['stok'],
+                    $res_before, $res_after,
                     'PO_Cancel', $poId, "Unreserve stok karena PO dibatalkan"
                 );
             }
-            $stmt = $pdo->prepare("UPDATE po SET status_stok = 'draft' WHERE id = ?");
+
+            $stmt = $pdo->prepare("UPDATE po SET status_stok = 'draft', updated_at = NOW() WHERE id = ?");
             $stmt->execute([$poId]);
+
             $pdo->commit();
             return ['success' => true, 'message' => "Reserve stok berhasil dibatalkan."];
         } catch (Exception $e) {
@@ -209,7 +252,7 @@ class PO {
     public static function getPOWithStok($poId) {
         global $pdo;
         $sql = "SELECT po.*, c.nama AS customer_name, c.perusahaan,
-                GROUP_CONCAT(CONCAT(poi.nama_material, ' (',poi.qty, 'pcs), Avail: ', COALESCE(p.stok_available, 0)) SEPARATOR ' | ') AS items_detail
+                GROUP_CONCAT(CONCAT(poi.nama_material, ' (', poi.qty, 'pcs), Avail: ', COALESCE(p.stok_available, 0)) SEPARATOR ' | ') AS items_detail
                 FROM po
                 LEFT JOIN customers c ON po.customer_id = c.id
                 LEFT JOIN po_items poi ON po.id = poi.po_id

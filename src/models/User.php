@@ -17,10 +17,18 @@ class User {
     /**
      * Get all users from database
      */
-    public static function getAll() {
+public static function getAll() {
         global $pdo;
         $stmt = $pdo->prepare("SELECT id, username FROM users ORDER BY username ASC");
         $stmt->execute();
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
+    public static function delete($id) {
+        global $pdo;
+        // Pastikan nama tabelnya bener 'users'. Kalau di database lu namanya 'user' (tanpa s), tinggal ganti aja.
+        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
 }
+?>
+

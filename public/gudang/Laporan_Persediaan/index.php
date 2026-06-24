@@ -7,22 +7,42 @@ if (!isset($_SESSION['user']) || !in_array($_SESSION['user']['role'], ['gudang',
 require_once '../../../src/auth.php';
 require_once '../../../src/config.php';
 
-$search    = $_GET['search']   ?? '';
-$kategori  = $_GET['kategori'] ?? '';
-$hasFilter = $search || $kategori;
+$search      = $_GET['search']   ?? '';
+$kategori    = $_GET['kategori'] ?? '';
+$filterStok  = $_GET['filter_stok'] ?? 'all'; 
+$hasFilter   = $search || $kategori || ($filterStok !== 'all');
 
 $listKategori = $pdo->query("SELECT id, nama_kategori FROM kategori ORDER BY nama_kategori")->fetchAll(PDO::FETCH_ASSOC);
 
-// Export Excel
+// ==========================================
+// 🚀 EXPORT EXCEL (URUTAN KOLOM SESUAI KETENTUAN)
+// ==========================================
 if (isset($_GET['export']) && $_GET['export'] === 'excel') {
         header('Content-Type: application/vnd.ms-excel');
         header('Content-Disposition: attachment; filename="laporan_persediaan.xls"');
         echo "<table border='1'>";
-        echo "<tr><th>No</th><th>Kode</th><th>Nama Produk</th><th>Kategori</th><th>Satuan</th><th>Stok Fisik</th><th>Stok Dipesan</th><th>Stok Tersedia</th><th>Stok Min</th><th>Status</th></tr>";
-        $sql = "SELECT p.id, p.kode, p.nama, p.satuan, p.stok, p.stok_reserved, p.stok_available, COALESCE(p.stok_min, 10) AS stok_min, k.nama_kategori FROM produk p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE 1=1";
+        echo "<tr>
+                <th>No</th>
+                <th>Kode Barang</th>
+                <th>Nama Barang</th>
+                <th>Kategori</th>
+                <th>Satuan</th>
+                <th>Harga Pokok Produksi (HPP)</th>
+                <th>Harga Jual (Rp)</th>
+                <th>Stok Fisik</th>
+                <th>Qty Tersedia</th>
+                <th>Jumlah Harga HPP (Rp)</th>
+                <th>Jumlah Harga Jual (Rp)</th>
+                <th>Stok Min</th>
+                <th>Status</th>
+              </tr>";
+        
+        $sql = "SELECT p.id, COALESCE(p.kode, '') AS kode, COALESCE(p.kode_produk, '') AS kode_produk_alt, p.nama, p.satuan, p.harga, p.harga AS harga_jual, p.stok, p.stok_available, COALESCE(p.stok_min, 10) AS stok_min, k.nama_kategori FROM produk p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE 1=1";
         $params = [];
+        
         if ($search) {
-                $sql .= " AND (p.nama LIKE ? OR p.kode LIKE ?)";
+                $sql .= " AND (p.nama LIKE ? OR p.kode LIKE ? OR p.kode_produk LIKE ?)";
+                $params[] = "%$search%";
                 $params[] = "%$search%";
                 $params[] = "%$search%";
         }
@@ -30,25 +50,43 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
                 $sql .= " AND p.kategori_id = ?";
                 $params[] = $kategori;
         }
+        if ($filterStok === 'available') {
+                $sql .= " AND (COALESCE(p.stok_available, p.stok, 0) > 0)";
+        } elseif ($filterStok === 'empty') {
+                $sql .= " AND (COALESCE(p.stok_available, p.stok, 0) <= 0)";
+        }
+        
         $sql .= " ORDER BY p.nama ASC";
+        
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $listProduk = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
         foreach ($listProduk as $i => $row) {
                 $stok_fisik = $row['stok'] ?? 0;
-                $stok_dipesan = $row['stok_reserved'] ?? 0;
                 $stok_tersedia = $row['stok_available'] ?? 0;
+                $hpp = $row['harga'] ?? 0;
+                $harga_jual = $row['harga_jual'] ?? 0;
+                
+                $jumlahHargaHpp = $stok_tersedia * $hpp; 
+                $jumlahHargaJual = $stok_tersedia * $harga_jual; 
+                
                 $status = ($stok_tersedia <= 0) ? 'Habis' : (($stok_tersedia <= $row['stok_min']) ? 'Kritis' : 'OK');
+                $tampilKode = !empty($row['kode']) ? $row['kode'] : $row['kode_produk_alt'];
+
                 echo "<tr>";
                 echo "<td>".($i+1)."</td>";
-                echo "<td>".htmlspecialchars($row['kode'] ?? '')."</td>";
+                echo "<td>".htmlspecialchars($tampilKode)."</td>";
                 echo "<td>".htmlspecialchars($row['nama'] ?? '')."</td>";
                 echo "<td>".htmlspecialchars($row['nama_kategori'] ?? 'Tanpa Kategori')."</td>";
                 echo "<td>".htmlspecialchars($row['satuan'] ?? '')."</td>";
-                echo "<td>".number_format($stok_fisik)."</td>";
-                echo "<td>".number_format($stok_dipesan)."</td>";
-                echo "<td>".number_format($stok_tersedia)."</td>";
-                echo "<td>".number_format($row['stok_min'])."</td>";
+                echo "<td>".$hpp."</td>";
+                echo "<td>".$harga_jual."</td>";
+                echo "<td>".$stok_fisik."</td>";
+                echo "<td>".$stok_tersedia."</td>";
+                echo "<td>".$jumlahHargaHpp."</td>";
+                echo "<td>".$jumlahHargaJual."</td>";
+                echo "<td>".$row['stok_min']."</td>";
                 echo "<td>".$status."</td>";
                 echo "</tr>";
         }
@@ -56,10 +94,14 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
         exit;
 }
 
-$sql = "SELECT p.id, p.kode, p.nama, p.satuan, p.stok, p.stok_reserved, p.stok_available, COALESCE(p.stok_min, 10) AS stok_min, k.nama_kategori FROM produk p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE 1=1";
+// ==========================================
+// 🚀 QUERY DASHBOARD UTAMA
+// ==========================================
+$sql = "SELECT p.id, COALESCE(p.kode, '') AS kode, COALESCE(p.kode_produk, '') AS kode_produk_alt, p.nama, p.satuan, p.harga, p.harga AS harga_jual, p.stok, p.stok_available, COALESCE(p.stok_min, 10) AS stok_min, k.nama_kategori FROM produk p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE 1=1";
 $params = [];
 if ($search) {
-        $sql .= " AND (p.nama LIKE ? OR p.kode LIKE ?)";
+        $sql .= " AND (p.nama LIKE ? OR p.kode LIKE ? OR p.kode_produk LIKE ?)";
+        $params[] = "%$search%";
         $params[] = "%$search%";
         $params[] = "%$search%";
 }
@@ -67,6 +109,12 @@ if ($kategori) {
         $sql .= " AND p.kategori_id = ?";
         $params[] = $kategori;
 }
+if ($filterStok === 'available') {
+        $sql .= " AND (COALESCE(p.stok_available, p.stok, 0) > 0)";
+} elseif ($filterStok === 'empty') {
+        $sql .= " AND (COALESCE(p.stok_available, p.stok, 0) <= 0)";
+}
+
 $sql .= " ORDER BY p.nama ASC";
 
 $stmt = $pdo->prepare($sql);
@@ -77,9 +125,16 @@ $listProduk = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $totalProduk = count($listProduk);
 $totalFG     = array_sum(array_column($listProduk, 'stok'));
 $kritisItems = array_filter($listProduk, fn($p) => $p['stok'] <= $p['stok_min']);
-$maxStok     = $totalProduk > 0 ? max(array_column($listProduk, 'stok')) : 1;
 
-// --- Chart Data: Stok per Kategori (Stok Tersedia) ---
+// Hitung Dual Valuasi (HPP & Harga Jual)
+$totalValuasiHpp = 0;
+$totalValuasiJual = 0;
+foreach ($listProduk as $p) {
+    $totalValuasiHpp  += (($p['stok_available'] ?? 0) * ($p['harga'] ?? 0));
+    $totalValuasiJual += (($p['stok_available'] ?? 0) * ($p['harga_jual'] ?? 0));
+}
+
+// --- Chart Data ---
 $byKategori = [];
 foreach ($listProduk as $p) {
     $kat = $p['nama_kategori'] ?: 'Tanpa Kategori';
@@ -90,18 +145,14 @@ arsort($byKategori);
 $chartKatLabels = json_encode(array_keys($byKategori));
 $chartKatData   = json_encode(array_values($byKategori));
 
-// --- Top 5 Produk (Stok Tersedia Terbanyak) ---
 $topProduk = $listProduk;
 usort($topProduk, function($a, $b) {
     return ($b['stok_available'] ?? 0) <=> ($a['stok_available'] ?? 0);
 });
 $top5Produk = array_slice($topProduk, 0, 5);
 
-function levelCls($stok, $min) {
-        if ($stok <= 0)       return 'danger';
-        if ($stok <= $min)    return 'danger';
-        if ($stok <= $min*3)  return 'warn';
-        return 'ok';
+function formatRp($n) {
+    return 'Rp ' . number_format($n ?? 0, 0, ',', '.');
 }
 ?>
 <!doctype html>
@@ -116,7 +167,6 @@ function levelCls($stok, $min) {
     <link href="/Inventaris/public/assets/css/marketing-css/dashboard.css" rel="stylesheet">
     <link href="/Inventaris/public/assets/css/marketing-css/laporan.css" rel="stylesheet"> 
     <link href="/Inventaris/public/assets/css/gudang-css/stok-barang.css" rel="stylesheet">
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         @media print {
@@ -124,6 +174,13 @@ function levelCls($stok, $min) {
             .main { margin:0 !important; }
             .table-card { box-shadow:none; border:none; }
         }
+        .filter-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px; box-shadow: var(--shadow); }
+        .filter-form { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+        .filter-group { flex: 1; min-width: 150px; }
+        .filter-group label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text3); text-transform: uppercase; margin-bottom: 6px; }
+        .filter-group .form-control { width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid var(--border2); border-radius: 8px; background: var(--bg); color: var(--text); }
+        .filter-actions { flex-shrink: 0; }
+        .filter-actions .btn-primary { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -146,7 +203,7 @@ function levelCls($stok, $min) {
                     <div class="user-avatar"><?= strtoupper(substr($_SESSION['user']['username'], 0, 1)) ?></div>
                     <div class="user-info">
                         <span class="user-name"><?= htmlspecialchars($_SESSION['user']['username']) ?></span>
-                        <span class="user-role">Gudang</span>
+                        <span class="user-role"><?= htmlspecialchars(ucfirst($_SESSION['user']['role'])) ?></span>
                     </div>
                 </div>
             </div>
@@ -162,41 +219,67 @@ function levelCls($stok, $min) {
         <div class="page-header">
             <div class="page-header-left">
                 <h1 class="page-title-lg">Laporan Persediaan</h1>
-                <p class="page-subtitle">Rekapitulasi dan analisis stok barang di gudang.</p>
+                <p class="page-subtitle">Rekapitulasi persediaan barang berdasarkan stok tersedia dan Harga Pokok Produksi (HPP).</p>
             </div>
             <div class="header-actions" style="display: flex; gap: 10px;">
                 <button class="btn-primary" onclick="window.print()">
                     <i class="bi bi-printer"></i> Cetak
                 </button>
-                <a href="?export=excel&search=<?= urlencode($search) ?>&kategori=<?= urlencode($kategori) ?>" class="btn-ghost-sm">
+                <a href="?export=excel&search=<?= urlencode($search) ?>&kategori=<?= urlencode($kategori) ?>&filter_stok=<?= urlencode($filterStok) ?>" class="btn-ghost-sm">
                     <i class="bi bi-file-earmark-excel"></i> Export Excel
                 </a>
             </div>
         </div>
 
-       
+        <div class="filter-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h4 style="margin:0; font-size:1rem; font-weight:700; color:var(--text);"><i class="bi bi-funnel"></i> Filter Laporan</h4>
+                <?php if ($hasFilter): ?>
+                    <a href="index.php" class="btn-ghost-sm" style="padding:4px 8px; font-size:0.8rem;"><i class="bi bi-x"></i> Reset</a>
+                <?php endif; ?>
+            </div>
+            <form method="get" class="filter-form">
+                <div class="filter-group">
+                    <label>Pencarian</label>
+                    <input type="text" name="search" class="form-control" placeholder="Nama atau kode..." value="<?= htmlspecialchars($search) ?>">
+                </div>
+                <div class="filter-group">
+                    <label>Kategori</label>
+                    <select name="kategori" class="form-control">
+                        <option value="">Semua Kategori</option>
+                        <?php foreach ($listKategori as $kat): ?>
+                            <option value="<?= $kat['id'] ?>" <?= $kategori == $kat['id'] ? 'selected' : '' ?>><?= htmlspecialchars($kat['nama_kategori']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Status Stok</label>
+                    <select name="filter_stok" class="form-control">
+                        <option value="all" <?= $filterStok === 'all' ? 'selected' : '' ?>>Semua Stok</option>
+                        <option value="available" <?= $filterStok === 'available' ? 'selected' : '' ?>>Stok Tersedia (&gt; 0)</option>
+                        <option value="empty" <?= $filterStok === 'empty' ? 'selected' : '' ?>>Stok Kosong (Habis)</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn-primary"><i class="bi bi-search"></i> Terapkan</button>
+                </div>
+            </form>
+        </div>
 
-        <div class="section-label">Ringkasan</div>
+        <div class="section-label">Ringkasan Nilai Aset Gudang</div>
         <div class="kpi-row">
             <div class="kpi-card">
-                <div class="kpi-icon blue"><i class="bi bi-boxes"></i></div>
+                <div class="kpi-icon blue"><i class="bi bi-tags"></i></div>
                 <div class="kpi-body">
-                    <span class="kpi-label">Jenis Produk</span>
-                    <span class="kpi-val"><?= number_format($totalProduk) ?></span>
+                    <span class="kpi-label">Total Valuasi HPP</span>
+                    <span class="kpi-val" style="color: #2563eb; font-size: 1.25rem;"><?= formatRp($totalValuasiHpp) ?></span>
                 </div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-icon green"><i class="bi bi-check-circle"></i></div>
+                <div class="kpi-icon orange"><i class="bi bi-boxes"></i></div>
                 <div class="kpi-body">
-                    <span class="kpi-label">Total Stok FG</span>
-                    <span class="kpi-val"><?= number_format($totalFG) ?></span>
-                </div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-icon orange"><i class="bi bi-exclamation-triangle"></i></div>
-                <div class="kpi-body">
-                    <span class="kpi-label">Stok Kritis/Habis</span>
-                    <span class="kpi-val"><?= count($kritisItems) ?></span>
+                    <span class="kpi-label">Total Kuantitas Fisik</span>
+                    <span class="kpi-val" style="font-size: 1.25rem;"><?= number_format($totalFG) ?> <span style="font-size: 0.8rem; color:#888;">Unit</span></span>
                 </div>
             </div>
         </div>
@@ -204,27 +287,17 @@ function levelCls($stok, $min) {
         <?php if (!empty($byKategori)): ?>
         <div class="section-label">Visualisasi</div>
         <div class="charts-row">
-
             <div class="form-card chart-card">
-                <div class="form-card-header">
-                    <h4><i class="bi bi-bar-chart-line"></i> Total Stok per Kategori</h4>
-                </div>
-                <div class="chart-wrap">
-                    <canvas id="chartKategori"></canvas>
-                </div>
+                <div class="form-card-header"><h4><i class="bi bi-bar-chart-line"></i> Total Stok per Kategori</h4></div>
+                <div class="chart-wrap"><canvas id="chartKategori"></canvas></div>
             </div>
-
             <div class="form-card chart-card">
-                <div class="form-card-header">
-                    <h4><i class="bi bi-trophy"></i> Top 5 Stok Produk</h4>
-                </div>
+                <div class="form-card-header"><h4><i class="bi bi-trophy"></i> Top 5 Stok Produk</h4></div>
                 <div class="top-customer-list">
                     <?php
-                    $maxValProduk = max(array_column($top5Produk, 'stok_available') ?: [1]);
-                    $rank = 1;
+                    $maxValProduk = max(array_column($top5Produk, 'stok_available') ?: [1]); $rank = 1;
                     foreach ($top5Produk as $prod):
-                        $val = $prod['stok_available'] ?? 0;
-                        $pct = $maxValProduk > 0 ? round($val / $maxValProduk * 100) : 0;
+                        $val = $prod['stok_available'] ?? 0; $pct = $maxValProduk > 0 ? round($val / $maxValProduk * 100) : 0;
                     ?>
                     <div class="tc-item">
                         <div class="tc-rank"><?= $rank++ ?></div>
@@ -233,179 +306,108 @@ function levelCls($stok, $min) {
                                 <span class="tc-name"><?= htmlspecialchars($prod['nama'] ?? '') ?></span>
                                 <span class="tc-val"><?= number_format($val) ?> <?= htmlspecialchars($prod['satuan'] ?? '') ?></span>
                             </div>
-                            <div class="tc-bar-bg">
-                                <div class="tc-bar-fill" style="width:<?= $pct ?>%"></div>
-                            </div>
+                            <div class="tc-bar-bg"><div class="tc-bar-fill" style="width:<?= $pct ?>%"></div></div>
                         </div>
                     </div>
                     <?php endforeach; ?>
                 </div>
             </div>
-
         </div>
         <?php endif; ?>
 
-        <div class="section-label">Detail Data</div>
+        <div class="section-label">Detail Data Persediaan</div>
         <div class="table-card">
             <div class="table-header">
                 <h4><i class="bi bi-clipboard-data"></i> Daftar Persediaan <span class="count-badge"><?= count($listProduk) ?></span></h4>
-                <div class="search-wrap">
-                    <i class="bi bi-search"></i>
-                    <input type="text" id="tableSearch" class="search-input" placeholder="Cari cepat...">
-                </div>
             </div>
             <div class="table-wrap">
                 <table id="stokTable">
                     <thead>
                         <tr>
                             <th>No</th>
-                            <th>Kode</th>
-                            <th>Nama Produk</th>
+                            <th>Kode Barang</th>
+                            <th>Nama Barang</th>
                             <th>Kategori</th>
-                            <th>Satuan</th>
-                            <th class="col-right">Fisik</th>
-                            <th class="col-right">Dipesan</th>
-                            <th class="col-right">Tersedia</th>
-                            <th class="col-right">Stok Min</th>
+                            <th class="col-right">HPP (Rp)</th>
+                            <th class="col-right">Stok Fisik</th>
+                            <th class="col-right">Qty Tersedia</th>
+                            <th class="col-right">Jumlah Harga HPP</th>
                             <th class="col-center">Status</th>
-                            <th class="col-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($listProduk)): ?>
-                        <tr>
-                            <td colspan="11" class="empty-state">
-                                <i class="bi bi-inboxes"></i>
-                                <span>Tidak ada data produk.</span>
-                            </td>
-                        </tr>
+                        <tr><td colspan="11" class="empty-state"><i class="bi bi-inboxes"></i><span>Tidak ada data produk sesuai filter.</span></td></tr>
                         <?php else: ?>
                         <?php foreach ($listProduk as $i => $row):
                             $stok_fisik = $row['stok'] ?? 0;
-                            $stok_dipesan = $row['stok_reserved'] ?? 0;
                             $stok_tersedia = $row['stok_available'] ?? 0;
+                            $hpp = $row['harga'] ?? 0;
+                            $harga_jual = $row['harga_jual'] ?? 0;
+                            
+                            $jumlahHargaHpp = $stok_tersedia * $hpp;
+                            $jumlahHargaJual = $stok_tersedia * $harga_jual;
+                            
                             $cls  = ($stok_tersedia <= 0) ? 'danger' : (($stok_tersedia <= $row['stok_min']) ? 'danger' : (($stok_tersedia <= $row['stok_min']*3) ? 'warn' : 'ok'));
                             $status = ($stok_tersedia <= 0) ? 'Habis' : (($stok_tersedia <= $row['stok_min']) ? 'Kritis' : 'OK');
+                            
+                            $tampilKodeHtml = !empty($row['kode']) ? $row['kode'] : $row['kode_produk_alt'];
                         ?>
                         <tr class="<?= $cls === 'danger' ? 'row-kritis' : '' ?>">
                             <td class="text-muted"><?= $i + 1 ?></td>
-                            <td class="fw-mid" style="font-size:0.8rem;"><?= htmlspecialchars($row['kode'] ?? '') ?></td>
-                            <td><?= htmlspecialchars($row['nama'] ?? '') ?></td>
-                            <td>
-                                <span class="badge neutral"><?= htmlspecialchars($row['nama_kategori'] ?? 'Tanpa Kategori') ?></span>
-                            </td>
-                            <td class="text-muted"><?= htmlspecialchars($row['satuan'] ?? '') ?></td>
-                            <td class="col-right">
-                                <?= number_format($stok_fisik) ?>
-                            </td>
-                            <td class="col-right" style="color: #dc3545;">
-                                <?= number_format($stok_dipesan) ?>
-                            </td>
-                            <td class="col-right" style="color: #10b981; font-weight: 600;">
-                                <?= number_format($stok_tersedia) ?>
-                            </td>
-                            <td class="col-right">
-                                <?= number_format($row['stok_min']) ?>
-                            </td>
-                            <td class="col-center">
-                                <span class="status-<?= $cls ?>"><?= $status ?></span>
-                            </td>
-                            <td class="col-center">
-                                <a href="kartu_stok.php?produk_id=<?= $row['id'] ?>" class="btn-outline btn-xs"><i class="bi bi-clipboard-check"></i> Kartu Stok</a>
-                            </td>
+                            <td class="fw-mid" style="font-size:0.8rem;"><?= htmlspecialchars($tampilKodeHtml) ?></td>
+                            <td style="font-weight:600; color:var(--text);"><?= htmlspecialchars($row['nama'] ?? '') ?></td>
+                            <td><span class="badge neutral"><?= htmlspecialchars($row['nama_kategori'] ?? 'Tanpa Kategori') ?></span></td>
+                            
+                            <td class="col-right text-muted"><?= number_format($hpp) ?></td>
+                        
+                            
+                            <td class="col-right text-muted"><?= number_format($stok_fisik) ?></td>
+                            <td class="col-right" style="font-weight: 700;"><?= number_format($stok_tersedia) ?> <span style="font-size:0.75rem; color:#888; font-weight:normal;"><?= htmlspecialchars($row['satuan'] ?? '') ?></span></td>
+                            
+                            <td class="col-right" style="color: #2563eb; font-weight: 600;"><?= number_format($jumlahHargaHpp) ?></td>
+                            
+                            <td class="col-center"><span class="status-<?= $cls ?>"><?= $status ?></span></td>
                         </tr>
                         <?php endforeach; ?>
+                        <tr class="total-row">
+                            <td colspan="6" class="fw-mid" style="text-align: left; padding-left: 20px;">Total Keseluruhan Valuasi Persediaan</td>
+                            <td class="col-right fw-mid" style="color: #2563eb; font-weight:700;"><?= number_format($totalValuasiHpp) ?></td>
+                            <td class="col-right fw-mid" style="color: #10b981; font-weight:700;"><?= number_format($totalValuasiJual) ?></td>
+                            <td></td>
+                        </tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
             </div>
             <?php if (!empty($listProduk)): ?>
-            <div class="table-footer">
-                <span class="text-muted" id="tableCount">Menampilkan <?= count($listProduk) ?> data</span>
-            </div>
+            <div class="table-footer"><span class="text-muted" id="tableCount">Menampilkan <?= count($listProduk) ?> data</span></div>
             <?php endif; ?>
         </div>
-
     </div>
 </main>
 
 <script>
-    // ── Table search ──────────────────────────────────────────
-    const si = document.getElementById('tableSearch');
-    const tc = document.getElementById('tableCount');
-    si?.addEventListener('input', function () {
-        const q = this.value.toLowerCase(); let v = 0;
-        document.querySelectorAll('#stokTable tbody tr').forEach(r => {
-            const m = r.textContent.toLowerCase().includes(q);
-            r.style.display = m ? '' : 'none';
-            if (m) v++;
-        });
-        if (tc) tc.textContent = `Menampilkan ${v} data`;
-    });
-
-    // ── Charts (hanya render jika ada data) ──────────────────
     <?php if (!empty($byKategori)): ?>
     const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
-
     const gridColor  = () => isDark() ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
     const labelColor = () => isDark() ? '#9ca3af' : '#888580';
-    const accent     = '#2563eb'; // Warna biru biar beda dari Laporan PO yang oren
+    const accent     = '#2563eb';
 
     function chartDefaults() {
-      return {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: isDark() ? '#1f2226' : '#fff',
-            titleColor: isDark() ? '#f1f0ee' : '#1a1714',
-            bodyColor:  isDark() ? '#9ca3af'  : '#4b4843',
-            borderColor: isDark() ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)',
-            borderWidth: 1,
-            padding: 10,
-            cornerRadius: 8,
-          }
-        },
-        scales: {
-          x: { grid: { color: gridColor() }, ticks: { color: labelColor(), font: { size: 11 } } },
-          y: { grid: { color: gridColor() }, ticks: { color: labelColor(), font: { size: 11 } } }
-        }
-      };
+      return { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: gridColor() }, ticks: { color: labelColor() } }, y: { grid: { color: gridColor() }, ticks: { color: labelColor() } } } };
     }
-
-    const labels = <?= $chartKatLabels ?>;
-    const dataStok = <?= $chartKatData ?>;
-
+    const labels = <?= $chartKatLabels ?>; const dataStok = <?= $chartKatData ?>;
     const ctxCount = document.getElementById('chartKategori');
-    let chartKategori = new Chart(ctxCount, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Total Stok',
-          data: dataStok,
-          backgroundColor: accent + 'cc',
-          borderColor: accent,
-          borderWidth: 1.5,
-          borderRadius: 6,
-        }]
-      },
-      options: { ...chartDefaults(), plugins: { ...chartDefaults().plugins } }
-    });
-
-    // Re-render chart saat theme berubah (Light/Dark mode)
-    document.getElementById('themeToggle')?.addEventListener('click', () => {
-      setTimeout(() => {
-        chartKategori.destroy();
-        chartKategori = new Chart(ctxCount, {
-          type: 'bar',
-          data: { labels: labels, datasets: [{ label: 'Total Stok', data: dataStok, backgroundColor: accent + 'cc', borderColor: accent, borderWidth: 1.5, borderRadius: 6 }] },
-          options: { ...chartDefaults() }
-        });
-      }, 50);
-    });
+    let chartKategori = new Chart(ctxCount, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Total Stok', data: dataStok, backgroundColor: accent + 'cc', borderColor: accent, borderWidth: 1.5, borderRadius: 6 }] }, options: chartDefaults() });
     <?php endif; ?>
+
+    const htmlEl = document.documentElement;
+    document.getElementById('themeToggle')?.addEventListener('click', () => {
+        const isDark = htmlEl.getAttribute('data-theme') === 'dark';
+        htmlEl.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        localStorage.setItem('theme', isDark ? 'light' : 'dark');
+    });
 </script>
 </body>
 </html>

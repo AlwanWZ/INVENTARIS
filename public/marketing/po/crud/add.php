@@ -14,7 +14,28 @@ require_once '../../../../src/functions.php';
 
 $errors = [];
 $success = false;
-$autoNomorPo = generatePONumber(); // Generate PO: PO-MMYY-urutan
+
+// 🚀 LOGIKA AUTO-GENERATE NOMOR PO (Format: PO-BulanTahun-Urutan -> PO-0626-001)
+$prefixOrder = 'PCB-' . date('my') . '-'; // my = bulan 2 digit, tahun 2 digit (0626)
+try {
+    // Kita cari pesanan terakhir di bulan ini yang pakai awalan 'PCB-0626-'
+    $stmtOrder = $pdo->prepare("SELECT nomor_po FROM po WHERE nomor_po LIKE ? ORDER BY id DESC LIMIT 1");
+    $stmtOrder->execute([$prefixOrder . '%']);
+    $lastOrder = $stmtOrder->fetchColumn();
+
+    if ($lastOrder) {
+        // Pecah 'PCB-0626-001', ambil angka paling belakang (001), lalu tambah 1
+        $parts = explode('-', $lastOrder);
+        $lastNumber = (int)end($parts);
+        $nextNumber = $lastNumber + 1;
+        $autoNomorPo = $prefixOrder . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+    } else {
+        // Kalau awal bulan belum ada yang pesen, reset otomatis ke 001
+        $autoNomorPo = $prefixOrder . '001';
+    }
+} catch (Exception $e) {
+    $autoNomorPo = $prefixOrder . '001';
+}
 
 // Get all customers & products
 $customerList = Customer::getAll();
@@ -24,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dataPO = [
         'nomor_po'    => trim($_POST['nomor_po'] ?? ''),
         'tanggal'     => $_POST['tanggal'] ?? '',
+        'tanggal_pengiriman' => $_POST['tanggal_pengiriman'] ?? null,
         'customer_id' => intval($_POST['customer_id'] ?? 0),
         'status'      => $_POST['status'] ?? 'draft',
         'notes'       => trim($_POST['notes'] ?? ''),
@@ -33,6 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$dataPO['nomor_po']) $errors[] = 'Nomor Pesanan wajib diisi.';
     if (!$dataPO['tanggal'])  $errors[] = 'Tanggal wajib diisi.';
     if (!$dataPO['customer_id']) $errors[] = 'Customer wajib dipilih.';
+    
+if (!empty($dataPO['tanggal_pengiriman']) && $dataPO['tanggal_pengiriman'] < $dataPO['tanggal']) {
+    $errors[] = 'Tanggal pengiriman tidak boleh sebelum tanggal pesanan.';
+}
 
     // Get items data
     $dataItems = [];
@@ -400,24 +426,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <i class="bi bi-file-earmark-text"></i> Data Utama Order
         </div>
         
-        <div class="form-grid-3">
-          <div class="form-group">
-            <label class="form-label">Nomor PO <span class="required">*</span></label>
-            <input type="text" name="nomor_po" class="form-control" value="<?= htmlspecialchars(($_POST['nomor_po'] ?? $autoNomorPo) ?: '') ?>" readonly style="background: var(--bg-body); cursor: not-allowed;">
-            <small style="color: var(--text3); font-size: 0.8rem;">Format: PO-MMYY-NNN (otomatis, misal: PO-1126-001)</small>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Tanggal <span class="required">*</span></label>
-            <input type="date" name="tanggal" class="form-control" value="<?= htmlspecialchars(($_POST['tanggal'] ?? date('Y-m-d')) ?: '') ?>" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Status <span class="required">*</span></label>
-            <select name="status" class="form-control" required>
-              <option value="draft" <?= (($_POST['status'] ?? '') === 'draft') ? 'selected' : '' ?>>Draft</option>
-              <option value="approved" <?= (($_POST['status'] ?? '') === 'approved') ? 'selected' : '' ?>>Approved</option>
-            </select>
-          </div>
-        </div>
+<div class="form-grid-3">
+  <div class="form-group">
+    <label class="form-label">Nomor Pesanan <span class="required">*</span></label>
+    <input type="text" name="nomor_po" class="form-control"
+           value="<?= htmlspecialchars(($_POST['nomor_po'] ?? $autoNomorPo) ?: '') ?>"
+           readonly style="background: var(--bg-body); cursor: not-allowed; font-weight: 800; color: #0d9488;">
+    <small style="color: var(--text3); font-size: 0.8rem;">Format: PCB-MMYY-NNN (Otomatis)</small>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Tanggal <span class="required">*</span></label>
+    <input type="date" name="tanggal" class="form-control"
+           value="<?= htmlspecialchars(($_POST['tanggal'] ?? date('Y-m-d')) ?: '') ?>" required>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Tanggal Pengiriman</label>
+    <input type="date" name="tanggal_pengiriman" class="form-control"
+           value="<?= htmlspecialchars($_POST['tanggal_pengiriman'] ?? '') ?>"
+           min="<?= date('Y-m-d') ?>">
+    <small style="color: var(--text3); font-size: 0.8rem;">Estimasi tanggal kirim ke customer</small>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Status <span class="required">*</span></label>
+    <select name="status" class="form-control" required>
+      <option value="draft" <?= (($_POST['status'] ?? '') === 'draft') ? 'selected' : '' ?>>Draft</option>
+      <option value="approved" <?= (($_POST['status'] ?? '') === 'approved') ? 'selected' : '' ?>>Approved</option>
+    </select>
+  </div>
+</div>
 
         <div class="form-grid-2">
           <div class="form-group">

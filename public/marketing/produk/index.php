@@ -33,6 +33,49 @@ $stokHabis = array_filter($produkList, function($p) {
   <link href="/Inventaris/public/assets/css/nav.css" rel="stylesheet">
   <link href="/Inventaris/public/assets/css/marketing-css/dashboard.css" rel="stylesheet">
   <link href="/Inventaris/public/assets/css/marketing-css/produk.css" rel="stylesheet">
+  
+  <style>
+    /* Styling untuk Quick View Combobox */
+    .customer-selector-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 22px;
+      box-shadow: var(--shadow);
+    }
+    .selector-header {
+      margin-bottom: 12px;
+    }
+    .customer-combobox {
+      width: 100%;
+      padding: 12px 14px;
+      font-family: 'Roboto', sans-serif;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      outline: none;
+      cursor: pointer;
+      transition: border-color var(--trans), box-shadow var(--trans);
+    }
+    .customer-combobox:hover {
+      border-color: var(--border);
+    }
+    .customer-combobox:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(232, 98, 26, 0.12);
+      background: var(--surface);
+    }
+    .customer-detail-box {
+      animation: slideDown 0.2s ease-out;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 <body>
 
@@ -96,6 +139,62 @@ $stokHabis = array_filter($produkList, function($p) {
       </div>
     <?php endif; ?>
 
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-title-lg">Produk PCB</h1>
+        <p class="page-subtitle">Kelola semua produk PCB yang tersedia dalam sistem.</p>
+      </div>
+      <a href="crud/add.php" class="btn-primary">
+        <i class="bi bi-plus-lg"></i> Tambah Produk
+      </a>
+    </div>
+
+    <div class="customer-selector-card">
+      <div class="selector-header">
+        <h3 style="margin: 0; font-size: 0.95rem; color: var(--text); font-weight: 700;">Quick View Produk</h3>
+      </div>
+      <select id="productComboBox" class="customer-combobox" onchange="handleProductSelect(this)">
+        <option value="">-- Pilih Produk untuk lihat detail --</option>
+        <?php foreach ($produkList as $p): ?>
+        <option value="<?= $p['id'] ?>" 
+                data-code="<?= htmlspecialchars($p['kode_produk'] ?? $p['kode'] ?? '-') ?>" 
+                data-name="<?= htmlspecialchars($p['nama']) ?>" 
+                data-category="<?= htmlspecialchars($p['nama_kategori'] ?? 'PCB') ?>" 
+                data-price="<?= htmlspecialchars($p['harga'] ?? 0) ?>" 
+                data-stock="<?= htmlspecialchars($p['stok_available'] ?? $p['stok'] ?? 0) ?>" 
+                data-unit="<?= htmlspecialchars($p['satuan'] ?? 'pcs') ?>" 
+                data-status="<?= $p['status'] ?? 'aktif' ?>">
+          <?= htmlspecialchars($p['kode_produk'] ?? $p['kode'] ?? '-') ?> - <?= htmlspecialchars($p['nama']) ?>
+        </option>
+        <?php endforeach; ?>
+      </select>
+
+      <div id="productDetail" class="customer-detail-box" style="display: none; margin-top: 16px; padding: 14px; background: var(--bg2); border-radius: var(--radius); border: 1px solid var(--border);">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div>
+            <span style="font-size: 0.72rem; color: var(--text3); text-transform: uppercase; font-weight: 700;">Kode Produk</span>
+            <p id="detProdCode" style="margin: 4px 0 0; color: var(--text2); font-weight: 800;">-</p>
+          </div>
+          <div>
+            <span style="font-size: 0.72rem; color: var(--text3); text-transform: uppercase; font-weight: 700;">Harga Jual</span>
+            <p id="detProdPrice" style="margin: 4px 0 0; color: #0d9488; font-weight: 800; font-family: monospace; font-size: 1.1rem;">-</p>
+          </div>
+          <div>
+            <span style="font-size: 0.72rem; color: var(--text3); text-transform: uppercase; font-weight: 700;">Kategori</span>
+            <p id="detProdCategory" style="margin: 4px 0 0; color: var(--text2);">-</p>
+          </div>
+          <div>
+            <span style="font-size: 0.72rem; color: var(--text3); text-transform: uppercase; font-weight: 700;">Sisa Stok Jual</span>
+            <p id="detProdStock" style="margin: 4px 0 0; color: var(--text2); font-weight: 800;">-</p>
+          </div>
+          <div style="grid-column: span 2;">
+            <span style="font-size: 0.72rem; color: var(--text3); text-transform: uppercase; font-weight: 700;">Status</span>
+            <p id="detProdStatus" style="margin: 4px 0 0; color: var(--text2);"><span class="badge ok">Aktif</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="stat-row">
       <div class="stat-pill">
         <span class="stat-pill-label">Total Produk</span>
@@ -120,22 +219,13 @@ $stokHabis = array_filter($produkList, function($p) {
       </div>
     </div>
 
-    <div class="page-header">
-      <div class="page-header-left">
-        <h1 class="page-title-lg">Produk PCB</h1>
-        <p class="page-subtitle">Kelola semua produk PCB yang tersedia dalam sistem.</p>
-      </div>
-      <a href="crud/add.php" class="btn-primary">
-        <i class="bi bi-plus-lg"></i> Tambah Produk
-      </a>
-    </div>
-
     <div class="table-card">
       <div class="table-header">
         <h4><i class="bi bi-box-seam"></i> Daftar Produk</h4>
         <div class="table-actions">
           <div class="search-wrap">
             <i class="bi bi-search"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Cari nama atau kode...">
           </div>
         </div>
       </div>
@@ -157,7 +247,7 @@ $stokHabis = array_filter($produkList, function($p) {
           <tbody>
             <?php if (empty($produkList)): ?>
               <tr>
-                <td colspan="8" class="empty-state">
+                <td colspan="7" class="empty-state">
                   <i class="bi bi-box-seam"></i>
                   <span>Belum ada produk. <a href="crud/add.php">Tambah sekarang</a></span>
                 </td>
@@ -245,21 +335,64 @@ $stokHabis = array_filter($produkList, function($p) {
 </main>
 
 <script>
+// Logic Quick View Combobox
+function handleProductSelect(select) {
+  const selectedOption = select.options[select.selectedIndex];
+  const detailBox = document.getElementById('productDetail');
+  
+  if (!select.value) {
+    detailBox.style.display = 'none';
+    return;
+  }
+  
+  // Tarik data dari atribut option
+  const code = selectedOption.dataset.code;
+  const category = selectedOption.dataset.category;
+  const price = parseInt(selectedOption.dataset.price) || 0;
+  const stock = selectedOption.dataset.stock;
+  const unit = selectedOption.dataset.unit;
+  const status = selectedOption.dataset.status;
+  
+  // Format harga ke Rupiah
+  const formatRp = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
+  
+  // Update isi HTML
+  document.getElementById('detProdCode').textContent = code;
+  document.getElementById('detProdCategory').textContent = category;
+  document.getElementById('detProdPrice').textContent = formatRp;
+  document.getElementById('detProdStock').textContent = `${stock} ${unit}`;
+  
+  // Styling Badge Status
+  const statusBadge = document.getElementById('detProdStatus');
+  const badgeClass = status.toLowerCase() === 'aktif' ? 'ok' : 'warn';
+  const statusLabel = status.toLowerCase() === 'aktif' ? 'Aktif' : 'Nonaktif';
+  statusBadge.innerHTML = `<span class="badge ${badgeClass}">${statusLabel}</span>`;
+  
+  // Tampilkan box dengan animasi
+  detailBox.style.display = 'block';
+}
+
+// Table Search Logic
 const searchInput = document.getElementById('searchInput');
 const tableCount  = document.getElementById('tableCount');
 
-searchInput.addEventListener('input', function () {
-  const q = this.value.toLowerCase();
-  let visible = 0;
+if(searchInput) {
+  searchInput.addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    let visible = 0;
 
-  document.querySelectorAll('#produkTable tbody tr').forEach(row => {
-    const match = row.textContent.toLowerCase().includes(q);
-    row.style.display = match ? '' : 'none';
-    if (match) visible++;
+    document.querySelectorAll('#produkTable tbody tr').forEach(row => {
+      // Pastikan nggak nge-search isi thead atau empty state
+      if(row.querySelector('.empty-state')) return;
+      
+      const match = row.textContent.toLowerCase().includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+
+    if(tableCount) tableCount.textContent = `Menampilkan ${visible} data`;
   });
-
-  tableCount.textContent = `Menampilkan ${visible} data`;
-});
+}
 
 // Dark mode toggle
 const html = document.documentElement;

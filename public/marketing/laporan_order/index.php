@@ -130,7 +130,7 @@ $hasFilter = array_filter($filter);
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Laporan Pesanan PCB | Inventory</title>
+  <title>Laporan Pesanan | Inventory</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   <link href="/Inventaris/public/assets/css/nav.css" rel="stylesheet">
@@ -151,7 +151,7 @@ $hasFilter = array_filter($filter);
         <div class="breadcrumb">
           <a href="/Inventaris/public/dashboard.php">Dashboard</a>
           <i class="bi bi-chevron-right"></i>
-          <span>Laporan Pesanan PCB</span>
+          <span>Laporan Pesanan </span>
         </div>
       </div>
       <div class="top-right">
@@ -174,8 +174,8 @@ $hasFilter = array_filter($filter);
 
     <div class="page-header">
       <div class="page-header-left">
-        <h1 class="page-title-lg">Laporan Pesanan PCB</h1>
-        <p class="page-subtitle">Rekap dan analisis transaksi Pesanan PCB<?= $hasFilter ? ' — <strong>Filter aktif</strong>' : '' ?></p>
+        <h1 class="page-title-lg">Laporan Pesanan </h1>
+        <p class="page-subtitle">Rekap dan analisis transaksi Pesanan<?= $hasFilter ? ' — <strong>Filter aktif</strong>' : '' ?></p>
       </div>
       <button class="btn-primary" onclick="window.print()">
         <i class="bi bi-printer"></i> Cetak
@@ -239,7 +239,7 @@ $hasFilter = array_filter($filter);
 
     <div class="section-label">Ringkasan</div>
     <div class="kpi-row">
-      <div class="kpi-card"><div class="kpi-icon orange"><i class="bi bi-file-earmark-text"></i></div><div class="kpi-body"><span class="kpi-label">Total Pesanan PCB</span><span class="kpi-val"><?= $totalPO ?></span></div></div>
+      <div class="kpi-card"><div class="kpi-icon orange"><i class="bi bi-file-earmark-text"></i></div><div class="kpi-body"><span class="kpi-label">Total Pesanan </span><span class="kpi-val"><?= $totalPO ?></span></div></div>
       <div class="kpi-card"><div class="kpi-icon blue"><i class="bi bi-cash-stack"></i></div><div class="kpi-body"><span class="kpi-label">Total Nilai Transaksi</span><span class="kpi-val kpi-val-sm"><?= formatRp($totalTransaksi) ?></span></div></div>
       <div class="kpi-card"><div class="kpi-icon green"><i class="bi bi-check-circle"></i></div><div class="kpi-body"><span class="kpi-label">Approved</span><span class="kpi-val"><?= $approvedCount ?></span><span class="kpi-sub"><?= $completedCount ?> completed</span></div></div>
       <div class="kpi-card"><div class="kpi-icon red"><i class="bi bi-x-circle"></i></div><div class="kpi-body"><span class="kpi-label">Rejected</span><span class="kpi-val"><?= $rejectedCount ?></span></div></div>
@@ -249,7 +249,7 @@ $hasFilter = array_filter($filter);
     <?php if (!empty($byMonth)): ?>
     <div class="section-label">Visualisasi</div>
     <div class="charts-row">
-      <div class="form-card chart-card"><div class="form-card-header"><h4><i class="bi bi-bar-chart-line"></i> Jumlah Pesanan PCB per Bulan</h4></div><div class="chart-wrap"><canvas id="chartCount"></canvas></div></div>
+      <div class="form-card chart-card"><div class="form-card-header"><h4><i class="bi bi-bar-chart-line"></i> Jumlah Pesanan per Bulan</h4></div><div class="chart-wrap"><canvas id="chartCount"></canvas></div></div>
       <div class="form-card chart-card"><div class="form-card-header"><h4><i class="bi bi-trophy"></i> Top 5 Pelanggan</h4></div><div class="top-customer-list">
           <?php $maxVal = max(array_values($topCustomers) ?: [1]); $rank = 1; foreach ($topCustomers as $name => $val): $pct = $maxVal > 0 ? round($val / $maxVal * 100) : 0; ?>
           <div class="tc-item"><div class="tc-rank"><?= $rank++ ?></div><div class="tc-body"><div class="tc-name-row"><span class="tc-name"><?= htmlspecialchars($name) ?></span><span class="tc-val"><?= formatRp($val) ?></span></div><div class="tc-bar-bg"><div class="tc-bar-fill" style="width:<?= $pct ?>%"></div></div></div></div>
@@ -261,7 +261,7 @@ $hasFilter = array_filter($filter);
     <div class="section-label">Detail Data</div>
     <div class="form-card">
       <div class="form-card-header">
-        <h4><i class="bi bi-table"></i> Data Pesanan PCB <span class="count-badge"><?= $totalPO ?></span></h4>
+        <h4><i class="bi bi-table"></i> Data Pesanan  <span class="count-badge"><?= $totalPO ?></span></h4>
         <div class="search-wrap"><i class="bi bi-search"></i><input type="text" id="tableSearch" class="search-input" placeholder="Cari nomor pesanan atau pelanggan..."></div>
       </div>
       <div class="table-wrap">
@@ -279,7 +279,7 @@ $hasFilter = array_filter($filter);
           </thead>
           <tbody>
             <?php if (empty($pos)): ?>
-            <tr><td colspan="7" class="empty-state"><i class="bi bi-inbox"></i><span>Tidak ada pesanan PCB.</span></td></tr>
+            <tr><td colspan="7" class="empty-state"><i class="bi bi-inbox"></i><span>Tidak ada pesanan .</span></td></tr>
             <?php else: ?>
             <?php foreach ($pos as $i => $po): ?>
             <tr>
@@ -322,7 +322,7 @@ $hasFilter = array_filter($filter);
               </td>
             </tr>
             <?php endforeach; ?>
-            <tr class="total-row"><td colspan="5" class="fw-mid">Total Keseluruhan Pesanan PCB</td><td class="col-right fw-mid"><?= formatRp($totalTransaksi) ?></td><td></td></tr>
+            <tr class="total-row"><td colspan="5" class="fw-mid">Total Keseluruhan Pesanan </td><td class="col-right fw-mid"><?= formatRp($totalTransaksi) ?></td><td></td></tr>
             <?php endif; ?>
           </tbody>
         </table>

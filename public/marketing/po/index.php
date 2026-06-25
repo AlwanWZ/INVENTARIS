@@ -17,7 +17,7 @@ $poList = array_map(function($po) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pesanan PCB | InventorySys</title>
+  <title>Pesanan | InventorySys</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
@@ -39,7 +39,7 @@ $poList = array_map(function($po) {
         <div class="breadcrumb">
           <a href="/Inventaris/public/dashboard.php">Dashboard</a>
           <i class="bi bi-chevron-right"></i>
-          <span>Pesanan PCB</span>
+          <span>Pesanan</span>
         </div>
       </div>
 
@@ -62,14 +62,11 @@ $poList = array_map(function($po) {
 
     <div class="page-header">
       <div class="page-header-left">
-        <h1 class="page-title-lg">Pesanan PCB</h1>
-        <p class="page-subtitle">Kelola pesanan PCB dari customer - lihat detail items (qty, PCB, harga) dan track status produksi.</p>
+        <h1 class="page-title-lg">Daftar Pesanan</h1>
+        <p class="page-subtitle">Kelola pesanan  dari customer - lihat detail items (qty, harga) dan track status produksi.</p>
       </div>
       
       <div class="page-header-actions" style="display: flex; gap: 0.6rem; align-items: center;">
-        <a href="history.php" class="btn-history" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.2rem; background: #ffffff; border: 1px solid #dcdcdc; border-radius: 6px; color: #444444; font-size: 0.9rem; font-weight: 500; text-decoration: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;">
-          <i class="bi bi-clock-history"></i> Riwayat Pesanan
-        </a>
         
         <a href="crud/add.php" class="btn-primary">
           <i class="bi bi-plus-lg"></i> Buat Pesanan Baru
@@ -114,7 +111,7 @@ $poList = array_map(function($po) {
 
     <div class="table-card">
       <div class="table-header">
-        <h4><i class="bi bi-file-earmark-text"></i> Daftar Pesanan PCB</h4>
+        <h4><i class="bi bi-file-earmark-text"></i> Daftar Pesanan </h4>
 
         <div class="table-actions">
           <div class="search-wrap">
@@ -145,7 +142,7 @@ $poList = array_map(function($po) {
               <tr>
                 <td colspan="9" class="empty-state">
                   <i class="bi bi-file-earmark"></i>
-                  <span>Belum ada pesanan PCB. <a href="crud/add.php" style="color: #007bff; font-weight: 500;">Buat Pesanan Baru</a></span>
+                  <span>Belum ada pesanan. <a href="crud/add.php" style="color: #007bff; font-weight: 500;">Buat Pesanan Baru</a></span>
                 </td>
               </tr>
             <?php else: ?>

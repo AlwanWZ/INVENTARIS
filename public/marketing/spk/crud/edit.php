@@ -149,9 +149,9 @@ $statusLabel = match($spk['status']) { 'on_progress' => 'On Progress', 'complete
                        value="<?= htmlspecialchars($spk['nomor_spk']) ?>" required>
               </div>
               <div class="form-group">
-                <label class="form-label">Pilih PO <span class="required">*</span></label>
+                <label class="form-label">Pilih Pesanan <span class="required">*</span></label>
                 <select name="po_id" class="form-control" required id="poSelect">
-                  <option value="">-- Pilih PO --</option>
+                  <option value="">-- Pilih Pesanan --</option>
                   <?php foreach ($poList as $po): ?>
                     <option value="<?= $po['id'] ?>"
                             data-customer="<?= htmlspecialchars($po['perusahaan'] ?? '') ?>"
@@ -224,7 +224,7 @@ $statusLabel = match($spk['status']) { 'on_progress' => 'On Progress', 'complete
                   <thead style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
                     <tr>
                       <th style="padding: 10px; text-align: left; font-weight: 600;">Barang</th>
-                      <th style="padding: 10px; text-align: center; font-weight: 600;">Qty PO</th>
+                      <th style="padding: 10px; text-align: center; font-weight: 600;">Qty</th>
                       <th style="padding: 10px; text-align: center; font-weight: 600;">PIC</th>
                     </tr>
                   </thead>
@@ -281,7 +281,7 @@ $statusLabel = match($spk['status']) { 'on_progress' => 'On Progress', 'complete
               <span class="side-info-val fw-mid"><?= htmlspecialchars($spk['nomor_spk']) ?></span>
             </div>
             <div class="side-info-item">
-              <span class="side-info-label">PO</span>
+              <span class="side-info-label">Nomor Pesanan</span>
               <span class="side-info-val"><?= htmlspecialchars($spk['nomor_po'] ?? '—') ?></span>
             </div>
             <div class="side-info-item">

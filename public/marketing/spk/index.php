@@ -174,7 +174,7 @@ function badgeLabel($s) {
             <tr>
               <th>No</th>
               <th>Nomor SPK</th>
-              <th>Nomor PO</th>
+              <th>Nomor Pesanan</th>
               <th>Customer</th>
               <th>Tanggal</th>
               <th>Deadline</th>

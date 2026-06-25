@@ -5,28 +5,57 @@ if (!isset($_SESSION['user']) || !in_array($_SESSION['user']['role'], ['marketin
     exit;
 }
 require_once '../../../../src/auth.php';
+require_once '../../../../src/config.php';
 require_once '../../../../src/models/Produk.php';
 
 $id = (int)($_GET['id'] ?? $_POST['id'] ?? null);
-$produk = $id ? Produk::find($id) : null;
+
+// Cari data produk untuk ditampilin di form
+$stmtCari = $pdo->prepare("SELECT p.*, k.nama_kategori AS kategori FROM produk p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE p.id = ?");
+$stmtCari->execute([$id]);
+$produk = $stmtCari->fetch(PDO::FETCH_ASSOC);
 
 if (!$produk) {
     header('Location: ../index.php');
     exit;
 }
 
-// Konfirmasi delete via POST
+$errorMessage = '';
+
+// 🚀 KONFIRMASI HARD DELETE VIA POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (Produk::delete($id)) {
+    try {
+        // Mulai Transaksi (Kalau gagal satu, gagal semua)
+        $pdo->beginTransaction();
+
+        // 1. SAPU BERSIH ANAKNYA DULU (Tabel log_stok)
+        $stmtLog = $pdo->prepare("DELETE FROM log_stok WHERE produk_id = ?");
+        $stmtLog->execute([$id]);
+        
+        // (Bisa tambahin delete tabel lain di sini kalau ada histori abal-abal yang mau dihapus)
+
+        // 2. BARU EKSEKUSI HARD DELETE BAPAKNYA (Tabel produk)
+        $stmtDel = $pdo->prepare("DELETE FROM produk WHERE id = ?");
+        $stmtDel->execute([$id]);
+        
+        // Simpan perubahan permanen
+        $pdo->commit();
+        
         header('Location: ../index.php?deleted=1');
         exit;
-    } else {
-        header('Location: ../index.php?deleted=0');
-        exit;
+        
+    } catch (PDOException $e) {
+        // Batalkan semua penghapusan kalau tiba-tiba ada error
+        $pdo->rollBack();
+        
+        // Tangkap kalau database nolak karena produk udah dipakai di transaksi PENTING (PO / Pengeluaran / SPK)
+        if ($e->getCode() == '23000') {
+            $errorMessage = "⚠️ GAGAL! Produk ini <strong>tidak bisa dihapus permanen</strong> karena masih nyangkut di riwayat transaksi penting (Pesanan / SPK / Barang Keluar). Hapus transaksi yang bersangkutan terlebih dahulu!";
+        } else {
+            $errorMessage = "⚠️ Error Database: " . $e->getMessage();
+        }
     }
 }
-
-// Tampilkan form konfirmasi
 ?>
 <!doctype html>
 <html lang="id" data-theme="light">
@@ -47,7 +76,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <main class="main">
   <div class="content">
     
-    <!-- TOPBAR -->
     <div class="topbar">
       <div class="top-left">
         <button class="menu-btn" id="menuBtn"><i class="bi bi-list"></i></button>
@@ -71,34 +99,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </div>
 
-    <!-- PAGE HEADER -->
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-title-lg">Hapus Produk</h1>
-        <p class="page-subtitle">Konfirmasi penghapusan produk ini secara permanen.</p>
+        <p class="page-subtitle">Konfirmasi penghapusan produk ini secara permanen dari database.</p>
       </div>
       <a href="../index.php" class="btn-ghost-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
     </div>
 
-    <!-- KONFIRMASI -->
+    <?php if ($errorMessage): ?>
+    <div style="background:#fff5f5; color:#dc3545; padding:15px; border-radius:8px; border:1px solid #ffcdd2; margin-bottom: 20px; font-weight: 500; line-height: 1.5;">
+        <?= $errorMessage ?>
+    </div>
+    <?php endif; ?>
+
     <div class="form-layout">
       <div class="form-main">
-        <!-- WARNING SECTION -->
         <div class="form-card" style="border: 2px solid #dc3545; background: #fff5f5;">
           <div class="form-card-header">
             <h4 style="color: #dc3545;"><i class="bi bi-exclamation-triangle-fill"></i> Konfirmasi Penghapusan Produk</h4>
           </div>
           <p style="margin-bottom: 1.5rem; color: #555; line-height: 1.6;">
-            Anda akan menghapus produk secara permanen. Tindakan ini <strong>TIDAK DAPAT DIBATALKAN</strong> dan akan menghapus semua data produk dari sistem.
+            Anda akan menghapus produk secara permanen. Tindakan ini <strong>TIDAK DAPAT DIBATALKAN</strong> dan akan menghapus riwayat log stok beserta data produk dari sistem.
           </p>
 
-          <!-- DETAIL SECTION -->
           <div style="background: white; padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid #ffe0e0;">
             <h5 style="margin-bottom: 1rem; color: #333; font-size: 0.95rem;">Data Produk yang akan Dihapus:</h5>
             <div class="detail-grid">
               <div class="detail-item">
                 <span class="detail-label">Kode Produk</span>
-                <span class="detail-val fw-mid" style="color: #dc3545; font-size: 1.1rem;"><?= htmlspecialchars($produk['kode_produk'] ?? $produk['kode'] ?? '-') ?></span>
+                <span class="detail-val fw-mid" style="color: #dc3545; font-size: 1.1rem;">
+                  <?= htmlspecialchars($produk['kode'] ?: $produk['kode_produk'] ?? '-') ?>
+                </span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Nama Produk</span>
@@ -109,17 +141,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span class="detail-val"><?= htmlspecialchars($produk['kategori'] ?? '-') ?></span>
               </div>
               <div class="detail-item">
-                <span class="detail-label">Harga Satuan</span>
+                <span class="detail-label">HPP (Harga Pokok)</span>
                 <span class="detail-val">Rp <?= number_format((int)($produk['harga'] ?? 0), 0, ',', '.') ?></span>
               </div>
               <div class="detail-item">
-                <span class="detail-label">Stok Tersimpan</span>
-                <span class="detail-val"><?= (int)($produk['stok'] ?? 0) ?> pcs</span>
+                <span class="detail-label">Stok Fisik Gudang</span>
+                <span class="detail-val"><?= (int)($produk['stok'] ?? 0) ?> <?= htmlspecialchars($produk['satuan'] ?? 'pcs') ?></span>
               </div>
             </div>
           </div>
 
-          <!-- ACTION BUTTONS -->
           <div style="display: flex; gap: 1rem;">
             <form method="post" style="flex: 1;">
               <input type="hidden" name="id" value="<?= $id ?>">
@@ -135,27 +166,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
       <div class="form-side">
-        <!-- CHECKLIST BEFORE DELETE -->
         <div class="form-card" style="border-left: 4px solid #dc3545;">
           <div class="form-card-header">
             <h4><i class="bi bi-clipboard-check"></i> Sebelum Menghapus</h4>
           </div>
           <ul class="info-list" style="font-size: 0.9rem;">
             <li style="margin-bottom: 0.75rem;"><i class="bi bi-check2-square"></i> <strong>Pastikan</strong> tidak ada PO/Pesanan yang menggunakan produk ini</li>
-            <li style="margin-bottom: 0.75rem;"><i class="bi bi-check2-square"></i> <strong>Verifikasi</strong> stok produk sudah dikosongkan</li>
+            <li style="margin-bottom: 0.75rem;"><i class="bi bi-check2-square"></i> <strong>Verifikasi</strong> stok produk sudah dikosongkan (0)</li>
             <li style="margin-bottom: 0.75rem;"><i class="bi bi-check2-square"></i> <strong>Confirm</strong> data produk di atas sudah benar</li>
           </ul>
         </div>
 
-        <!-- WARNING CARD -->
         <div class="form-card" style="background: #fff3cd; border-left: 4px solid #ff9800;">
           <div class="form-card-header">
             <h4 style="color: #ff9800;"><i class="bi bi-exclamation-circle-fill"></i> Peringatan</h4>
           </div>
           <ul class="info-list" style="font-size: 0.85rem;">
             <li><i class="bi bi-exclamation-circle"></i> Tidak ada backup otomatis</li>
-            <li><i class="bi bi-exclamation-circle"></i> Data tidak dapat dipulihkan</li>
-            <li><i class="bi bi-exclamation-circle"></i> Hanya admin yang bisa membatalkan</li>
+            <li><i class="bi bi-exclamation-circle"></i> Data musnah dari database</li>
+            <li><i class="bi bi-exclamation-circle"></i> Jika error, tandanya produk sedang digunakan transaksi.</li>
           </ul>
         </div>
       </div>

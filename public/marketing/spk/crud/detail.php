@@ -97,7 +97,7 @@ function badgeLabel($s) {
               <span class="detail-val fw-mid"><?= htmlspecialchars($spk['nomor_spk']) ?></span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">Nomor PO</span>
+              <span class="detail-label">Nomor Pesanan</span>
               <span class="detail-val"><?= htmlspecialchars($spk['nomor_po']) ?></span>
             </div>
             <div class="detail-item">

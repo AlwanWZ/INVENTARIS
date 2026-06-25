@@ -14,8 +14,8 @@ $customerCount = count(Customer::getAll());
 $poList = PO::all();
 $poCount = count($poList);
 $userCount = count(User::getAll());
-$kategoriList = array_unique(array_map(function($p){return $p['kategori'];}, $produkList));
-$kategoriCount = count($kategoriList);
+$kategoriList = array_unique(array_map(function($p){return $p['kategori'] ?? '';}, $produkList));
+$kategoriCount = count(array_filter($kategoriList));
 
 $spkCount = 0;
 if (file_exists('../src/models/SPK.php')) {
@@ -24,8 +24,8 @@ if (file_exists('../src/models/SPK.php')) {
     $spkCount = count($spkModel->all()); 
 }
 
-$totalStok = array_sum(array_map(function($p){return $p['stok'];}, $produkList));
-$lowStockCount = count(array_filter($produkList, function($p){return $p['stok'] <= 10;}));
+$totalStok = array_sum(array_map(function($p){return $p['stok'] ?? 0;}, $produkList));
+$lowStockCount = count(array_filter($produkList, function($p){return ($p['stok'] ?? 0) <= 10;}));
 $totalFG = $totalStok;
 
 // Pengiriman bulan ini (Surat Jalan)
@@ -41,8 +41,6 @@ foreach ($poList as $po) {
   $month = (int)date('n', strtotime($po['tanggal']));
   $ordersPerMonth[$month]++;
 }
-
-// Note: NG items removed from system - showing FG only
 
 // Tabel aktivitas: 5 aktivitas terakhir
 $aktivitas = [];
@@ -118,14 +116,13 @@ $aktivitas = array_slice($aktivitas,0,5);
       </div>
 
       <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
-        <div class="kpi-card"><div class="kpi-icon orange"><i class="bi bi-box-seam"></i></div><div class="kpi-body"><span class="kpi-label">Total Produk</span><div class="kpi-val"><?= $produkCount ?></div><span class="kpi-trend up"><i class="bi bi-arrow-up-short"></i> Produk aktif</span></div></div>
+        <div class="kpi-card"><div class="kpi-icon orange"><i class="bi bi-box-seam"></i></div><div class="kpi-body"><span class="kpi-label">Total Barang</span><div class="kpi-val"><?= $produkCount ?></div><span class="kpi-trend up"><i class="bi bi-arrow-up-short"></i> Produk aktif</span></div></div>
         <div class="kpi-card"><div class="kpi-icon blue"><i class="bi bi-tags"></i></div><div class="kpi-body"><span class="kpi-label">Kategori Barang</span><div class="kpi-val"><?= $kategoriCount ?></div><span class="kpi-trend"><i class="bi bi-tag"></i> Kategori aktif</span></div></div>
         <div class="kpi-card"><div class="kpi-icon green"><i class="bi bi-people"></i></div><div class="kpi-body"><span class="kpi-label">Total Customer</span><div class="kpi-val"><?= $customerCount ?></div><span class="kpi-trend up"><i class="bi bi-arrow-up-short"></i> Customer terdaftar</span></div></div>
-        <div class="kpi-card"><div class="kpi-icon purple"><i class="bi bi-file-earmark-text"></i></div><div class="kpi-body"><span class="kpi-label">Total PO</span><div class="kpi-val"><?= $poCount ?></div><span class="kpi-trend"><i class="bi bi-clipboard-data"></i> Order masuk</span></div></div>
+        <div class="kpi-card"><div class="kpi-icon purple"><i class="bi bi-file-earmark-text"></i></div><div class="kpi-body"><span class="kpi-label">Total Pesanan</span><div class="kpi-val"><?= $poCount ?></div><span class="kpi-trend"><i class="bi bi-clipboard-data"></i> Order masuk</span></div></div>
         <div class="kpi-card"><div class="kpi-icon teal"><i class="bi bi-clipboard-data"></i></div><div class="kpi-body"><span class="kpi-label">Total SPK</span><div class="kpi-val"><?= $spkCount ?></div><span class="kpi-trend"><i class="bi bi-clipboard-check"></i> Semua divisi</span></div></div>
         <div class="kpi-card"><div class="kpi-icon red"><i class="bi bi-exclamation-triangle"></i></div><div class="kpi-body"><span class="kpi-label">Stok Menipis (&le;10)</span><div class="kpi-val"><?= $lowStockCount ?></div><span class="kpi-trend warn"><i class="bi bi-arrow-down"></i> Perlu reorder</span></div></div>
         <div class="kpi-card"><div class="kpi-icon green"><i class="bi bi-stack"></i></div><div class="kpi-body"><span class="kpi-label">Total Stok Barang</span><div class="kpi-val"><?= $totalStok ?></div><span class="kpi-trend"><i class="bi bi-box-seam"></i> Semua produk</span></div></div>
-
         <div class="kpi-card"><div class="kpi-icon blue"><i class="bi bi-truck"></i></div><div class="kpi-body"><span class="kpi-label">Pengiriman Bulan Ini</span><div class="kpi-val"><?= $totalPengiriman ?></div><span class="kpi-trend"><i class="bi bi-calendar-event"></i> Surat Jalan</span></div></div>
       </div>
 
@@ -139,15 +136,13 @@ $aktivitas = array_slice($aktivitas,0,5);
 
       <div style="display:flex;gap:24px;margin:28px 0 0 0;flex-wrap:wrap;align-items:stretch;">
         
-        <div class="chart-card">
+        <!-- FIX: Layout chart diperbaiki, Flex Center dihapus biar Chart.js bisa resize dengan normal -->
+        <div class="chart-card" style="flex: 1; min-width: 320px;">
           <h4><i class="bi bi-bar-chart-fill"></i> Order Masuk per Bulan</h4>
-          <div style="position: relative; height: 300px; width: 100%; display: flex; align-items: center; justify-content: center;">
-            <canvas id="orderChart" width="600" height="300"></canvas>
+          <div style="position: relative; height: 300px; width: 100%;">
+            <canvas id="orderChart"></canvas>
           </div>
-          <div id="orderChartEmpty" style="display:none;padding:40px 20px;color:#d97706;text-align:center;font-size:1rem;">Belum ada data order bulan ini.</div>
         </div>
-        
-
 
       </div>
 
@@ -164,12 +159,16 @@ $aktivitas = array_slice($aktivitas,0,5);
               </tr>
             </thead>
             <tbody>
-            <?php foreach ($aktivitas as $a): ?>
-              <tr>
-                <td><?= date('d M Y', strtotime($a['tanggal'])) ?></td>
-                <td><?= $a['desc'] ?></td>
-              </tr>
-            <?php endforeach; ?>
+            <?php if (empty($aktivitas)): ?>
+              <tr><td colspan="2" style="text-align:center; padding:20px;">Belum ada aktivitas.</td></tr>
+            <?php else: ?>
+              <?php foreach ($aktivitas as $a): ?>
+                <tr>
+                  <td style="white-space: nowrap;"><?= date('d M Y', strtotime($a['tanggal'])) ?></td>
+                  <td><?= $a['desc'] ?></td>
+                </tr>
+              <?php endforeach; ?>
+            <?php endif; ?>
             </tbody>
           </table>
         </div>
@@ -179,51 +178,46 @@ $aktivitas = array_slice($aktivitas,0,5);
   </main>
 
 <script>
-  // Initialize charts after full load to ensure canvases and Chart.js are ready
   window.addEventListener('load', function () {
     // Grafik Bar Order Masuk
     const rawOrderData = <?= json_encode(array_values($ordersPerMonth)) ?>;
     const orderChartEl = document.getElementById('orderChart');
-    const orderChartEmptyEl = document.getElementById('orderChartEmpty');
     
     if (orderChartEl && typeof Chart !== 'undefined') {
       const numericOrderData = rawOrderData.map(v => Number(v) || 0);
-      const totalOrders = numericOrderData.reduce((a, b) => a + b, 0);
-      if (totalOrders === 0) {
-        if (orderChartEl.parentElement) orderChartEl.parentElement.style.display = 'none';
-        if (orderChartEmptyEl) orderChartEmptyEl.style.display = 'block';
-      } else {
-        try {
-          const ctx = orderChartEl.getContext('2d');
-          new Chart(ctx, {
-            type: 'bar',
-            data: {
-              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-              datasets: [{
-                label: 'Order Masuk',
-                data: numericOrderData,
-                backgroundColor: 'rgba(232,98,26,0.85)',
-                borderRadius: 6,
-                maxBarThickness: 40
-              }]
-            },
-            options: {
-              maintainAspectRatio: false,
-              responsive: true,
-              plugins: { legend: { display: false } },
-              scales: {
-                x: { grid: { display: false } },
-                y: { beginAtZero: true, ticks: { stepSize: 2 } }
+      
+      try {
+        const ctx = orderChartEl.getContext('2d');
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+            datasets: [{
+              label: 'Order Masuk',
+              data: numericOrderData,
+              backgroundColor: 'rgba(232,98,26,0.85)',
+              borderRadius: 6,
+              maxBarThickness: 40
+            }]
+          },
+          options: {
+            maintainAspectRatio: false,
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false } },
+              y: { 
+                  beginAtZero: true, 
+                  suggestedMax: 5, // Trik agar Y-Axis tetap memunculkan angka 0-5 saat data masih kosong
+                  ticks: { stepSize: 1 } 
               }
             }
-          });
-        } catch (err) {
-          console.error('Error creating order Chart:', err);
-        }
+          }
+        });
+      } catch (err) {
+        console.error('Error creating order Chart:', err);
       }
     }
-
-    // NG chart removed - system now shows good items only
 
     // Theme, Notif, Quick Search, Dropdown, Active Link scripts
     const html = document.getElementById('htmlRoot');
@@ -262,22 +256,23 @@ $aktivitas = array_slice($aktivitas,0,5);
       });
     });
   
-  document.querySelectorAll('.dropdown-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const dd   = btn.nextElementSibling;
-      const open = dd.classList.contains('open');
-      document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
-      document.querySelectorAll('.dropdown-btn').forEach(b => b.classList.remove('open'));
-      if (!open) { dd.classList.add('open'); btn.classList.add('open'); }
+    document.querySelectorAll('.dropdown-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dd   = btn.nextElementSibling;
+        const open = dd.classList.contains('open');
+        document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
+        document.querySelectorAll('.dropdown-btn').forEach(b => b.classList.remove('open'));
+        if (!open) { dd.classList.add('open'); btn.classList.add('open'); }
+      });
     });
-  });
-  
-  document.querySelectorAll('.dropdown a').forEach(a => {
-    if (a.href === window.location.href) {
-      a.classList.add('active');
-      a.closest('.dropdown')?.classList.add('open');
-      a.closest('.dropdown')?.previousElementSibling?.classList.add('open');
-    }
+    
+    document.querySelectorAll('.dropdown a').forEach(a => {
+      if (a.href === window.location.href) {
+        a.classList.add('active');
+        a.closest('.dropdown')?.classList.add('open');
+        a.closest('.dropdown')?.previousElementSibling?.classList.add('open');
+      }
+    });
   });
 </script>
 

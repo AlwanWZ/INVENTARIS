@@ -152,9 +152,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        value="<?= htmlspecialchars($_POST['nomor_spk'] ?? $autoNomorSPK) ?>" readonly>
               </div>
               <div class="form-group">
-                <label class="form-label">Pilih PO <span class="required">*</span></label>
+                <label class="form-label">Pilih Pesanan <span class="required">*</span></label>
                 <select name="po_id" class="form-control" required id="poSelect">
-                  <option value="">-- Pilih PO --</option>
+                  <option value="">-- Pilih Pesanan --</option>
                   <?php foreach ($poList as $po): ?>
                     <option value="<?= $po['id'] ?>"
                             data-customer="<?= htmlspecialchars($po['perusahaan']) ?>"
@@ -170,8 +170,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <div class="form-group">
                 <label class="form-label">Customer (otomatis)</label>
                 <input type="text" id="customerField" class="form-control"
-                       value="— Pilih PO Dahulu —" readonly
-                       placeholder="Terisi otomatis dari PO" style="background-color: #f8f9fa; cursor: not-allowed;">
+                       value="— Pilih Pesanan Dahulu —" readonly
+                       placeholder="Terisi otomatis dari Pesanan" style="background-color: #f8f9fa; cursor: not-allowed;">
               </div>
               <div class="form-group">
                 <label class="form-label">Tanggal <span class="required">*</span></label>
@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function syncCustomer() {
         if (poSelect.value === "") {
-            customerField.value = "— Pilih PO Dahulu —";
+            customerField.value = "— Pilih Pesanan Dahulu —";
         } else {
             const selectedOpt = poSelect.options[poSelect.selectedIndex];
             customerField.value = selectedOpt.getAttribute('data-customer');

@@ -14,44 +14,58 @@ $errors = [];
 $kategoriList = [];
 try {
     $kategoriList = $pdo->query("SELECT id, nama_kategori, prefix_kode FROM kategori ORDER BY nama_kategori")->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    // Jika tabel kategori belum ada
-}
+} catch (Exception $e) {}
 
-// Tetap set Kategori ID ke 1 untuk syarat database
 $kategoriIdSelected = !empty($kategoriList) ? (int)$kategoriList[0]['id'] : 1;
 
-// 🚀 LOGIKA AUTO-GENERATE KODE (Format PCB-001, PCB-002, dst)
-// Cari kode terakhir yang berawalan 'PCB-', potong 4 karakter pertama ("PCB-"), lalu urutkan angkanya
-$stmtKode = $pdo->query("SELECT kode FROM produk WHERE kode LIKE 'PCB-%' ORDER BY CAST(SUBSTRING(kode, 5) AS UNSIGNED) DESC LIMIT 1");
-$lastKode = $stmtKode->fetchColumn();
+// =======================================================
+// 🚀 LOGIKA AUTO-GENERATE KODE (SUPER AMAN VIA PHP)
+// =======================================================
+$maxUrutan = 0;
 
-if ($lastKode) {
-    // Ambil angkanya saja (index ke-4 setelah "PCB-"), lalu tambah 1
-    $urutan = (int)substr($lastKode, 4) + 1;
-    // Format ulang jadi PCB- ditambah 3 digit angka
-    $autoKodeProduk = 'PCB-' . str_pad($urutan, 3, '0', STR_PAD_LEFT);
-} else {
-    // Kalau database produk masih kosong melompong
-    $autoKodeProduk = 'PCB-001';
+try {
+    // 1. Ambil semua kode yang depannya PCB- dari kolom 'kode'
+    $stmtKode = $pdo->query("SELECT kode FROM produk WHERE kode LIKE 'PCB-%'");
+    $listKode = $stmtKode->fetchAll(PDO::FETCH_COLUMN);
+    
+    // 2. Kalau ternyata kosong, coba cari di kolom 'kode_produk' (jaga-jaga nama kolom beda)
+    if (empty($listKode)) {
+        $stmtKode2 = $pdo->query("SELECT kode_produk FROM produk WHERE kode_produk LIKE 'PCB-%'");
+        $listKode = $stmtKode2->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    // 3. Ekstrak angkanya dan cari yang paling gede
+    foreach ($listKode as $k) {
+        // Buang tulisan 'PCB-' dan ambil sisa angkanya
+        $angka = (int) str_replace('PCB-', '', $k);
+        if ($angka > $maxUrutan) {
+            $maxUrutan = $angka;
+        }
+    }
+} catch (Exception $e) {
+    // Abaikan error database jika kolom tidak ditemukan
 }
+
+// 4. Tambah 1 dari angka terbesar yang ketemu
+$urutanBaru = $maxUrutan + 1;
+// 5. Format jadi PCB-001, PCB-002, dst
+$autoKodeProduk = 'PCB-' . str_pad($urutanBaru, 3, '0', STR_PAD_LEFT);
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stok_input = (int)($_POST['stok'] ?? 0);
     
-   $data = [
-    'kode'        => trim($_POST['kode'] ?? ''),
-    'nama'        => trim($_POST['nama'] ?? ''),
-    'kategori_id' => $kategoriIdSelected,
-    'stok'        => $stok_input,
-    'stok_min' => (int)($_POST['stok_min'] ?? 10),
-'satuan' => trim($_POST['satuan'] ?? 'pcs'),
-
-'harga' => (int)($_POST['harga'] ?? 0),
-'harga_jual' => (float)($_POST['harga_jual'] ?? 0),
-
-'status' => $_POST['status'] ?? 'aktif',
-];
+    $data = [
+        'kode'        => trim($_POST['kode'] ?? ''),
+        'nama'        => trim($_POST['nama'] ?? ''),
+        'kategori_id' => $kategoriIdSelected,
+        'stok'        => $stok_input,
+        'stok_min'    => (int)($_POST['stok_min'] ?? 10),
+        'satuan'      => trim($_POST['satuan'] ?? 'pcs'),
+        'harga'       => (int)($_POST['harga'] ?? 0),
+        'harga_jual'  => (float)($_POST['harga_jual'] ?? 0),
+        'status'      => $_POST['status'] ?? 'aktif',
+    ];
     
     if (!$data['kode']) $errors[] = 'Kode produk wajib diisi.';
     if (!$data['nama']) $errors[] = 'Nama produk wajib diisi.';
@@ -144,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label class="form-label">Kode Produk <span class="required">*</span></label>
                 <input type="text" name="kode" id="kodeInput" class="form-control"
                        value="<?= htmlspecialchars($_POST['kode'] ?? $autoKodeProduk) ?>" readonly style="background: var(--bg-body); cursor: not-allowed; font-weight: 800; color: #0d9488;">
-                <small class="text-muted" style="display: block; margin-top: 0.25rem;">Format: PCB-NNN (Otomatis dari sistem)</small>
+                <small class="text-muted" style="display: block; margin-top: 0.25rem;">Format: PCB-NNN (Otomatis)</small>
               </div>
               <div class="form-group">
                 <label class="form-label">Nama Produk <span class="required">*</span></label>
@@ -153,63 +167,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               </div>
             </div>
 
-           <div class="form-group">
-    <label class="form-label">HPP (Rp)</label>
-    <input type="text"
-           name="harga"
-           id="hargaInput"
-           class="form-control"
-           placeholder="0"
-           value="<?= (int)($_POST['harga'] ?? 0) ?>"
-           oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">HPP (Rp)</label>
+                <input type="text" name="harga" id="hargaInput" class="form-control" placeholder="0" value="<?= (int)($_POST['harga'] ?? 0) ?>" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                <small id="hargaPreview" class="text-muted" style="display:block;margin-top:.25rem;font-weight:600;color:#059669!important;">
+                    Preview HPP : Rp <?= number_format((int)($_POST['harga'] ?? 0),0,',','.') ?>
+                </small>
+              </div>
 
-    <small id="hargaPreview"
-           class="text-muted"
-           style="display:block;margin-top:.25rem;font-weight:600;color:#059669!important;">
-        Preview HPP :
-        Rp <?= number_format((int)($_POST['harga'] ?? 0),0,',','.') ?>
-    </small>
-</div>
-
-<div class="form-group">
-    <label class="form-label">Harga Jual (Rp)</label>
-    <input type="text"
-           name="harga_jual"
-           id="hargaJualInput"
-           class="form-control"
-           placeholder="0"
-           value="<?= (int)($_POST['harga_jual'] ?? 0) ?>"
-           oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-
-    <small id="hargaJualPreview"
-           class="text-muted"
-           style="display:block;margin-top:.25rem;font-weight:600;color:#2563eb!important;">
-        Preview Harga Jual :
-        Rp <?= number_format((int)($_POST['harga_jual'] ?? 0),0,',','.') ?>
-    </small>
-</div>
-
-                <label class="form-label">Stok Fisik Awal</label>
-                <input type="number" name="stok" class="form-control" placeholder="0" min="0"
-                       value="<?= (int)($_POST['stok'] ?? 0) ?>">
+              <div class="form-group">
+                <label class="form-label">Harga Jual (Rp)</label>
+                <input type="text" name="harga_jual" id="hargaJualInput" class="form-control" placeholder="0" value="<?= (int)($_POST['harga_jual'] ?? 0) ?>" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                <small id="hargaJualPreview" class="text-muted" style="display:block;margin-top:.25rem;font-weight:600;color:#2563eb!important;">
+                    Preview Harga Jual : Rp <?= number_format((int)($_POST['harga_jual'] ?? 0),0,',','.') ?>
+                </small>
               </div>
             </div>
 
             <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Stok Fisik Awal</label>
+                <input type="number" name="stok" class="form-control" placeholder="0" min="0" value="<?= (int)($_POST['stok'] ?? 0) ?>">
+              </div>
               <div class="form-group">
                 <label class="form-label">Batas Stok Minimum</label>
-                <input type="number" name="stok_min" class="form-control" placeholder="10" min="0"
-                       value="<?= (int)($_POST['stok_min'] ?? 10) ?>">
-                <small class="text-muted" style="display: block; margin-top: 0.25rem;">Peringatan 'Menipis' akan muncul jika stok di bawah angka ini.</small>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Satuan (UOM)</label>
-                <input type="text" name="satuan" class="form-control" placeholder="pcs, sheet, roll..."
-                       value="<?= htmlspecialchars($_POST['satuan'] ?? 'pcs') ?>" required>
+                <input type="number" name="stok_min" class="form-control" placeholder="10" min="0" value="<?= (int)($_POST['stok_min'] ?? 10) ?>">
+                <small class="text-muted" style="display: block; margin-top: 0.25rem;">Peringatan 'Kritis' jika stok di bawah angka ini.</small>
               </div>
             </div>
 
             <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Satuan (UOM)</label>
+                <input type="text" name="satuan" class="form-control" placeholder="pcs, sheet, roll..." value="<?= htmlspecialchars($_POST['satuan'] ?? 'pcs') ?>" required>
+              </div>
               <div class="form-group">
                 <label class="form-label">Status</label>
                 <select name="status" class="form-control">
@@ -234,7 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h4><i class="bi bi-info-circle"></i> Panduan</h4>
           </div>
           <ul class="info-list">
-            <li><i class="bi bi-dot"></i> <strong>Kategori & Kode:</strong> Sistem telah otomatis menetapkan kategori PCB dan nomor urut.</li>
+            <li><i class="bi bi-dot"></i> <strong>Kategori & Kode:</strong> Sistem telah otomatis menetapkan kategori PCB dan nomor urut berdasarkan database terakhir.</li>
             <li><i class="bi bi-dot"></i> <strong>Stok Fisik Awal</strong> akan langsung menjadi Stok Tersedia (Available) karena belum ada pesanan.</li>
             <li><i class="bi bi-dot"></i> Produk dengan status <strong>Tidak Aktif</strong> tidak akan muncul saat membuat pesanan (PO).</li>
           </ul>
@@ -246,23 +238,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </main>
 
 <script>
-// Format harga dengan separator yang aman (menggunakan ID langsung)
-const hargaInput = document.getElementById('hargaInput');
-const hargaPreview = document.getElementById('hargaPreview');
+function applyCurrencyFormat(inputId, previewId, labelPrefix) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
 
-if (hargaInput && hargaPreview) {
-  hargaInput.addEventListener('input', function() {
-    let value = this.value.replace(/[^0-9]/g, '');
-    
-    if (value === '') {
-      hargaPreview.innerHTML = 'Preview: Rp 0';
-      return;
+    if (input && preview) {
+        input.addEventListener('input', function() {
+            let value = this.value.replace(/[^0-9]/g, '');
+            
+            if (value === '') {
+                preview.innerHTML = `Preview ${labelPrefix} : Rp 0`;
+                return;
+            }
+
+            const formatted = new Intl.NumberFormat('id-ID').format(value);
+            preview.innerHTML = `Preview ${labelPrefix} : Rp ${formatted}`;
+        });
     }
-
-    const formatted = new Intl.NumberFormat('id-ID').format(value);
-    hargaPreview.innerHTML = 'Preview: Rp ' + formatted;
-  });
 }
+
+applyCurrencyFormat('hargaInput', 'hargaPreview', 'HPP');
+applyCurrencyFormat('hargaJualInput', 'hargaJualPreview', 'Harga Jual');
 </script>
 
 </body>

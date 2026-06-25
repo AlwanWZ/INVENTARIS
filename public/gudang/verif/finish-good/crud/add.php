@@ -11,7 +11,7 @@ header("Expires: 0");
 
 $verifModel = new Verifikasi($pdo);
 
-// 1. GANTI: Ambil data dari SPK, bukan Penerimaan
+// 1. Ambil data dari SPK
 try {
     $spkList = $pdo->query("SELECT id, nomor_spk, tanggal, status FROM spk ORDER BY id DESC")
                    ->fetchAll(PDO::FETCH_ASSOC);
@@ -23,12 +23,16 @@ $errors = [];
 $items  = [];
 $isSubmit = $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save']);
 
-// 2. GANTI: Tarik items berdasarkan spk_id yang dipilih (Auto-fill)
+// 2. Tarik items berdasarkan spk_id yang dipilih (Auto-fill)
 $selectedSpk = $_POST['spk_id'] ?? $_GET['spk_id'] ?? '';
 if ($selectedSpk) {
-    // Tarik data dari spk_items, pakai qty_schedule atau qty_po sebagai patokan qty_masuk
+    /* * PERBAIKAN DI SINI: 
+     * Mengubah qty_schedule/qty_po menjadi kolom 'qty'.
+     * CATATAN: Pastikan kolom 'qty' ini sesuai dengan yang ada di tabel 'spk_items' DB kamu. 
+     * Jika namanya beda (misal: 'jumlah' atau 'target_qty'), ubah tulisan 'si.qty' di bawah.
+     */
     $stmt = $pdo->prepare("SELECT si.id, si.spk_id, si.produk_id, 
-                                  COALESCE(si.qty_schedule, si.qty_po, 0) as qty_diterima, 
+                                  COALESCE(si.qty_po, 0) as qty_diterima, 
                                   pr.nama AS produk_nama 
                            FROM spk_items si 
                            LEFT JOIN produk pr ON si.produk_id = pr.id 
@@ -40,8 +44,8 @@ if ($selectedSpk) {
 
 if ($isSubmit) {
     $data = [
-        'spk_id'        => $_POST['spk_id'] ?? null,  // Pake spk_id sekarang
-        'penerimaan_id' => null,                      // Kosongkan
+        'spk_id'        => $_POST['spk_id'] ?? null,
+        'penerimaan_id' => null,                      // Kosongkan untuk Finish Good
         'tanggal'       => $_POST['tanggal']       ?? date('Y-m-d'),
         'pic'           => $_SESSION['user']['id'] ?? null,
         'status'        => 'draft',
@@ -182,7 +186,7 @@ if ($isSubmit) {
                 </thead>
                 <tbody>
                   <?php foreach ($items as $i => $item): 
-                        $defaultQty = $isSubmit ? (int)($_POST['items'][$i]['qty_ok'] ?? 0) : (int)$item['qty_diterima']; // Default auto-fill full qty
+                        $defaultQty = $isSubmit ? (int)($_POST['items'][$i]['qty_ok'] ?? 0) : (int)$item['qty_diterima']; 
                         $defaultKet = $isSubmit ? htmlspecialchars($_POST['items'][$i]['keterangan'] ?? '') : '';
                   ?>
                   <tr>

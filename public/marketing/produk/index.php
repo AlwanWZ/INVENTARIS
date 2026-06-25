@@ -90,7 +90,7 @@ $stokHabis = array_filter($produkList, function($p) {
         <div class="breadcrumb">
           <a href="/Inventaris/public/dashboard.php">Dashboard</a>
           <i class="bi bi-chevron-right"></i>
-          <span>Produk PCB</span>
+          <span>Barang</span>
         </div>
       </div>
 
@@ -141,20 +141,20 @@ $stokHabis = array_filter($produkList, function($p) {
 
     <div class="page-header">
       <div class="page-header-left">
-        <h1 class="page-title-lg">Produk PCB</h1>
-        <p class="page-subtitle">Kelola semua produk PCB yang tersedia dalam sistem.</p>
+        <h1 class="page-title-lg">Daftar Barang </h1>
+        <p class="page-subtitle">Kelola semua barang yang tersedia dalam sistem.</p>
       </div>
       <a href="crud/add.php" class="btn-primary">
-        <i class="bi bi-plus-lg"></i> Tambah Produk
+        <i class="bi bi-plus-lg"></i> Tambah Barang
       </a>
     </div>
 
     <div class="customer-selector-card">
       <div class="selector-header">
-        <h3 style="margin: 0; font-size: 0.95rem; color: var(--text); font-weight: 700;">Quick View Produk</h3>
+        <h3 style="margin: 0; font-size: 0.95rem; color: var(--text); font-weight: 700;">Quick View Barang</h3>
       </div>
       <select id="productComboBox" class="customer-combobox" onchange="handleProductSelect(this)">
-        <option value="">-- Pilih Produk untuk lihat detail --</option>
+        <option value="">-- Pilih Barang untuk lihat detail --</option>
         <?php foreach ($produkList as $p): ?>
         <option value="<?= $p['id'] ?>" 
                 data-code="<?= htmlspecialchars($p['kode_produk'] ?? $p['kode'] ?? '-') ?>" 
@@ -221,7 +221,7 @@ $stokHabis = array_filter($produkList, function($p) {
 
     <div class="table-card">
       <div class="table-header">
-        <h4><i class="bi bi-box-seam"></i> Daftar Produk</h4>
+        <h4><i class="bi bi-box-seam"></i> Daftar Barang</h4>
         <div class="table-actions">
           <div class="search-wrap">
             <i class="bi bi-search"></i>
@@ -249,7 +249,7 @@ $stokHabis = array_filter($produkList, function($p) {
               <tr>
                 <td colspan="7" class="empty-state">
                   <i class="bi bi-box-seam"></i>
-                  <span>Belum ada produk. <a href="crud/add.php">Tambah sekarang</a></span>
+                  <span>Belum ada barang. <a href="crud/add.php">Tambah sekarang</a></span>
                 </td>
               </tr>
             <?php else: ?>

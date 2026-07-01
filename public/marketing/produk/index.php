@@ -75,6 +75,49 @@ $stokHabis = array_filter($produkList, function($p) {
       from { opacity: 0; transform: translateY(-8px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    
+    /* Styling tambahan untuk Filter Dropdown & Search Button */
+    .filter-select {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+    .table-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .search-group {
+      display: flex;
+      align-items: stretch;
+    }
+    .search-group input {
+      border-radius: var(--radius) 0 0 var(--radius);
+      border-right: none;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      outline: none;
+    }
+    .search-group input:focus {
+      border-color: var(--accent);
+    }
+    .search-group button {
+      background-color: #0d9488;
+      color: white;
+      border: none;
+      padding: 0 14px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .search-group button:hover {
+      background-color: #0f766e;
+    }
   </style>
 </head>
 <body>
@@ -223,9 +266,17 @@ $stokHabis = array_filter($produkList, function($p) {
       <div class="table-header">
         <h4><i class="bi bi-box-seam"></i> Daftar Barang</h4>
         <div class="table-actions">
-          <div class="search-wrap">
-            <i class="bi bi-search"></i>
-            <input type="text" id="searchInput" class="search-input" placeholder="Cari nama atau kode...">
+          <select id="filterStatus" class="filter-select">
+            <option value="all">Semua Status</option>
+            <option value="aktif">Aktif</option>
+            <option value="nonaktif">Nonaktif</option>
+          </select>
+          
+          <div class="search-group">
+            <input type="text" id="searchInput" placeholder="Cari nama atau kode...">
+            <button type="button" id="searchBtn" title="Cari Data">
+              <i class="bi bi-search"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -255,25 +306,24 @@ $stokHabis = array_filter($produkList, function($p) {
             <?php else: ?>
 
               <?php foreach ($produkList as $i => $p):
-                $statusCls = match(strtolower($p['status'] ?? '')) {
+                $rawStatus = strtolower($p['status'] ?? 'aktif');
+                $statusCls = match($rawStatus) {
                   'aktif' => 'ok',
                   default => 'warn'
                 };
                 
-                // Ambil data stok sesuai database
                 $stokAktif = $p['stok_available'] ?? $p['stok'] ?? 0;
                 $stokFisik = $p['stok'] ?? 0;
                 $stokBooking = $p['stok_reserved'] ?? 0;
                 $batasMin = $p['stok_min'] ?? 10;
                 $satuan = htmlspecialchars($p['satuan'] ?? 'pcs');
               ?>
-
-              <tr>
+              
+              <tr data-status="<?= $rawStatus ?>">
                 <td class="text-muted"><?= $i + 1 ?></td>
                 <td class="fw-mid"><?= htmlspecialchars($p['kode_produk'] ?? $p['kode'] ?? '-') ?></td>
                 <td style="font-weight: 500; color: #111827;"><?= htmlspecialchars($p['nama'] ?? '-') ?></td>
             
-                
                 <td>
                   <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
                     <span><?= $stokAktif ?> <?= $satuan ?></span>
@@ -335,75 +385,114 @@ $stokHabis = array_filter($produkList, function($p) {
 </main>
 
 <script>
-// Logic Quick View Combobox
-function handleProductSelect(select) {
-  const selectedOption = select.options[select.selectedIndex];
-  const detailBox = document.getElementById('productDetail');
+// Menunggu semua DOM (HTML) ter-load sempurna baru jalankan fungsi JS
+document.addEventListener('DOMContentLoaded', function() {
   
-  if (!select.value) {
-    detailBox.style.display = 'none';
-    return;
+  // ==========================================
+  // LOGIC QUICK VIEW COMBOBOX
+  // ==========================================
+  const productComboBox = document.getElementById('productComboBox');
+  if(productComboBox) {
+    productComboBox.addEventListener('change', function() {
+      const select = this;
+      const selectedOption = select.options[select.selectedIndex];
+      const detailBox = document.getElementById('productDetail');
+      
+      if (!select.value) {
+        detailBox.style.display = 'none';
+        return;
+      }
+      
+      const code = selectedOption.dataset.code;
+      const category = selectedOption.dataset.category;
+      const price = parseInt(selectedOption.dataset.price) || 0;
+      const stock = selectedOption.dataset.stock;
+      const unit = selectedOption.dataset.unit;
+      const status = selectedOption.dataset.status;
+      
+      const formatRp = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
+      
+      document.getElementById('detProdCode').textContent = code;
+      document.getElementById('detProdCategory').textContent = category;
+      document.getElementById('detProdPrice').textContent = formatRp;
+      document.getElementById('detProdStock').textContent = `${stock} ${unit}`;
+      
+      const statusBadge = document.getElementById('detProdStatus');
+      const badgeClass = status.toLowerCase() === 'aktif' ? 'ok' : 'warn';
+      const statusLabel = status.toLowerCase() === 'aktif' ? 'Aktif' : 'Nonaktif';
+      statusBadge.innerHTML = `<span class="badge ${badgeClass}">${statusLabel}</span>`;
+      
+      detailBox.style.display = 'block';
+    });
   }
-  
-  // Tarik data dari atribut option
-  const code = selectedOption.dataset.code;
-  const category = selectedOption.dataset.category;
-  const price = parseInt(selectedOption.dataset.price) || 0;
-  const stock = selectedOption.dataset.stock;
-  const unit = selectedOption.dataset.unit;
-  const status = selectedOption.dataset.status;
-  
-  // Format harga ke Rupiah
-  const formatRp = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
-  
-  // Update isi HTML
-  document.getElementById('detProdCode').textContent = code;
-  document.getElementById('detProdCategory').textContent = category;
-  document.getElementById('detProdPrice').textContent = formatRp;
-  document.getElementById('detProdStock').textContent = `${stock} ${unit}`;
-  
-  // Styling Badge Status
-  const statusBadge = document.getElementById('detProdStatus');
-  const badgeClass = status.toLowerCase() === 'aktif' ? 'ok' : 'warn';
-  const statusLabel = status.toLowerCase() === 'aktif' ? 'Aktif' : 'Nonaktif';
-  statusBadge.innerHTML = `<span class="badge ${badgeClass}">${statusLabel}</span>`;
-  
-  // Tampilkan box dengan animasi
-  detailBox.style.display = 'block';
-}
 
-// Table Search Logic
-const searchInput = document.getElementById('searchInput');
-const tableCount  = document.getElementById('tableCount');
+  // ==========================================
+  // LOGIC PENCARIAN & FILTER TABEL YANG BARU
+  // ==========================================
+  const searchInput = document.getElementById('searchInput');
+  const searchBtn = document.getElementById('searchBtn'); // Ambil elemen tombol
+  const filterStatus = document.getElementById('filterStatus');
+  const tableCount = document.getElementById('tableCount');
+  const tableRows = document.querySelectorAll('#produkTable tbody tr');
 
-if(searchInput) {
-  searchInput.addEventListener('input', function () {
-    const q = this.value.toLowerCase();
+  function filterTableData() {
+    const query = searchInput ? searchInput.value.toLowerCase() : '';
+    const statusVal = filterStatus ? filterStatus.value.toLowerCase() : 'all';
     let visible = 0;
 
-    document.querySelectorAll('#produkTable tbody tr').forEach(row => {
-      // Pastikan nggak nge-search isi thead atau empty state
-      if(row.querySelector('.empty-state')) return;
+    tableRows.forEach(row => {
+      // Abaikan baris kosong (empty state)
+      if (row.querySelector('.empty-state')) return;
       
-      const match = row.textContent.toLowerCase().includes(q);
-      row.style.display = match ? '' : 'none';
-      if (match) visible++;
+      // Ambil teks dari baris dan status dari atribut data-status
+      const textMatch = row.textContent.toLowerCase().includes(query);
+      const rowStatus = row.getAttribute('data-status') || '';
+      
+      // Cek apakah cocok dengan filter dropdown
+      const statusMatch = (statusVal === 'all' || rowStatus === statusVal);
+
+      // Tampilkan jika teks DAN status cocok
+      if (textMatch && statusMatch) {
+        row.style.display = '';
+        visible++;
+      } else {
+        row.style.display = 'none';
+      }
     });
 
-    if(tableCount) tableCount.textContent = `Menampilkan ${visible} data`;
-  });
-}
+    // Update tulisan jumlah data di bawah tabel
+    if (tableCount) {
+      tableCount.textContent = `Menampilkan ${visible} data`;
+    }
+  }
 
-// Dark mode toggle
-const html = document.documentElement;
-const themeBtn = document.getElementById('themeToggle');
-if (themeBtn) {
-  themeBtn.addEventListener('click', () => {
-    const isDark = html.getAttribute('data-theme') === 'dark';
-    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    themeBtn.querySelector('i').className = isDark ? 'bi bi-sun' : 'bi bi-moon';
-  });
-}
+  // 1. Eksekusi filter setiap kali ada ketikan (real-time)
+  if (searchInput) {
+    searchInput.addEventListener('input', filterTableData);
+  }
+  
+  // 2. Eksekusi filter jika pengguna menekan tombol cari secara manual
+  if (searchBtn) {
+    searchBtn.addEventListener('click', filterTableData);
+  }
+
+  // 3. Eksekusi filter saat pengguna memilih status dari dropdown
+  if (filterStatus) {
+    filterStatus.addEventListener('change', filterTableData);
+  }
+
+  // Dark mode toggle
+  const html = document.documentElement;
+  const themeBtn = document.getElementById('themeToggle');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', () => {
+      const isDark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      themeBtn.querySelector('i').className = isDark ? 'bi bi-sun' : 'bi bi-moon';
+    });
+  }
+
+}); // Penutup DOMContentLoaded
 </script>
 
 </body>

@@ -19,9 +19,10 @@ if ($id) {
 if (!$user) { header('Location: ../index.php'); exit; }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username'] ?? '');
-    $role     = $_POST['role'] ?? '';
-    $password = $_POST['password'] ?? '';
+    $username  = trim($_POST['username'] ?? '');
+    $role      = $_POST['role'] ?? '';
+    $no_telpon = trim($_POST['no_telpon'] ?? ''); // Menangkap input no telpon
+    $password  = $_POST['password'] ?? '';
 
     if (!$username) $errors[] = 'Username wajib diisi.';
     if (!$role)     $errors[] = 'Role wajib dipilih.';
@@ -30,16 +31,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$errors) {
         if ($password) {
             $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("UPDATE users SET username=?, role=?, password=? WHERE id=?");
-            $stmt->bind_param('sssi', $username, $role, $hash, $id);
+            // Tambahkan no_telpon ke query UPDATE dengan password
+            $stmt = $conn->prepare("UPDATE users SET username=?, role=?, no_telpon=?, password=? WHERE id=?");
+            $stmt->bind_param('ssssi', $username, $role, $no_telpon, $hash, $id);
         } else {
-            $stmt = $conn->prepare("UPDATE users SET username=?, role=? WHERE id=?");
-            $stmt->bind_param('ssi', $username, $role, $id);
+            // Tambahkan no_telpon ke query UPDATE tanpa password
+            $stmt = $conn->prepare("UPDATE users SET username=?, role=?, no_telpon=? WHERE id=?");
+            $stmt->bind_param('sssi', $username, $role, $no_telpon, $id);
         }
+        
         if ($stmt->execute()) {
             $success = true;
-            $user['username'] = $username;
-            $user['role']     = $role;
+            $user['username']  = $username;
+            $user['role']      = $role;
+            $user['no_telpon'] = $no_telpon; // Update array user agar tampilan langsung berubah
             if ($password) $user['password'] = $hash;
         } else {
             $errors[] = 'Gagal memperbarui user. Username mungkin sudah digunakan.';
@@ -132,6 +137,7 @@ $roleCls = match($user['role']) { 'marketing' => 'role-marketing', 'manager' => 
               <input type="text" name="username" class="form-control"
                      value="<?= htmlspecialchars($user['username']) ?>" required>
             </div>
+            
             <div class="form-group">
               <label class="form-label">Role <span class="required">*</span></label>
               <select name="role" class="form-control" required>
@@ -139,6 +145,12 @@ $roleCls = match($user['role']) { 'marketing' => 'role-marketing', 'manager' => 
                   <option value="<?= $val ?>" <?= $user['role'] === $val ? 'selected' : '' ?>><?= $label ?></option>
                 <?php endforeach; ?>
               </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">No. Telpon</label>
+              <input type="text" name="no_telpon" class="form-control"
+                     value="<?= htmlspecialchars($user['no_telpon'] ?? '') ?>" placeholder="Contoh: 081234567890">
             </div>
             <div class="form-group">
               <label class="form-label">Password Baru <span class="text-muted" style="font-weight:400;">(kosongkan jika tidak diubah)</span></label>
@@ -172,6 +184,10 @@ $roleCls = match($user['role']) { 'marketing' => 'role-marketing', 'manager' => 
               <span class="side-info-val"><span class="badge <?= $roleCls ?>"><?= htmlspecialchars($user['role']) ?></span></span>
             </div>
             <div class="side-info-item">
+              <span class="side-info-label">No. Telpon</span>
+              <span class="side-info-val fw-mid"><?= htmlspecialchars($user['no_telpon'] ?? '-') ?></span>
+            </div>
+            <div class="side-info-item">
               <span class="side-info-label">ID</span>
               <span class="side-info-val text-muted">#<?= $user['id'] ?></span>
             </div>
@@ -192,7 +208,6 @@ $roleCls = match($user['role']) { 'marketing' => 'role-marketing', 'manager' => 
       </div>
     </div>
 
-    <!-- Delete Modal -->
     <div class="modal-overlay" id="deleteModal">
       <div class="modal-box">
         <div class="modal-icon"><i class="bi bi-exclamation-triangle"></i></div>

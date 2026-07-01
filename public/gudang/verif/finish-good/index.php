@@ -6,7 +6,7 @@ if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'gudang') {
 }
 require_once '../../../../src/auth.php';
 require_once '../../../../src/config.php';
-require_once '../../../../src/models/Verifikasi.php'; // Tetap pakai model ini karena tabel database-nya masih sama
+require_once '../../../../src/models/Verifikasi.php'; 
 
 $verifModel = new Verifikasi($pdo);
 $search    = $_GET['search'] ?? '';
@@ -81,24 +81,24 @@ function fgBadgeLabel($s){ return match($s) { 'verified' => 'Stok Bertambah', de
 
     <div class="form-card filter-card">
       <div class="form-card-header">
-        <h4><i class="bi bi-funnel"></i> Filter Pencarian</h4>
+        <h4><i class="bi bi-funnel"></i> Filter & Pencarian</h4>
         <?php if ($hasFilter): ?><a href="index.php" class="btn-ghost-xs"><i class="bi bi-x"></i> Reset</a><?php endif; ?>
       </div>
-      <form method="get" class="filter-form">
+      <form method="get" action="index.php" class="filter-form">
         <div class="filter-group filter-search">
-          <label class="form-label">Cari</label>
-          <input type="text" name="search" class="form-control" placeholder="No. Dokumen / PIC..." value="<?= htmlspecialchars($search) ?>">
+          <label class="form-label">Cari Data</label>
+          <input type="text" name="search" class="form-control" placeholder="No. Dokumen / PIC... (Tekan Enter)" value="<?= htmlspecialchars($search) ?>">
         </div>
         <div class="filter-group">
           <label class="form-label">Status Masuk</label>
-          <select name="status" class="form-control">
+          <select name="status" class="form-control" onchange="this.form.submit()">
             <?php foreach ($statusOptions as $k => $v): ?>
               <option value="<?= $k ?>" <?= $status === $k ? 'selected' : '' ?>><?= $v ?></option>
             <?php endforeach; ?>
           </select>
         </div>
         <div class="filter-actions">
-          <button type="submit" class="btn-primary"><i class="bi bi-search"></i> Terapkan Filter</button>
+          <button type="submit" class="btn-primary"><i class="bi bi-search"></i> Cari</button>
         </div>
       </form>
     </div>
@@ -106,11 +106,7 @@ function fgBadgeLabel($s){ return match($s) { 'verified' => 'Stok Bertambah', de
     <div class="table-card">
       <div class="table-header">
         <h4><i class="bi bi-boxes"></i> Histori Barang Masuk <span class="count-badge"><?= count($list) ?></span></h4>
-        <div class="search-wrap">
-          <i class="bi bi-search"></i>
-          <input type="text" id="tableSearch" class="search-input" placeholder="Cari di tabel...">
         </div>
-      </div>
       <div class="table-wrap">
         <table id="verifTable">
           <thead>
@@ -126,7 +122,7 @@ function fgBadgeLabel($s){ return match($s) { 'verified' => 'Stok Bertambah', de
           </thead>
           <tbody>
             <?php if (empty($list)): ?>
-            <tr><td colspan="7" class="empty-state"><i class="bi bi-inbox"></i><span>Belum ada histori barang masuk. <a href="crud/add.php">Tambah sekarang</a></span></td></tr>
+            <tr><td colspan="7" class="empty-state"><i class="bi bi-inbox"></i><span>Belum ada histori barang masuk atau data tidak ditemukan. <a href="index.php">Reset Filter</a></span></td></tr>
             <?php else: ?>
             <?php foreach ($list as $i => $row): ?>
             <tr>
@@ -175,16 +171,9 @@ function fgBadgeLabel($s){ return match($s) { 'verified' => 'Stok Bertambah', de
 </div>
 
 <script>
-  const si = document.getElementById('tableSearch');
-  const tc = document.getElementById('tableCount');
-  si?.addEventListener('input', function() {
-    const q = this.value.toLowerCase(); let v = 0;
-    document.querySelectorAll('#verifTable tbody tr').forEach(r => {
-      const m = r.textContent.toLowerCase().includes(q); r.style.display = m ? '' : 'none'; if(m) v++;
-    });
-    if(tc) tc.textContent = `Menampilkan ${v} data`;
-  });
+  // Script pencarian lokal (JS) dihapus sejalan dengan UI di atas.
   
+  // Modal Konfirmasi Hapus
   const modal = document.getElementById('deleteModal');
   function confirmDelete(id, label) {
     document.getElementById('deleteId').value = id;

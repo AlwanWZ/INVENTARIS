@@ -17,6 +17,7 @@ $filter = [
 ];
 $users   = User::getAll();
 
+// Memanggil method all() yang sudah kita perbaiki query-nya di SPK.php
 $spks    = SPK::all($filter);
 
 $totalSPK   = count($spks);
@@ -50,7 +51,6 @@ function badgeLabel($s) {
 <main class="main">
   <div class="content">
 
-    <!-- TOPBAR -->
     <div class="topbar">
       <div class="top-left">
         <button class="menu-btn" id="menuBtn"><i class="bi bi-list"></i></button>
@@ -72,7 +72,6 @@ function badgeLabel($s) {
       </div>
     </div>
 
-    <!-- NOTIFIKASI -->
     <?php if (isset($_GET['success'])): ?>
     <div class="alert-success"><i class="bi bi-check-circle"></i> SPK berhasil ditambahkan.</div>
     <?php elseif (isset($_GET['updated'])): ?>
@@ -81,7 +80,6 @@ function badgeLabel($s) {
     <div class="alert-warn"><i class="bi bi-trash"></i> SPK berhasil dihapus.</div>
     <?php endif; ?>
 
-    <!-- PAGE HEADER -->
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-title-lg">Surat Perintah Kerja</h1>
@@ -90,7 +88,6 @@ function badgeLabel($s) {
       <a href="crud/add.php" class="btn-primary"><i class="bi bi-plus-lg"></i> Tambah SPK</a>
     </div>
 
-    <!-- STAT ROW -->
     <div class="stat-row">
       <div class="stat-pill">
         <span class="stat-pill-label">Total SPK</span>
@@ -110,22 +107,22 @@ function badgeLabel($s) {
       </div>
     </div>
 
-    <!-- FILTER CARD -->
     <div class="form-card filter-card">
       <div class="form-card-header">
-        <h4><i class="bi bi-funnel"></i> Filter</h4>
+        <h4><i class="bi bi-funnel"></i> Filter Server (Database)</h4>
         <?php if ($hasFilter): ?>
           <a href="index.php" class="btn-ghost-xs"><i class="bi bi-x"></i> Reset</a>
         <?php endif; ?>
       </div>
-      <form method="get" class="filter-form">
+      
+      <form method="get" action="index.php" id="filterForm" class="filter-form">
         <div class="filter-group">
           <label class="form-label">Tanggal</label>
-          <input type="date" name="tanggal" class="form-control" value="<?= htmlspecialchars($filter['tanggal']) ?>">
+          <input type="date" name="tanggal" class="form-control" value="<?= htmlspecialchars($filter['tanggal']) ?>" onchange="this.form.submit()">
         </div>
         <div class="filter-group">
           <label class="form-label">Status</label>
-          <select name="status" class="form-control">
+          <select name="status" class="form-control" onchange="this.form.submit()">
             <option value="">Semua Status</option>
             <option value="draft"       <?= $filter['status'] === 'draft'       ? 'selected' : '' ?>>Draft</option>
             <option value="on_progress" <?= $filter['status'] === 'on_progress' ? 'selected' : '' ?>>On Progress</option>
@@ -135,7 +132,7 @@ function badgeLabel($s) {
         </div>
         <div class="filter-group">
           <label class="form-label">PIC</label>
-          <select name="pic" class="form-control">
+          <select name="pic" class="form-control" onchange="this.form.submit()">
             <option value="">Semua PIC</option>
             <?php foreach ($users as $u): ?>
               <option value="<?= $u['id'] ?>" <?= $filter['pic'] == $u['id'] ? 'selected' : '' ?>>
@@ -145,7 +142,7 @@ function badgeLabel($s) {
           </select>
         </div>
         <div class="filter-group filter-search">
-          <label class="form-label">Cari</label>
+          <label class="form-label">Cari Data</label>
           <input type="text" name="search" class="form-control"
                  placeholder="No. SPK / PO / customer..."
                  value="<?= htmlspecialchars($filter['search']) ?>">
@@ -156,15 +153,14 @@ function badgeLabel($s) {
       </form>
     </div>
 
-    <!-- TABLE CARD -->
     <div class="table-card">
       <div class="table-header">
         <h4><i class="bi bi-file-earmark-check"></i> Data SPK
           <span class="count-badge"><?= $totalSPK ?></span>
         </h4>
-        <div class="search-wrap">
+        <div class="search-wrap" title="Pencarian cepat di tabel yang sedang tampil">
           <i class="bi bi-search"></i>
-          <input type="text" id="searchInput" class="search-input" placeholder="Cari di tabel...">
+          <input type="text" id="searchInput" class="search-input" placeholder="Quick find di tabel ini...">
         </div>
       </div>
 
@@ -189,15 +185,16 @@ function badgeLabel($s) {
             <tr>
               <td colspan="10" class="empty-state">
                 <i class="bi bi-file-earmark-check"></i>
-                <span>Belum ada SPK. <a href="crud/add.php">Tambah sekarang</a></span>
+                <span>Tidak ada data SPK yang sesuai. <a href="index.php">Reset Filter</a> atau <a href="crud/add.php">Tambah baru</a></span>
               </td>
             </tr>
             <?php else: ?>
             <?php foreach ($spks as $i => $spk):
-            $spk['nomor_spk'] = $spk['nomor_spk'] ?? '-';
-            $spk['nomor_po']  = $spk['nomor_po'] ?? '-';
-            $spk['perusahaan'] = $spk['perusahaan'] ?? '-';
-            $spk['pic_username'] = $spk['pic_username'] ?? '-';
+              $spk['nomor_spk'] = $spk['nomor_spk'] ?? '-';
+              $spk['nomor_po']  = $spk['nomor_po'] ?? '-';
+              $spk['perusahaan'] = $spk['perusahaan'] ?? '-';
+              $spk['pic_username'] = $spk['pic_username'] ?? '-';
+              
               $isLate = $spk['status'] !== 'completed' && strtotime($spk['deadline']) < time();
               $prog   = (int)$spk['progress'];
             ?>
@@ -223,7 +220,6 @@ function badgeLabel($s) {
               <td><span class="badge <?= badgeCls($spk['status']) ?>"><?= badgeLabel($spk['status']) ?></span></td>
               <td>
                 <div class="action-btns">
-                  <!-- ROW 1: VIEW & EDIT & PRINT -->
                   <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
                     <a href="crud/detail.php?id=<?= $spk['id'] ?>" class="btn-icon" title="Detail"><i class="bi bi-eye"></i></a>
                     <a href="crud/edit.php?id=<?= $spk['id'] ?>"   class="btn-icon edit" title="Edit"><i class="bi bi-pencil"></i></a>
@@ -231,7 +227,6 @@ function badgeLabel($s) {
                       <i class="bi bi-printer"></i>
                     </a>
                   </div>
-                  <!-- ROW 2: DELETE -->
                   <div>
                     <button type="button" class="btn-icon danger" title="Hapus"
                             onclick="confirmDelete(<?= $spk['id'] ?>, '<?= htmlspecialchars($spk['nomor_spk'], ENT_QUOTES) ?>')">
@@ -257,7 +252,6 @@ function badgeLabel($s) {
   </div>
 </main>
 
-<!-- DELETE MODAL -->
 <div class="modal-overlay" id="deleteModal">
   <div class="modal-box">
     <div class="modal-icon"><i class="bi bi-exclamation-triangle"></i></div>
@@ -274,21 +268,29 @@ function badgeLabel($s) {
 </div>
 
 <script>
-  // Search
+  // PERBAIKAN 3: JS Local Search yang lebih solid
   const si = document.getElementById('searchInput');
   const tc = document.getElementById('tableCount');
-  si?.addEventListener('input', function () {
-    const q = this.value.toLowerCase();
-    let v = 0;
-    document.querySelectorAll('#spkTable tbody tr:not(.empty-state-row)').forEach(r => {
-      const m = r.textContent.toLowerCase().includes(q);
-      r.style.display = m ? '' : 'none';
-      if (m) v++;
+  
+  if (si) {
+    si.addEventListener('input', function () {
+      const q = this.value.toLowerCase();
+      let v = 0;
+      
+      document.querySelectorAll('#spkTable tbody tr').forEach(r => {
+        // Jangan ikut menyembunyikan kolom "kosong / empty-state"
+        if (r.querySelector('.empty-state')) return;
+        
+        const m = r.textContent.toLowerCase().includes(q);
+        r.style.display = m ? '' : 'none';
+        if (m) v++;
+      });
+      
+      if (tc) tc.textContent = `Menampilkan ${v} data (filter lokal)`;
     });
-    if (tc) tc.textContent = `Menampilkan ${v} data`;
-  });
+  }
 
-  // Delete modal
+  // Delete modal logic
   const modal      = document.getElementById('deleteModal');
   const cancelBtn  = document.getElementById('cancelDelete');
   function confirmDelete(id, label) {

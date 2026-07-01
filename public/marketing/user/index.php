@@ -107,14 +107,15 @@ $conn->close();
               <th>No</th>
               <th>Username</th>
               <th>Role</th>
+              <th>No. Telpon</th>
               <th>Password</th>
-              <th>Aksi</th>
+              <th style="text-align: center;">Aksi</th>
             </tr>
           </thead>
           <tbody>
             <?php if (empty($users)): ?>
             <tr>
-              <td colspan="5" class="empty-state">
+              <td colspan="6" class="empty-state">
                 <i class="bi bi-people"></i>
                 <span>Belum ada user. <a href="crud/add.php">Tambah sekarang</a></span>
               </td>
@@ -132,21 +133,16 @@ $conn->close();
                 </div>
               </td>
               <td><span class="badge <?= $roleCls ?>"><?= htmlspecialchars($u['role']) ?></span></td>
+              <td style="font-weight: 500; color: #4b5563;"><?= htmlspecialchars($u['no_telpon'] ?? '-') ?></td>
               <td><span class="hash-preview"><?= htmlspecialchars(substr($u['password'], 0, 30)) ?>…</span></td>
-              <td>
-                <div class="action-btns">
-                  <!-- ROW 1: VIEW & EDIT -->
-                  <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <a href="crud/detail.php?id=<?= $u['id'] ?>" class="btn-icon" title="Detail"><i class="bi bi-eye"></i></a>
-                    <a href="crud/edit.php?id=<?= $u['id'] ?>" class="btn-icon edit" title="Edit"><i class="bi bi-pencil"></i></a>
-                  </div>
-                  <!-- ROW 2: DELETE -->
-                  <div>
-                    <button type="button" class="btn-icon danger" title="Hapus"
-                            onclick="confirmDelete(<?= $u['id'] ?>, '<?= htmlspecialchars($u['username'], ENT_QUOTES) ?>')">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </div>
+              <td style="text-align: center;">
+                <div class="action-btns" style="justify-content: center; gap: 8px;">
+                  <a href="crud/detail.php?id=<?= $u['id'] ?>" class="btn-icon" title="Detail"><i class="bi bi-eye"></i></a>
+                  <a href="crud/edit.php?id=<?= $u['id'] ?>" class="btn-icon edit" title="Edit"><i class="bi bi-pencil"></i></a>
+                  <button type="button" class="btn-icon danger" title="Hapus"
+                          onclick="confirmDelete(<?= $u['id'] ?>, '<?= htmlspecialchars($u['username'], ENT_QUOTES) ?>')">
+                    <i class="bi bi-trash"></i>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -164,7 +160,6 @@ $conn->close();
   </div>
 </main>
 
-<!-- Delete Modal -->
 <div class="modal-overlay" id="deleteModal">
   <div class="modal-box">
     <div class="modal-icon"><i class="bi bi-exclamation-triangle"></i></div>

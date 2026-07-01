@@ -30,8 +30,14 @@ class SPK {
             $params['pic'] = $filter['pic'];
         }
         if (!empty($filter['search'])) {
-            $sql .= " AND (spk.nomor_spk LIKE :search OR po.nomor_po LIKE :search OR customers.perusahaan LIKE :search)";
-            $params['search'] = '%' . $filter['search'] . '%';
+            // PERBAIKAN: Gunakan parameter unik untuk setiap kondisi LIKE
+            $sql .= " AND (spk.nomor_spk LIKE :search1 OR po.nomor_po LIKE :search2 OR customers.perusahaan LIKE :search3)";
+            $searchTerm = '%' . $filter['search'] . '%';
+            
+            // Masukkan ketiga parameter tersebut ke dalam array eksekusi
+            $params['search1'] = $searchTerm;
+            $params['search2'] = $searchTerm;
+            $params['search3'] = $searchTerm;
         }
 
         // 3. SATU KALI ORDER BY DI PALING BAWAH

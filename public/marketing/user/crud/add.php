@@ -9,24 +9,32 @@ $success = false;
 $password = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $role     = $_POST['role'] ?? '';
-  $password = $_POST['password'] ?? '';
-  $prefixes = ['marketing'=>'MRK','manager'=>'MNG','gudang'=>'GDG'];
-  $prefix   = $prefixes[$role] ?? '';
-  $username = '';
+  $role      = $_POST['role'] ?? '';
+  $no_telpon = $_POST['no_telpon'] ?? ''; // Menangkap input no_telpon
+  $password  = $_POST['password'] ?? '';
+  $prefixes  = ['marketing'=>'MRK','manager'=>'MNG','gudang'=>'GDG'];
+  $prefix    = $prefixes[$role] ?? '';
+  $username  = '';
+  
   if (!$role)                 $errors[] = 'Role wajib dipilih.';
-  if (strlen($password) < 6) $errors[] = 'Password minimal 6 karakter.';
+  if (strlen($password) < 6)  $errors[] = 'Password minimal 6 karakter.';
+  
   if ($prefix) {
     $result = $conn->query("SELECT COUNT(*) as total FROM users WHERE role='$role'");
     $count = ($result && $row = $result->fetch_assoc()) ? (int)$row['total'] : 0;
     $nextNum = str_pad($count+1, 3, '0', STR_PAD_LEFT);
     $username = $prefix.'-'.$nextNum;
   }
+  
   if (!$username) $errors[] = 'Username gagal dibuat.';
+  
   if (!$errors) {
     $hash = password_hash($password, PASSWORD_DEFAULT);
-    $stmt = $conn->prepare("INSERT INTO users (username, password, role) VALUES (?, ?, ?)");
-    $stmt->bind_param('sss', $username, $hash, $role);
+    // Menambahkan no_telpon ke dalam query INSERT
+    $stmt = $conn->prepare("INSERT INTO users (username, password, role, no_telpon) VALUES (?, ?, ?, ?)");
+    // Ubah tipe bind_param menjadi 'ssss' karena ada 4 string
+    $stmt->bind_param('ssss', $username, $hash, $role, $no_telpon);
+    
     if ($stmt->execute()) {
       $success = true;
     } else {
@@ -118,9 +126,15 @@ $conn->close();
                 <?php endforeach; ?>
               </select>
             </div>
+            
             <div class="form-group">
               <label class="form-label">Username (otomatis)</label>
               <input type="text" name="username" class="form-control" id="usernameInput" value="<?= htmlspecialchars($username ?? '') ?>" readonly>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">No. Telpon</label>
+              <input type="text" name="no_telpon" class="form-control" placeholder="Contoh: 081234567890" value="<?= htmlspecialchars($_POST['no_telpon'] ?? '') ?>">
             </div>
             <div class="form-group">
               <label class="form-label">Password <span class="required">*</span></label>
@@ -132,6 +146,7 @@ $conn->close();
                 </button>
               </div>
             </div>
+            
             <div class="form-actions">
               <button type="submit" class="btn-primary"><i class="bi bi-check-lg"></i> Simpan User</button>
               <a href="../index.php" class="btn-outline">Batal</a>

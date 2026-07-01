@@ -90,6 +90,13 @@ $roleCls = match($user['role']) { 'marketing' => 'role-marketing', 'manager' => 
               <span class="detail-label">Role</span>
               <span class="detail-val"><span class="badge <?= $roleCls ?>"><?= htmlspecialchars($user['role']) ?></span></span>
             </div>
+            
+            <div class="detail-item">
+              <span class="detail-label">No. Telpon</span>
+              <span class="detail-val fw-mid" style="color: #4b5563;">
+                <?= htmlspecialchars($user['no_telpon'] ?? '-') ?>
+              </span>
+            </div>
             <div class="detail-item detail-item-full">
               <span class="detail-label">Password Hash</span>
               <span class="detail-val hash-preview"><?= htmlspecialchars($user['password']) ?></span>

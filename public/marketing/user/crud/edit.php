@@ -21,7 +21,7 @@ if (!$user) { header('Location: ../index.php'); exit; }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username  = trim($_POST['username'] ?? '');
     $role      = $_POST['role'] ?? '';
-    $no_telpon = trim($_POST['no_telpon'] ?? ''); // Menangkap input no telpon
+    $no_telpon = trim($_POST['no_telpon'] ?? '');
     $password  = $_POST['password'] ?? '';
 
     if (!$username) $errors[] = 'Username wajib diisi.';
@@ -29,27 +29,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($password && strlen($password) < 6) $errors[] = 'Password minimal 6 karakter.';
 
     if (!$errors) {
-        if ($password) {
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            // Tambahkan no_telpon ke query UPDATE dengan password
-            $stmt = $conn->prepare("UPDATE users SET username=?, role=?, no_telpon=?, password=? WHERE id=?");
-            $stmt->bind_param('ssssi', $username, $role, $no_telpon, $hash, $id);
-        } else {
-            // Tambahkan no_telpon ke query UPDATE tanpa password
-            $stmt = $conn->prepare("UPDATE users SET username=?, role=?, no_telpon=? WHERE id=?");
-            $stmt->bind_param('sssi', $username, $role, $no_telpon, $id);
-        }
-        
-        if ($stmt->execute()) {
+        try {
+            if ($password) {
+                $hash = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $conn->prepare("UPDATE users SET username=?, role=?, no_telpon=?, password=? WHERE id=?");
+                $stmt->bind_param('ssssi', $username, $role, $no_telpon, $hash, $id);
+            } else {
+                $stmt = $conn->prepare("UPDATE users SET username=?, role=?, no_telpon=? WHERE id=?");
+                $stmt->bind_param('sssi', $username, $role, $no_telpon, $id);
+            }
+            
+            $stmt->execute();
+            
             $success = true;
             $user['username']  = $username;
             $user['role']      = $role;
-            $user['no_telpon'] = $no_telpon; // Update array user agar tampilan langsung berubah
+            $user['no_telpon'] = $no_telpon;
             if ($password) $user['password'] = $hash;
-        } else {
-            $errors[] = 'Gagal memperbarui user. Username mungkin sudah digunakan.';
+            
+            $stmt->close();
+
+        } catch (mysqli_sql_exception $e) {
+            if ($e->getCode() == 1062) {
+                $errors[] = "Username '$username' sudah digunakan. Silakan gunakan username lain.";
+            } else {
+                $errors[] = "Gagal menyimpan ke database: " . $e->getMessage();
+            }
         }
-        $stmt->close();
     }
 }
 $conn->close();

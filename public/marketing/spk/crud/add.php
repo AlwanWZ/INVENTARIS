@@ -24,7 +24,7 @@ if ($lastSPK) {
 }
 // -----------------------------------------
 
-// --- KUERI PO + CUSTOMER (DI-JOIN MANUAL AGAR PASTI DAPAT PERUSAHAAN) ---
+// --- KUERI PO + CUSTOMER ---
 $poList = $pdo->query("
     SELECT po.id, po.nomor_po, 
            COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan
@@ -45,13 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $customer_id = $stmtCust->fetchColumn() ?: null;
         
         // --- UPGRADE 1: CEK APAKAH PO SUDAH PUNYA BARANG ---
-        // Mencegah SPK terbentuk tapi spk_items kosong (sangat penting untuk Gudang!)
         $stmtCekItems = $pdo->prepare("SELECT COUNT(*) FROM po_items WHERE po_id = ?");
         $stmtCekItems->execute([$po_id]);
         if ($stmtCekItems->fetchColumn() <= 0) {
             $errors[] = 'PO yang dipilih belum memiliki daftar barang (PO Items kosong). Silakan lengkapi data barang pada PO tersebut terlebih dahulu!';
         }
-        // ----------------------------------------------------
     }
 
     $data = [
@@ -61,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'tanggal'     => $_POST['tanggal']   ?? '',
         'deadline'    => $_POST['deadline']  ?? '',
         'pic_id'      => !empty($_POST['pic_id']) ? (int)$_POST['pic_id'] : null,
-        'status'      => $_POST['status']    ?? 'draft',
+        'status'      => $_POST['status']    ?? 'draft', // Mengambil nilai dari value option select
         'notes'       => trim($_POST['notes'] ?? ''),
         'progress'    => (int)($_POST['progress'] ?? 0),
     ];
@@ -79,18 +77,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // --- UPGRADE 2: PAKAI TRY-CATCH SUPAYA ANTI CRASH ---
+    // --- UPGRADE 2: SIMPAN DATA ---
     if (!$errors) {
         try {
             SPK::create($data);
             header('Location: ../index.php?success=1');
             exit;
         } catch (Exception $e) {
-            // Jika terjadi kesalahan database saat menyimpan header/copy barang, tampilkan pesan error
             $errors[] = 'Gagal menyimpan SPK ke database: ' . $e->getMessage();
         }
     }
-    // ----------------------------------------------------
 }
 ?>
 <!doctype html>
@@ -219,7 +215,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <div class="form-group">
                 <label class="form-label">Status</label>
                 <select name="status" class="form-control">
-                  <?php foreach (['draft'=>'Draft','on_progress'=>'On Progress','completed'=>'Completed','cancelled'=>'Cancelled'] as $v => $l): ?>
+                  <?php 
+                  // CATATAN PENTING: Sesuaikan key array di bawah ini dengan struktur isi ENUM/VARCHAR di database-mu.
+                  // Jika database-mu memakai huruf kapital & spasi, ubah key-nya (contoh: 'On Progress' => 'On Progress')
+                  $statusOptions = [
+                      'draft'       => 'Draft',
+                      'on_progress' => 'On Progress',
+                      'completed'   => 'Completed',
+                      'cancelled'   => 'Cancelled'
+                  ];
+                  foreach ($statusOptions as $v => $l): ?>
                     <option value="<?= $v ?>" <?= ($_POST['status'] ?? 'draft') === $v ? 'selected' : '' ?>><?= $l ?></option>
                   <?php endforeach; ?>
                 </select>
@@ -263,7 +268,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     poSelect.addEventListener('change', syncCustomer);
-    // Initial call in case form has old values
     syncCustomer();
 });
 </script>

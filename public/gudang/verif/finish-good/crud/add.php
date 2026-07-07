@@ -3,7 +3,6 @@ session_start();
 require_once '../../../../../src/auth.php';
 require_once '../../../../../src/config.php';
 require_once '../../../../../src/models/Verifikasi.php';
-// Memanggil Model SPK untuk mengotomatiskan perubahan status SPK jadi Completed
 require_once '../../../../../src/models/SPK.php';
 
 // Pastikan tidak ada cache browser
@@ -28,32 +27,33 @@ $isSubmit = $_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_draft']
 // 2. Tarik items berdasarkan spk_id yang dipilih (Auto-fill)
 $selectedSpk = $_POST['spk_id'] ?? $_GET['spk_id'] ?? '';
 if ($selectedSpk) {
-    /*
-     * MENGGUNAKAN SMART COALESCE:
-     * Mengambil qty_outstanding terlebih dahulu (sisa yang belum selesai).
-     * Jika tidak ada, baru turun mengambil qty_po atau qty.
-     */
-    $stmt = $pdo->prepare("SELECT si.id, si.spk_id, si.produk_id, 
-                                  COALESCE(si.qty_outstanding, si.qty_po, si.qty, 0) as qty_diterima, 
-                                  pr.nama AS produk_nama,
-                                  pr.satuan AS produk_satuan
+    $stmt = $pdo->prepare("SELECT si.id, si.spk_id, COALESCE(si.produk_id, 0) as produk_id, 
+                                  COALESCE(si.qty_outstanding, si.qty_po, 0) as qty_diterima, 
+                                  COALESCE(pr.nama, si.nama_barang, 'Barang SPK') AS produk_nama,
+                                  COALESCE(pr.satuan, 'pcs') AS produk_satuan
                            FROM spk_items si 
                            LEFT JOIN produk pr ON si.produk_id = pr.id 
-                           WHERE si.spk_id = ? AND si.produk_id IS NOT NULL AND COALESCE(si.qty_outstanding, si.qty_po, si.qty, 0) > 0
+                           WHERE si.spk_id = ? AND COALESCE(si.qty_outstanding, si.qty_po, 0) > 0
                            ORDER BY si.id");
     $stmt->execute([$selectedSpk]);
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 if ($isSubmit) {
-    $isComplete = isset($_POST['save_complete']); // Apakah user memilih simpan langsung Selesai?
+    $isComplete = isset($_POST['save_complete']);
 
+    $userId = $_SESSION['user']['id'] ?? null;
     $data = [
         'spk_id'        => $_POST['spk_id'] ?? null,
-        'penerimaan_id' => null,                      // Kosong untuk Finish Good
-        'tanggal'       => $_POST['tanggal']       ?? date('Y-m-d'),
-        'pic'           => $_SESSION['user']['id'] ?? null,
-        'status'        => $isComplete ? 'completed' : 'draft',
+        'penerimaan_id' => null,
+        'tanggal'       => $_POST['tanggal'] ?? date('Y-m-d'),
+        'pic'           => $userId,
+        'pic_id'        => $userId,
+        'user_id'       => $userId,
+        
+        // 🔥 PASTIKAN INI 'approved' BUKAN 'completed' AGAR TIDAK ERROR 1265 (Data Truncated)
+        'status'        => $isComplete ? 'approved' : 'draft',
+        
         'jenis'         => 'finish_good',
         'keterangan'    => trim($_POST['keterangan'] ?? ''),
     ];
@@ -64,13 +64,16 @@ if ($isSubmit) {
     
     $filteredItems = [];
     foreach ($data['items'] as $i => $item) {
-        $qty_ok    = (int)($item['qty_ok']    ?? 0);
+        $qty_ok    = (int)($item['qty_ok']    ?? $item['qty'] ?? 0);
         $qty_masuk = (int)($item['qty_masuk'] ?? 0);
         
         if ($qty_ok > 0) {
             if ($qty_ok > $qty_masuk) {
                 $errors[] = 'Qty Masuk tidak boleh melebihi sisa target SPK pada baris ke-'.($i+1).'.';
             } else {
+                $item['qty']    = $qty_ok;
+                $item['qty_ok'] = $qty_ok;
+                $item['jumlah'] = $qty_ok;
                 $filteredItems[] = $item;
             }
         }
@@ -81,44 +84,47 @@ if ($isSubmit) {
     
     if (!$errors) {
         try {
-            // Gunakan transaksi untuk menjaga konsistensi database
-            $pdo->beginTransaction();
-
-            // 1. Simpan data verifikasi Finish Good
+            // 1. Simpan data verifikasi
             $verif_id = $verifModel->add($data, $data['items']);
             
-            // 2. Jika user memilih langsung SELESAI, eksekusi penambahan stok & penyelesaian SPK
+            // 2. Jika sukses dan user milih langsung "SELESAI"
             if ($isComplete && $verif_id) {
+                
+                // 🔥 SOLUSI: KITA TIDAK PAKAI $pdo->beginTransaction() DI SINI AGAR TIDAK BENTROK!
                 foreach ($data['items'] as $item) {
-                    $qty_add = (int)$item['qty_ok'];
-                    $prod_id = (int)$item['produk_id'];
+                    $qty_add     = (int)($item['qty_ok'] ?? $item['qty'] ?? 0);
+                    $prod_id     = (int)($item['produk_id'] ?? 0);
+                    $spk_item_id = (int)($item['spk_item_id'] ?? $item['id'] ?? 0);
                     
-                    // Tambah stok ke master produk
-                    $pdo->exec("UPDATE produk SET stok = stok + $qty_add, stok_available = stok_available + $qty_add WHERE id = $prod_id");
+                    if ($prod_id > 0 && $qty_add > 0) {
+                        $pdo->exec("UPDATE produk SET stok = stok + $qty_add, stok_available = stok_available + $qty_add WHERE id = $prod_id");
+                    }
                     
-                    // Kurangi qty_outstanding di spk_items
-                    $pdo->exec("UPDATE spk_items SET qty_outstanding = GREATEST(0, qty_outstanding - $qty_add) WHERE spk_id = {$data['spk_id']} AND produk_id = $prod_id");
+                    if ($qty_add > 0) {
+                        if ($spk_item_id > 0) {
+                            $pdo->exec("UPDATE spk_items SET qty_outstanding = GREATEST(0, COALESCE(qty_outstanding, qty_po, 0) - $qty_add) WHERE id = $spk_item_id");
+                        } else if ($prod_id > 0) {
+                            $pdo->exec("UPDATE spk_items SET qty_outstanding = GREATEST(0, COALESCE(qty_outstanding, qty_po, 0) - $qty_add) WHERE spk_id = {$data['spk_id']} AND produk_id = $prod_id");
+                        }
+                    }
                 }
                 
-                // Cek apakah semua item di SPK ini sudah habis (outstanding = 0)
+                // Cek apakah target SPK sudah terpenuhi semua (outstanding habis)
                 $cekSisa = $pdo->query("SELECT SUM(COALESCE(qty_outstanding, 0)) FROM spk_items WHERE spk_id = {$data['spk_id']}")->fetchColumn();
                 if ($cekSisa <= 0) {
-                    // Panggil fungsi model SPK untuk mengubah status SPK jadi Completed (100%)
-                    if (method_exists('SPK', 'complete')) {
-                        SPK::complete($data['spk_id']);
-                    } else {
-                        $pdo->exec("UPDATE spk SET status = 'completed', progress = 100 WHERE id = {$data['spk_id']}");
-                    }
+                    // Update header SPK langsung
+                    $pdo->exec("UPDATE spk SET status = 'completed', progress = 100 WHERE id = {$data['spk_id']}");
+                    $pdo->exec("UPDATE spk_items SET status_produksi = 'selesai', qty_outstanding = 0 WHERE spk_id = {$data['spk_id']}");
                 }
             }
 
-            $pdo->commit();
+            // Jika semua lancar, langsung pindah halaman (Success)
             header('Location: ../index.php?success=1');
             exit;
             
         } catch (Exception $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-            $errors[] = 'Terjadi kesalahan sistem saat menyimpan data: ' . $e->getMessage();
+            // 🔥 SOLUSI: Hapus $pdo->rollback() untuk menghindari bentrok transaksi dengan model Verifikasi
+            $errors[] = 'Gagal memproses data Finish Good: ' . $e->getMessage();
         }
     }
 }
@@ -247,8 +253,10 @@ if ($isSubmit) {
                       <?php if (!empty($item['produk_satuan'])): ?>
                         <span class="badge neutral" style="font-size:0.7rem;"><?= htmlspecialchars($item['produk_satuan']) ?></span>
                       <?php endif; ?>
-                      <input type="hidden" name="items[<?= $i ?>][produk_id]"  value="<?= (int)$item['produk_id'] ?>">
-                      <input type="hidden" name="items[<?= $i ?>][qty_masuk]"  value="<?= (int)$item['qty_diterima'] ?>">
+                      <input type="hidden" name="items[<?= $i ?>][id]"          value="<?= (int)$item['id'] ?>">
+                      <input type="hidden" name="items[<?= $i ?>][spk_item_id]" value="<?= (int)$item['id'] ?>">
+                      <input type="hidden" name="items[<?= $i ?>][produk_id]"   value="<?= (int)($item['produk_id'] ?? 0) ?>">
+                      <input type="hidden" name="items[<?= $i ?>][qty_masuk]"   value="<?= (int)$item['qty_diterima'] ?>">
                     </td>
                     <td class="col-center text-muted" style="font-weight: 600;">
                       <?= number_format((int)$item['qty_diterima']) ?>

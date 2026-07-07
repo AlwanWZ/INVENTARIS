@@ -49,7 +49,7 @@ try {
 // 4. Tambah 1 dari angka terbesar yang ketemu
 $urutanBaru = $maxUrutan + 1;
 // 5. Format jadi PCB-001, PCB-002, dst
-$autoKodeProduk = 'PCB-' . str_pad($urutanBaru, 3, '0', STR_PAD_LEFT);
+$autoKodeBarang = 'PCB-' . str_pad($urutanBaru, 3, '0', STR_PAD_LEFT);
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -67,8 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'status'      => $_POST['status'] ?? 'aktif',
     ];
     
-    if (!$data['kode']) $errors[] = 'Kode produk wajib diisi.';
-    if (!$data['nama']) $errors[] = 'Nama produk wajib diisi.';
+    if (!$data['kode']) $errors[] = 'Kode barang wajib diisi.';
+    if (!$data['nama']) $errors[] = 'Nama barang wajib diisi.';
     if ($data['kategori_id'] <= 0) $errors[] = 'Kategori tidak valid di database.';
     if ($data['stok'] < 0) $errors[] = 'Stok tidak boleh negatif.';
     
@@ -76,12 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             Produk::create($data);
             echo "<script>
-                alert('✅ Produk berhasil ditambahkan!');
+                alert('✅ Barang berhasil ditambahkan!');
                 window.location.href = '../index.php?success=1';
             </script>";
             exit;
         } catch (Exception $e) {
-            $errors[] = 'Gagal menyimpan produk: ' . $e->getMessage();
+            $errors[] = 'Gagal menyimpan barang: ' . $e->getMessage();
         }
     }
 }
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tambah Produk PCB | InventorySys</title>
+  <title>Tambah Barang PCB | InventorySys</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   <link href="/Inventaris/public/assets/css/nav.css" rel="stylesheet">
@@ -111,9 +111,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="breadcrumb">
           <a href="/Inventaris/public/dashboard.php">Dashboard</a>
           <i class="bi bi-chevron-right"></i>
-          <a href="../index.php">Produk PCB</a>
+          <a href="../index.php">Barang PCB</a>
           <i class="bi bi-chevron-right"></i>
-          <span>Tambah Produk</span>
+          <span>Tambah Barang</span>
         </div>
       </div>
       <div class="top-right">
@@ -130,8 +130,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="page-header">
       <div class="page-header-left">
-        <h1 class="page-title-lg">Tambah Produk</h1>
-        <p class="page-subtitle">Isi formulir berikut untuk menambahkan produk PCB baru.</p>
+        <h1 class="page-title-lg">Tambah Barang</h1>
+        <p class="page-subtitle">Isi formulir berikut untuk menambahkan barang PCB baru.</p>
       </div>
       <a href="../index.php" class="btn-ghost-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
     </div>
@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="form-main">
         <div class="form-card">
           <div class="form-card-header">
-            <h4><i class="bi bi-box-seam"></i> Data Produk</h4>
+            <h4><i class="bi bi-box-seam"></i> Data Barang</h4>
           </div>
 
           <?php if ($errors): ?>
@@ -155,14 +155,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Kode Produk <span class="required">*</span></label>
+                <label class="form-label">Kode Barang <span class="required">*</span></label>
                 <input type="text" name="kode" id="kodeInput" class="form-control"
-                       value="<?= htmlspecialchars($_POST['kode'] ?? $autoKodeProduk) ?>" readonly style="background: var(--bg-body); cursor: not-allowed; font-weight: 800; color: #0d9488;">
+                       value="<?= htmlspecialchars($_POST['kode'] ?? $autoKodeBarang) ?>" readonly style="background: var(--bg-body); cursor: not-allowed; font-weight: 800; color: #0d9488;">
                 <small class="text-muted" style="display: block; margin-top: 0.25rem;">Format: PCB-NNN (Otomatis)</small>
               </div>
               <div class="form-group">
-                <label class="form-label">Nama Produk <span class="required">*</span></label>
-                <input type="text" name="nama" class="form-control" placeholder="Nama lengkap produk"
+                <label class="form-label">Nama Barang <span class="required">*</span></label>
+                <input type="text" name="nama" class="form-control" placeholder="Nama lengkap barang"
                        value="<?= htmlspecialchars($_POST['nama'] ?? '') ?>" required autofocus>
               </div>
             </div>
@@ -213,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-actions">
-              <button type="submit" class="btn-primary"><i class="bi bi-check-lg"></i> Simpan Produk</button>
+              <button type="submit" class="btn-primary"><i class="bi bi-check-lg"></i> Simpan Barang</button>
               <a href="../index.php" class="btn-outline">Batal</a>
             </div>
           </form>
@@ -228,7 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <ul class="info-list">
             <li><i class="bi bi-dot"></i> <strong>Kategori & Kode:</strong> Sistem telah otomatis menetapkan kategori PCB dan nomor urut berdasarkan database terakhir.</li>
             <li><i class="bi bi-dot"></i> <strong>Stok Fisik Awal</strong> akan langsung menjadi Stok Tersedia (Available) karena belum ada pesanan.</li>
-            <li><i class="bi bi-dot"></i> Produk dengan status <strong>Tidak Aktif</strong> tidak akan muncul saat membuat pesanan (PO).</li>
+            <li><i class="bi bi-dot"></i> Barang dengan status <strong>Tidak Aktif</strong> tidak akan muncul saat membuat pesanan (PO).</li>
           </ul>
         </div>
       </div>

@@ -1,6 +1,6 @@
 <?php
 /**
- * StokTracking Model
+ * StokTracking Model (SAFE TRANSACTION VERSION)
  * 
  * Mengelola semua transaksi stok secara terpusat dan realtime:
  * - Reserve stok saat PO dibuat
@@ -8,11 +8,7 @@
  * - Kurang stok saat pengeluaran
  * - Nambah stok saat verifikasi
  * - Audit trail lengkap
- * 
- * Alur Otomatis:
- * 1. Customer buat PO → reserve stok
- * 2. Produksi selesai → stok nambah, unreserve PO qty
- * 3. Siap kirim → stok kurang (pengeluaran)
+ * - Imun dari error "There is already an active transaction"
  */
 
 class StokTracking {
@@ -27,8 +23,12 @@ class StokTracking {
      * Kurangi stok_available, nambah stok_reserved
      */
     public function reserveStok($produk_id, $qty, $reference_type = 'po', $reference_id = null, $created_by = null, $keterangan = '') {
+        $isRootTransaction = false;
         try {
-            $this->pdo->beginTransaction();
+            if (!$this->pdo->inTransaction()) {
+                $this->pdo->beginTransaction();
+                $isRootTransaction = true;
+            }
             
             // 1. Get current stok
             $stmt = $this->pdo->prepare("
@@ -81,11 +81,15 @@ class StokTracking {
                 $created_by
             );
             
-            $this->pdo->commit();
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
             return ['success' => true, 'message' => "Stok berhasil di-reserve: {$qty} pcs"];
             
         } catch (Exception $e) {
-            $this->pdo->rollBack();
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -95,8 +99,12 @@ class StokTracking {
      * Nambah stok_available, kurangi stok_reserved
      */
     public function unreserveStok($produk_id, $qty, $reference_type = 'po', $reference_id = null, $created_by = null, $keterangan = '') {
+        $isRootTransaction = false;
         try {
-            $this->pdo->beginTransaction();
+            if (!$this->pdo->inTransaction()) {
+                $this->pdo->beginTransaction();
+                $isRootTransaction = true;
+            }
             
             // Get current stok
             $stmt = $this->pdo->prepare("
@@ -146,11 +154,15 @@ class StokTracking {
                 $created_by
             );
             
-            $this->pdo->commit();
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
             return ['success' => true, 'message' => "Reserve stok berhasil dibatalkan: {$qty} pcs"];
             
         } catch (Exception $e) {
-            $this->pdo->rollBack();
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -159,8 +171,12 @@ class StokTracking {
      * NAMBAH stok saat verifikasi (barang masuk dari produksi)
      */
     public function addStok($produk_id, $qty, $reference_type = 'verifikasi', $reference_id = null, $created_by = null, $keterangan = '') {
+        $isRootTransaction = false;
         try {
-            $this->pdo->beginTransaction();
+            if (!$this->pdo->inTransaction()) {
+                $this->pdo->beginTransaction();
+                $isRootTransaction = true;
+            }
             
             // Get current stok
             $stmt = $this->pdo->prepare("
@@ -205,11 +221,15 @@ class StokTracking {
                 $created_by
             );
             
-            $this->pdo->commit();
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
             return ['success' => true, 'message' => "Stok berhasil ditambah: {$qty} pcs"];
             
         } catch (Exception $e) {
-            $this->pdo->rollBack();
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -218,8 +238,12 @@ class StokTracking {
      * KURANG stok saat pengeluaran (shipment ke customer)
      */
     public function reduceStok($produk_id, $qty, $reference_type = 'pengeluaran', $reference_id = null, $created_by = null, $keterangan = '') {
+        $isRootTransaction = false;
         try {
-            $this->pdo->beginTransaction();
+            if (!$this->pdo->inTransaction()) {
+                $this->pdo->beginTransaction();
+                $isRootTransaction = true;
+            }
             
             // Get current stok
             $stmt = $this->pdo->prepare("
@@ -272,11 +296,15 @@ class StokTracking {
                 $created_by
             );
             
-            $this->pdo->commit();
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
             return ['success' => true, 'message' => "Stok berhasil dikurangi: {$qty} pcs"];
             
         } catch (Exception $e) {
-            $this->pdo->rollBack();
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -285,8 +313,12 @@ class StokTracking {
      * ADJUSTMENT stok manual (untuk koreksi/selisih)
      */
     public function adjustmentStok($produk_id, $qty_change, $keterangan = '', $created_by = null) {
+        $isRootTransaction = false;
         try {
-            $this->pdo->beginTransaction();
+            if (!$this->pdo->inTransaction()) {
+                $this->pdo->beginTransaction();
+                $isRootTransaction = true;
+            }
             
             // Get current stok
             $stmt = $this->pdo->prepare("
@@ -336,11 +368,15 @@ class StokTracking {
                 $created_by
             );
             
-            $this->pdo->commit();
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
             return ['success' => true, 'message' => "Stok berhasil disesuaikan"];
             
         } catch (Exception $e) {
-            $this->pdo->rollBack();
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }

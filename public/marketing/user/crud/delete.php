@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-// Validasi akses (opsional, pastikan cuma role tertentu yang bisa hapus kalau perlu)
+// Validasi akses
 if (!isset($_SESSION['user'])) {
     header('Location: /Inventaris/public/dashboard.php');
     exit;
@@ -14,14 +14,27 @@ require_once '../../../../src/models/User.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['id'])) {
     $id = (int)$_POST['id'];
     
-    // Manggil fungsi delete yang udah lu tambahin di User.php tadi
-    User::delete($id);
-    
-    // Tendang balik ke halaman index dengan notif sukses
-    header('Location: ../index.php?deleted=1');
-    exit;
+    try {
+        // Manggil fungsi delete
+        User::delete($id);
+        
+        // Tendang balik ke halaman index dengan notif sukses
+        header('Location: ../index.php?deleted=1');
+        exit;
+    } catch (PDOException $e) {
+        // Tangkap error Foreign Key Constraint (SQLSTATE 23000)
+        if ($e->getCode() == '23000') {
+            // Balikin ke index bawa parameter error
+            header('Location: ../index.php?error=has_relation');
+            exit;
+        } else {
+            // Kalau error database lain
+            header('Location: ../index.php?error=db_failed');
+            exit;
+        }
+    }
 }
 
-// Kalau ada orang iseng buka file ini langsung via URL (bukan dari tombol), tendang balik ke index
+// Kalau ada orang iseng buka file ini langsung via URL
 header('Location: ../index.php');
 exit;

@@ -1,5 +1,6 @@
 <?php
 session_start();
+// Pastikan role sesuai
 if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'gudang') {
   echo "<script>alert('Anda tidak memiliki akses ke halaman ini!'); window.location.href='/Inventaris/public/dashboard.php';</script>";
   exit;
@@ -14,13 +15,13 @@ $status    = $_GET['status'] ?? '';
 $hasFilter = $search || $status;
 
 // Mengambil data barang masuk (Finish Good)
-$list      = $verifModel->getAll('finish_good', $search, $status);
+$list = $verifModel->getAll('finish_good', $search, $status);
 
 $statusOptions = ['' => 'Semua Status', 'draft' => 'Draft', 'verified' => 'Selesai (Masuk Stok)'];
 
-// Ubah label biar lebih gampang dipahami orang gudang
-function fgBadgeCls($s)  { return match($s) { 'verified' => 'ok', default => 'warn' }; }
-function fgBadgeLabel($s){ return match($s) { 'verified' => 'Stok Bertambah', default => 'Draft' }; }
+// Badge helper agar sinkron dengan model
+function fgBadgeCls($s)  { return ($s === 'verified' || $s === 'approved' || $s === 'completed') ? 'ok' : 'warn'; }
+function fgBadgeLabel($s){ return ($s === 'verified' || $s === 'approved' || $s === 'completed') ? 'Stok Bertambah' : 'Draft'; }
 ?>
 <!doctype html>
 <html lang="id" data-theme="light">
@@ -60,9 +61,10 @@ function fgBadgeLabel($s){ return match($s) { 'verified' => 'Stok Bertambah', de
       </div>
     </div>
 
+    <!-- Alert Messages -->
     <?php if (isset($_GET['success'])): ?><div class="alert-success"><i class="bi bi-check-circle"></i> Data Finish Good berhasil disimpan. Stok otomatis bertambah!</div>
-    <?php elseif (isset($_GET['updated'])): ?><div class="alert-success"><i class="bi bi-check-circle"></i> Data Finish Good berhasil diperbarui.</div>
-    <?php elseif (isset($_GET['deleted'])): ?><div class="alert-warn"><i class="bi bi-trash"></i> Data Finish Good berhasil dihapus dan stok telah disesuaikan ulang.</div>
+    <?php elseif (isset($_GET['msg']) && $_GET['msg'] === 'delete-success'): ?><div class="alert-warn"><i class="bi bi-trash"></i> Data berhasil dihapus dan stok telah disesuaikan kembali.</div>
+    <?php elseif (isset($_GET['error'])): ?><div class="alert-error"><i class="bi bi-exclamation-triangle"></i> <?= htmlspecialchars($_GET['error']) ?></div>
     <?php endif; ?>
 
     <div class="page-header">
@@ -75,7 +77,7 @@ function fgBadgeLabel($s){ return match($s) { 'verified' => 'Stok Bertambah', de
 
     <div class="stat-row">
       <div class="stat-pill"><span class="stat-pill-label">Total Transaksi</span><span class="stat-pill-val"><?= count($list) ?></span></div>
-      <div class="stat-pill"><span class="stat-pill-label">Masuk Stok</span><span class="stat-pill-val ok"><?= count(array_filter($list, fn($r) => $r['status']==='verified')) ?></span></div>
+      <div class="stat-pill"><span class="stat-pill-label">Masuk Stok</span><span class="stat-pill-val ok"><?= count(array_filter($list, fn($r) => in_array($r['status'], ['verified', 'approved', 'completed']))) ?></span></div>
       <div class="stat-pill"><span class="stat-pill-label">Draft</span><span class="stat-pill-val warn"><?= count(array_filter($list, fn($r) => $r['status']==='draft')) ?></span></div>
     </div>
 
@@ -87,7 +89,7 @@ function fgBadgeLabel($s){ return match($s) { 'verified' => 'Stok Bertambah', de
       <form method="get" action="index.php" class="filter-form">
         <div class="filter-group filter-search">
           <label class="form-label">Cari Data</label>
-          <input type="text" name="search" class="form-control" placeholder="No. Dokumen / PIC... (Tekan Enter)" value="<?= htmlspecialchars($search) ?>">
+          <input type="text" name="search" class="form-control" placeholder="No. Dokumen / PIC..." value="<?= htmlspecialchars($search) ?>">
         </div>
         <div class="filter-group">
           <label class="form-label">Status Masuk</label>
@@ -106,7 +108,7 @@ function fgBadgeLabel($s){ return match($s) { 'verified' => 'Stok Bertambah', de
     <div class="table-card">
       <div class="table-header">
         <h4><i class="bi bi-boxes"></i> Histori Barang Masuk <span class="count-badge"><?= count($list) ?></span></h4>
-        </div>
+      </div>
       <div class="table-wrap">
         <table id="verifTable">
           <thead>
@@ -122,23 +124,22 @@ function fgBadgeLabel($s){ return match($s) { 'verified' => 'Stok Bertambah', de
           </thead>
           <tbody>
             <?php if (empty($list)): ?>
-            <tr><td colspan="7" class="empty-state"><i class="bi bi-inbox"></i><span>Belum ada histori barang masuk atau data tidak ditemukan. <a href="index.php">Reset Filter</a></span></td></tr>
+            <tr><td colspan="7" class="empty-state"><i class="bi bi-inbox"></i><span>Belum ada histori barang masuk atau data tidak ditemukan.</span></td></tr>
             <?php else: ?>
             <?php foreach ($list as $i => $row): ?>
             <tr>
               <td class="text-muted"><?= $i+1 ?></td>
               <td class="fw-mid"><?= htmlspecialchars($row['nomor_penerimaan'] ?? 'FG-'.$row['id']) ?></td>
               <td class="text-muted"><?= date('d M Y', strtotime($row['tanggal'])) ?></td>
-              <td style="font-weight: 500; color: #111827;"><?= htmlspecialchars($row['pic_name']) ?></td>
-              
-              <td style="font-weight: 700; color: #059669;"><?= (int)($row['total_ok'] ?? 0) ?> <span style="font-weight: normal; font-size: 0.75rem; color:#888;">Unit</span></td>
-              
+              <td style="font-weight: 500;"><?= htmlspecialchars($row['pic_name']) ?></td>
+              <td style="font-weight: 700; color: #059669;"><?= (int)($row['total_ok'] ?? 0) ?></td>
               <td><span class="badge <?= fgBadgeCls($row['status']) ?>"><?= fgBadgeLabel($row['status']) ?></span></td>
               <td style="text-align: center;">
                 <div class="action-btns" style="justify-content: center; gap: 6px;">
                   <a href="crud/detail.php?id=<?= $row['id'] ?>" class="btn-icon" title="Detail"><i class="bi bi-eye"></i></a>
                   <a href="crud/edit.php?id=<?= $row['id'] ?>" class="btn-icon edit" title="Edit Data"><i class="bi bi-pencil"></i></a>
-                  <button type="button" class="btn-icon danger" onclick="confirmDelete(<?= $row['id'] ?>, '<?= htmlspecialchars($row['nomor_penerimaan'], ENT_QUOTES) ?>')" title="Hapus Data"><i class="bi bi-trash"></i></button>
+                  <!-- Tombol hapus memanggil JS confirmDelete -->
+                  <button type="button" class="btn-icon danger" onclick="confirmDelete(<?= $row['id'] ?>, '<?= htmlspecialchars($row['nomor_penerimaan'] ?? 'FG-'.$row['id'], ENT_QUOTES) ?>')" title="Hapus Data"><i class="bi bi-trash"></i></button>
                 </div>
               </td>
             </tr>
@@ -147,21 +148,19 @@ function fgBadgeLabel($s){ return match($s) { 'verified' => 'Stok Bertambah', de
           </tbody>
         </table>
       </div>
-      <?php if (!empty($list)): ?>
-      <div class="table-footer"><span class="text-muted" id="tableCount">Menampilkan <?= count($list) ?> data barang masuk</span></div>
-      <?php endif; ?>
     </div>
 
   </div>
 </main>
 
+<!-- Modal Hapus -->
 <div class="modal-overlay" id="deleteModal">
   <div class="modal-box">
     <div class="modal-icon"><i class="bi bi-exclamation-triangle"></i></div>
     <h3>Hapus Data Barang Masuk?</h3>
-    <p>Data Finish Good <strong id="deleteTarget"></strong> akan dihapus permanen. Jika stok sudah bertambah, sistem akan otomatis mengurangi kembali stok tersebut.</p>
+    <p>Data Finish Good <strong id="deleteTarget"></strong> akan dihapus permanen. Stok akan otomatis disesuaikan.</p>
     <div class="modal-actions">
-      <form method="post" action="crud/delete.php">
+      <form method="get" action="crud/delete.php">
         <input type="hidden" name="id" id="deleteId">
         <button type="submit" class="btn-danger"><i class="bi bi-trash"></i> Ya, Hapus</button>
       </form>
@@ -171,17 +170,13 @@ function fgBadgeLabel($s){ return match($s) { 'verified' => 'Stok Bertambah', de
 </div>
 
 <script>
-  // Script pencarian lokal (JS) dihapus sejalan dengan UI di atas.
-  
-  // Modal Konfirmasi Hapus
   const modal = document.getElementById('deleteModal');
   function confirmDelete(id, label) {
     document.getElementById('deleteId').value = id;
-    document.getElementById('deleteTarget').textContent = label || 'FG-' + id;
+    document.getElementById('deleteTarget').textContent = label;
     modal.classList.add('show');
   }
   document.getElementById('cancelDelete')?.addEventListener('click', () => modal.classList.remove('show'));
-  modal?.addEventListener('click', e => { if(e.target === modal) modal.classList.remove('show'); });
 </script>
 </body>
 </html>

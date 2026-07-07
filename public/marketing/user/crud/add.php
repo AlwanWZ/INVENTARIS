@@ -30,17 +30,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   
   if (!$errors) {
     $hash = password_hash($password, PASSWORD_DEFAULT);
-    // Menambahkan no_telpon ke dalam query INSERT
-    $stmt = $conn->prepare("INSERT INTO users (username, password, role, no_telpon) VALUES (?, ?, ?, ?)");
-    // Ubah tipe bind_param menjadi 'ssss' karena ada 4 string
-    $stmt->bind_param('ssss', $username, $hash, $role, $no_telpon);
     
-    if ($stmt->execute()) {
-      $success = true;
-    } else {
-      $errors[] = 'Username sudah digunakan atau terjadi kesalahan.';
+    // --- UPGRADE: Menggunakan try-catch agar tidak crash layar putih saat error SQL ---
+    try {
+        $stmt = $conn->prepare("INSERT INTO users (username, password, role, no_telpon) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param('ssss', $username, $hash, $role, $no_telpon);
+        
+        if ($stmt->execute()) {
+          $success = true;
+        } else {
+          $errors[] = 'Username sudah digunakan atau terjadi kesalahan pada database.';
+        }
+        $stmt->close();
+    } catch (Exception $e) {
+        // Tampilkan pesan error SQL ke dalam alert box merah
+        $errors[] = 'Gagal menyimpan ke database: ' . $e->getMessage();
     }
-    $stmt->close();
+    // ---------------------------------------------------------------------------------
   }
 }
 $conn->close();

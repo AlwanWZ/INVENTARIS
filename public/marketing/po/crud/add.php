@@ -511,7 +511,7 @@ if (!empty($dataPO['tanggal_pengiriman']) && $dataPO['tanggal_pengiriman'] < $da
             <i class="bi bi-x-circle"></i> Batal
           </a>
           <button type="submit" class="btn-primary">
-            <i class="bi bi-save"></i> Simpan Purchase Order
+            <i class="bi bi-save"></i> Simpan Pesanan
           </button>
         </div>
       </div>

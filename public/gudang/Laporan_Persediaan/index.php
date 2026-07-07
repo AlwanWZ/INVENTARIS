@@ -15,7 +15,7 @@ $hasFilter   = $search || $kategori || ($filterStok !== 'all');
 $listKategori = $pdo->query("SELECT id, nama_kategori FROM kategori ORDER BY nama_kategori")->fetchAll(PDO::FETCH_ASSOC);
 
 // ==========================================
-// 🚀 EXPORT EXCEL (URUTAN KOLOM SESUAI KETENTUAN)
+// 🚀 EXPORT EXCEL (KOLOM KATEGORI DIHAPUS)
 // ==========================================
 if (isset($_GET['export']) && $_GET['export'] === 'excel') {
         header('Content-Type: application/vnd.ms-excel');
@@ -25,7 +25,6 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
                 <th>No</th>
                 <th>Kode Barang</th>
                 <th>Nama Barang</th>
-                <th>Kategori</th>
                 <th>Satuan</th>
                 <th>Harga Pokok Produksi (HPP)</th>
                 <th>Harga Jual (Rp)</th>
@@ -78,7 +77,6 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
                 echo "<td>".($i+1)."</td>";
                 echo "<td>".htmlspecialchars($tampilKode)."</td>";
                 echo "<td>".htmlspecialchars($row['nama'] ?? '')."</td>";
-                echo "<td>".htmlspecialchars($row['nama_kategori'] ?? 'Tanpa Kategori')."</td>";
                 echo "<td>".htmlspecialchars($row['satuan'] ?? '')."</td>";
                 echo "<td>".$hpp."</td>";
                 echo "<td>".$harga_jual."</td>";
@@ -244,15 +242,6 @@ function formatRp($n) {
                     <input type="text" name="search" class="form-control" placeholder="Nama atau kode..." value="<?= htmlspecialchars($search) ?>">
                 </div>
                 <div class="filter-group">
-                    <label>Kategori</label>
-                    <select name="kategori" class="form-control">
-                        <option value="">Semua Kategori</option>
-                        <?php foreach ($listKategori as $kat): ?>
-                            <option value="<?= $kat['id'] ?>" <?= $kategori == $kat['id'] ? 'selected' : '' ?>><?= htmlspecialchars($kat['nama_kategori']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="filter-group">
                     <label>Status Stok</label>
                     <select name="filter_stok" class="form-control">
                         <option value="all" <?= $filterStok === 'all' ? 'selected' : '' ?>>Semua Stok</option>
@@ -327,7 +316,6 @@ function formatRp($n) {
                             <th>No</th>
                             <th>Kode Barang</th>
                             <th>Nama Barang</th>
-                            <th>Kategori</th>
                             <th class="col-right">HPP (Rp)</th>
                             <th class="col-right">Stok Fisik</th>
                             <th class="col-right">Qty Tersedia</th>
@@ -337,7 +325,7 @@ function formatRp($n) {
                     </thead>
                     <tbody>
                         <?php if (empty($listProduk)): ?>
-                        <tr><td colspan="11" class="empty-state"><i class="bi bi-inboxes"></i><span>Tidak ada data produk sesuai filter.</span></td></tr>
+                        <tr><td colspan="10" class="empty-state"><i class="bi bi-inboxes"></i><span>Tidak ada data produk sesuai filter.</span></td></tr>
                         <?php else: ?>
                         <?php foreach ($listProduk as $i => $row):
                             $stok_fisik = $row['stok'] ?? 0;
@@ -357,7 +345,6 @@ function formatRp($n) {
                             <td class="text-muted"><?= $i + 1 ?></td>
                             <td class="fw-mid" style="font-size:0.8rem;"><?= htmlspecialchars($tampilKodeHtml) ?></td>
                             <td style="font-weight:600; color:var(--text);"><?= htmlspecialchars($row['nama'] ?? '') ?></td>
-                            <td><span class="badge neutral"><?= htmlspecialchars($row['nama_kategori'] ?? 'Tanpa Kategori') ?></span></td>
                             
                             <td class="col-right text-muted"><?= number_format($hpp) ?></td>
                         
@@ -371,7 +358,7 @@ function formatRp($n) {
                         </tr>
                         <?php endforeach; ?>
                         <tr class="total-row">
-                            <td colspan="6" class="fw-mid" style="text-align: left; padding-left: 20px;">Total Keseluruhan Valuasi Persediaan</td>
+                            <td colspan="5" class="fw-mid" style="text-align: left; padding-left: 20px;">Total Keseluruhan Valuasi Persediaan</td>
                             <td class="col-right fw-mid" style="color: #2563eb; font-weight:700;"><?= number_format($totalValuasiHpp) ?></td>
                             <td class="col-right fw-mid" style="color: #10b981; font-weight:700;"><?= number_format($totalValuasiJual) ?></td>
                             <td></td>

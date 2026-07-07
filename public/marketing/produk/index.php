@@ -25,7 +25,7 @@ $stokHabis = array_filter($produkList, function($p) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Daftar Produk PCB | InventorySys</title>
+  <title>Daftar Barang PCB | InventorySys</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
@@ -76,7 +76,13 @@ $stokHabis = array_filter($produkList, function($p) {
       to { opacity: 1; transform: translateY(0); }
     }
     
-    /* Styling tambahan untuk Filter Dropdown & Search Button */
+    /* Styling tambahan untuk Filter Dropdown & Search Button yang Lebih Responsif */
+    .table-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
     .filter-select {
       padding: 8px 12px;
       border: 1px solid var(--border);
@@ -84,13 +90,13 @@ $stokHabis = array_filter($produkList, function($p) {
       background: var(--bg);
       color: var(--text);
       font-family: inherit;
+      font-size: 0.88rem;
       outline: none;
       cursor: pointer;
+      transition: border-color 0.2s;
     }
-    .table-actions {
-      display: flex;
-      gap: 12px;
-      align-items: center;
+    .filter-select:focus {
+      border-color: var(--accent);
     }
     .search-group {
       display: flex;
@@ -102,6 +108,7 @@ $stokHabis = array_filter($produkList, function($p) {
       padding: 8px 12px;
       border: 1px solid var(--border);
       outline: none;
+      font-size: 0.88rem;
     }
     .search-group input:focus {
       border-color: var(--accent);
@@ -117,6 +124,24 @@ $stokHabis = array_filter($produkList, function($p) {
     }
     .search-group button:hover {
       background-color: #0f766e;
+    }
+    .btn-reset-filter {
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      background: #f3f4f6;
+      color: #4b5563;
+      border: 1px solid #d1d5db;
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .btn-reset-filter:hover {
+      background: #e5e7eb;
+      color: #1f2937;
     }
   </style>
 </head>
@@ -150,11 +175,11 @@ $stokHabis = array_filter($produkList, function($p) {
     </div>
 
     <?php if (isset($_GET['success'])): ?>
-      <div class="alert-success"><i class="bi bi-check-circle"></i> Produk berhasil ditambahkan.</div>
+      <div class="alert-success"><i class="bi bi-check-circle"></i> Barang berhasil ditambahkan.</div>
     <?php elseif (isset($_GET['updated'])): ?>
-      <div class="alert-success"><i class="bi bi-check-circle"></i> Produk berhasil diperbarui.</div>
+      <div class="alert-success"><i class="bi bi-check-circle"></i> Barang berhasil diperbarui.</div>
     <?php elseif (isset($_GET['deleted'])): ?>
-      <div class="alert-success"><i class="bi bi-check-circle"></i> Produk berhasil dihapus.</div>
+      <div class="alert-success"><i class="bi bi-check-circle"></i> Barang berhasil dihapus.</div>
     <?php endif; ?>
 
     <?php if (!empty($stokHabis)): ?>
@@ -162,7 +187,7 @@ $stokHabis = array_filter($produkList, function($p) {
         <strong style="font-size: 1.1rem;">🔴 STOK HABIS (Atau Full Dibooking)!</strong>
         <div style="margin-top: 0.5rem; font-size: 0.9rem;">
           <?php foreach ($stokHabis as $produk): ?>
-            <div>• <strong><?= htmlspecialchars($produk['nama']) ?></strong> (<?= htmlspecialchars($produk['kode_produk'] ?? $produk['kode']) ?>)</div>
+            <div>• <strong><?= htmlspecialchars($produk['nama']) ?></strong> (<?= htmlspecialchars($produk['kode_barang'] ?? $produk['kode_produk'] ?? $produk['kode']) ?>)</div>
           <?php endforeach; ?>
         </div>
       </div>
@@ -184,7 +209,7 @@ $stokHabis = array_filter($produkList, function($p) {
 
     <div class="page-header">
       <div class="page-header-left">
-        <h1 class="page-title-lg">Daftar Barang </h1>
+        <h1 class="page-title-lg">Daftar Barang</h1>
         <p class="page-subtitle">Kelola semua barang yang tersedia dalam sistem.</p>
       </div>
       <a href="crud/add.php" class="btn-primary">
@@ -200,14 +225,14 @@ $stokHabis = array_filter($produkList, function($p) {
         <option value="">-- Pilih Barang untuk lihat detail --</option>
         <?php foreach ($produkList as $p): ?>
         <option value="<?= $p['id'] ?>" 
-                data-code="<?= htmlspecialchars($p['kode_produk'] ?? $p['kode'] ?? '-') ?>" 
+                data-code="<?= htmlspecialchars($p['kode_barang'] ?? $p['kode_produk'] ?? $p['kode'] ?? '-') ?>" 
                 data-name="<?= htmlspecialchars($p['nama']) ?>" 
                 data-category="<?= htmlspecialchars($p['nama_kategori'] ?? 'PCB') ?>" 
                 data-price="<?= htmlspecialchars($p['harga'] ?? 0) ?>" 
                 data-stock="<?= htmlspecialchars($p['stok_available'] ?? $p['stok'] ?? 0) ?>" 
                 data-unit="<?= htmlspecialchars($p['satuan'] ?? 'pcs') ?>" 
                 data-status="<?= $p['status'] ?? 'aktif' ?>">
-          <?= htmlspecialchars($p['kode_produk'] ?? $p['kode'] ?? '-') ?> - <?= htmlspecialchars($p['nama']) ?>
+          <?= htmlspecialchars($p['kode_barang'] ?? $p['kode_produk'] ?? $p['kode'] ?? '-') ?> - <?= htmlspecialchars($p['nama']) ?>
         </option>
         <?php endforeach; ?>
       </select>
@@ -215,7 +240,7 @@ $stokHabis = array_filter($produkList, function($p) {
       <div id="productDetail" class="customer-detail-box" style="display: none; margin-top: 16px; padding: 14px; background: var(--bg2); border-radius: var(--radius); border: 1px solid var(--border);">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
           <div>
-            <span style="font-size: 0.72rem; color: var(--text3); text-transform: uppercase; font-weight: 700;">Kode Produk</span>
+            <span style="font-size: 0.72rem; color: var(--text3); text-transform: uppercase; font-weight: 700;">Kode Barang</span>
             <p id="detProdCode" style="margin: 4px 0 0; color: var(--text2); font-weight: 800;">-</p>
           </div>
           <div>
@@ -240,7 +265,7 @@ $stokHabis = array_filter($produkList, function($p) {
 
     <div class="stat-row">
       <div class="stat-pill">
-        <span class="stat-pill-label">Total Produk</span>
+        <span class="stat-pill-label">Total Barang</span>
         <span class="stat-pill-val"><?= count($produkList) ?></span>
       </div>
 
@@ -263,21 +288,49 @@ $stokHabis = array_filter($produkList, function($p) {
     </div>
 
     <div class="table-card">
-      <div class="table-header">
+      <div class="table-header" style="flex-wrap: wrap; gap: 12px;">
         <h4><i class="bi bi-box-seam"></i> Daftar Barang</h4>
+        
+        <!-- ========================================== -->
+        <!-- 🚀 MULTI-FILTER SECTION YANG DIPERBAGUS   -->
+        <!-- ========================================== -->
         <div class="table-actions">
-          <select id="filterStatus" class="filter-select">
+          <!-- 1. Filter Kondisi Stok (Termasuk Minimum/0) -->
+          <select id="filterStok" class="filter-select" title="Filter Kondisi Stok">
+            <option value="all">Semua Kondisi Stok</option>
+            <option value="habis">🔴 Stok Habis / 0</option>
+            <option value="menipis">⚠️ Stok Menipis (&le; Min)</option>
+            <option value="aman">🟢 Stok Aman (&gt; Min)</option>
+          </select>
+
+          <!-- 2. Filter Status Aktif/Nonaktif -->
+          <select id="filterStatus" class="filter-select" title="Filter Status Barang">
             <option value="all">Semua Status</option>
             <option value="aktif">Aktif</option>
             <option value="nonaktif">Nonaktif</option>
           </select>
+
+          <!-- 3. Sort By (Urutkan Data) -->
+          <select id="sortBy" class="filter-select" title="Urutkan Data">
+            <option value="default">Urutkan: Default</option>
+            <option value="stok-desc">Stok Terbanyak</option>
+            <option value="stok-asc">Stok Sedikit (Kritis)</option>
+            <option value="harga-desc">Harga Tertinggi</option>
+            <option value="harga-asc">Harga Terendah</option>
+          </select>
           
+          <!-- 4. Pencarian Teks -->
           <div class="search-group">
             <input type="text" id="searchInput" placeholder="Cari nama atau kode...">
             <button type="button" id="searchBtn" title="Cari Data">
               <i class="bi bi-search"></i>
             </button>
           </div>
+
+          <!-- Tombol Reset Filter -->
+          <button type="button" id="resetBtn" class="btn-reset-filter" title="Reset Semua Filter" style="display: none;">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset
+          </button>
         </div>
       </div>
 
@@ -286,8 +339,8 @@ $stokHabis = array_filter($produkList, function($p) {
           <thead>
             <tr>
               <th>No</th>
-              <th>Kode Produk</th>
-              <th>Nama Produk</th>
+              <th>Kode Barang</th>
+              <th>Nama Barang</th>
               <th>Stok (Bisa Dijual)</th>
               <th>Harga</th>
               <th>Status</th>
@@ -317,11 +370,24 @@ $stokHabis = array_filter($produkList, function($p) {
                 $stokBooking = $p['stok_reserved'] ?? 0;
                 $batasMin = $p['stok_min'] ?? 10;
                 $satuan = htmlspecialchars($p['satuan'] ?? 'pcs');
+
+                // Klasifikasi kondisi stok untuk filter JS
+                if ($stokAktif <= 0) {
+                    $kategoriStok = 'habis';
+                } elseif ($stokAktif <= $batasMin) {
+                    $kategoriStok = 'menipis';
+                } else {
+                    $kategoriStok = 'aman';
+                }
               ?>
               
-              <tr data-status="<?= $rawStatus ?>">
-                <td class="text-muted"><?= $i + 1 ?></td>
-                <td class="fw-mid"><?= htmlspecialchars($p['kode_produk'] ?? $p['kode'] ?? '-') ?></td>
+              <!-- Ditambahkan data-stok, data-min, data-price untuk proses filter/sort -->
+              <tr data-status="<?= $rawStatus ?>" 
+                  data-stok-type="<?= $kategoriStok ?>" 
+                  data-stok-val="<?= $stokAktif ?>" 
+                  data-price-val="<?= (int)($p['harga'] ?? 0) ?>">
+                <td class="text-muted row-number"><?= $i + 1 ?></td>
+                <td class="fw-mid"><?= htmlspecialchars($p['kode_barang'] ?? $p['kode_produk'] ?? $p['kode'] ?? '-') ?></td>
                 <td style="font-weight: 500; color: #111827;"><?= htmlspecialchars($p['nama'] ?? '-') ?></td>
             
                 <td>
@@ -359,7 +425,7 @@ $stokHabis = array_filter($produkList, function($p) {
                       <a href="crud/edit.php?id=<?= $p['id'] ?>" class="btn-icon edit" title="Edit">
                         <i class="bi bi-pencil"></i>
                       </a>
-                      <a href="crud/delete.php?id=<?= $p['id'] ?>" class="btn-icon danger" title="Hapus" onclick="return confirm('Hapus produk ini?')">
+                      <a href="crud/delete.php?id=<?= $p['id'] ?>" class="btn-icon danger" title="Hapus" onclick="return confirm('Hapus barang ini?')">
                         <i class="bi bi-trash"></i>
                       </a>
                     </div>
@@ -385,7 +451,6 @@ $stokHabis = array_filter($produkList, function($p) {
 </main>
 
 <script>
-// Menunggu semua DOM (HTML) ter-load sempurna baru jalankan fungsi JS
 document.addEventListener('DOMContentLoaded', function() {
   
   // ==========================================
@@ -427,58 +492,99 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // ==========================================
-  // LOGIC PENCARIAN & FILTER TABEL YANG BARU
+  // 🚀 LOGIC MULTI-FILTER & SORTING TABEL
   // ==========================================
   const searchInput = document.getElementById('searchInput');
-  const searchBtn = document.getElementById('searchBtn'); // Ambil elemen tombol
-  const filterStatus = document.getElementById('filterStatus');
-  const tableCount = document.getElementById('tableCount');
-  const tableRows = document.querySelectorAll('#produkTable tbody tr');
+  const searchBtn   = document.getElementById('searchBtn');
+  const filterStok  = document.getElementById('filterStok');
+  const filterStatus= document.getElementById('filterStatus');
+  const sortBy      = document.getElementById('sortBy');
+  const resetBtn    = document.getElementById('resetBtn');
+  const tableCount  = document.getElementById('tableCount');
+  const tbody       = document.querySelector('#produkTable tbody');
+  const tableRows   = Array.from(tbody.querySelectorAll('tr:not(.empty-state)'));
 
-  function filterTableData() {
-    const query = searchInput ? searchInput.value.toLowerCase() : '';
-    const statusVal = filterStatus ? filterStatus.value.toLowerCase() : 'all';
-    let visible = 0;
+  function filterAndSortTable() {
+    const query      = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const stokVal    = filterStok ? filterStok.value : 'all';
+    const statusVal  = filterStatus ? filterStatus.value.toLowerCase() : 'all';
+    const sortVal    = sortBy ? sortBy.value : 'default';
 
+    let visibleCount = 0;
+    let visibleRows  = [];
+
+    // 1. FILTER DATA
     tableRows.forEach(row => {
-      // Abaikan baris kosong (empty state)
-      if (row.querySelector('.empty-state')) return;
-      
-      // Ambil teks dari baris dan status dari atribut data-status
-      const textMatch = row.textContent.toLowerCase().includes(query);
-      const rowStatus = row.getAttribute('data-status') || '';
-      
-      // Cek apakah cocok dengan filter dropdown
-      const statusMatch = (statusVal === 'all' || rowStatus === statusVal);
+      const textContent = row.textContent.toLowerCase();
+      const rowStatus   = row.getAttribute('data-status') || '';
+      const rowStokType = row.getAttribute('data-stok-type') || '';
 
-      // Tampilkan jika teks DAN status cocok
-      if (textMatch && statusMatch) {
+      const textMatch   = textContent.includes(query);
+      const statusMatch = (statusVal === 'all' || rowStatus === statusVal);
+      const stokMatch   = (stokVal === 'all' || rowStokType === stokVal);
+
+      if (textMatch && statusMatch && stokMatch) {
         row.style.display = '';
-        visible++;
+        visibleRows.push(row);
+        visibleCount++;
       } else {
         row.style.display = 'none';
       }
     });
 
-    // Update tulisan jumlah data di bawah tabel
+    // 2. SORTING (PENGURUTAN) DATA YANG TAMPIL
+    if (sortVal !== 'default' && visibleRows.length > 1) {
+      visibleRows.sort((a, b) => {
+        const stokA  = parseInt(a.getAttribute('data-stok-val')) || 0;
+        const stokB  = parseInt(b.getAttribute('data-stok-val')) || 0;
+        const priceA = parseInt(a.getAttribute('data-price-val')) || 0;
+        const priceB = parseInt(b.getAttribute('data-price-val')) || 0;
+
+        if (sortVal === 'stok-desc') return stokB - stokA;
+        if (sortVal === 'stok-asc')  return stokA - stokB;
+        if (sortVal === 'harga-desc') return priceB - priceA;
+        if (sortVal === 'harga-asc')  return priceA - priceB;
+        return 0;
+      });
+
+      // Susun ulang baris ke dalam tbody sesuai urutan
+      visibleRows.forEach(row => tbody.appendChild(row));
+    }
+
+    // 3. PERBARUI NOMOR URUT (No.) PADA BARIS YANG TAMPIL
+    visibleRows.forEach((row, idx) => {
+      const cellNo = row.querySelector('.row-number');
+      if (cellNo) cellNo.textContent = idx + 1;
+    });
+
+    // 4. UPDATE TEKS JUMLAH DATA
     if (tableCount) {
-      tableCount.textContent = `Menampilkan ${visible} data`;
+      tableCount.textContent = `Menampilkan ${visibleCount} data`;
+    }
+
+    // 5. TAMPILKAN / SEMBUNYIKAN TOMBOL RESET
+    const isFiltered = query !== '' || stokVal !== 'all' || statusVal !== 'all' || sortVal !== 'default';
+    if (resetBtn) {
+      resetBtn.style.display = isFiltered ? 'inline-flex' : 'none';
     }
   }
 
-  // 1. Eksekusi filter setiap kali ada ketikan (real-time)
-  if (searchInput) {
-    searchInput.addEventListener('input', filterTableData);
-  }
-  
-  // 2. Eksekusi filter jika pengguna menekan tombol cari secara manual
-  if (searchBtn) {
-    searchBtn.addEventListener('click', filterTableData);
-  }
+  // Pasang Event Listener untuk setiap filter
+  if (searchInput)  searchInput.addEventListener('input', filterAndSortTable);
+  if (searchBtn)    searchBtn.addEventListener('click', filterAndSortTable);
+  if (filterStok)   filterStok.addEventListener('change', filterAndSortTable);
+  if (filterStatus) filterStatus.addEventListener('change', filterAndSortTable);
+  if (sortBy)       sortBy.addEventListener('change', filterAndSortTable);
 
-  // 3. Eksekusi filter saat pengguna memilih status dari dropdown
-  if (filterStatus) {
-    filterStatus.addEventListener('change', filterTableData);
+  // Aksi Tombol Reset
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (searchInput)  searchInput.value = '';
+      if (filterStok)   filterStok.value = 'all';
+      if (filterStatus) filterStatus.value = 'all';
+      if (sortBy)       sortBy.value = 'default';
+      filterAndSortTable();
+    });
   }
 
   // Dark mode toggle

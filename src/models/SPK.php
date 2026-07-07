@@ -3,10 +3,12 @@ require_once __DIR__ . '/../config.php';
 
 class SPK {
 
+    // =========================================================================
+    // 1. MENGAMBIL SEMUA DATA SPK (DENGAN FILTER & SEARCH)
+    // =========================================================================
     public static function all($filter = []) {
         global $pdo;
         
-        // 1. Kueri dasar dengan WHERE 1=1 agar filter mudah disambung
         $sql = "SELECT spk.*, po.nomor_po, customers.perusahaan, users.username as pic_username 
                 FROM spk 
                 LEFT JOIN po ON spk.po_id = po.id 
@@ -16,7 +18,6 @@ class SPK {
         
         $params = [];
 
-        // 2. Tambahkan filter jika ada
         if (!empty($filter['tanggal'])) {
             $sql .= " AND spk.tanggal = :tanggal";
             $params['tanggal'] = $filter['tanggal'];
@@ -30,17 +31,14 @@ class SPK {
             $params['pic'] = $filter['pic'];
         }
         if (!empty($filter['search'])) {
-            // PERBAIKAN: Gunakan parameter unik untuk setiap kondisi LIKE
             $sql .= " AND (spk.nomor_spk LIKE :search1 OR po.nomor_po LIKE :search2 OR customers.perusahaan LIKE :search3)";
             $searchTerm = '%' . $filter['search'] . '%';
             
-            // Masukkan ketiga parameter tersebut ke dalam array eksekusi
             $params['search1'] = $searchTerm;
             $params['search2'] = $searchTerm;
             $params['search3'] = $searchTerm;
         }
 
-        // 3. SATU KALI ORDER BY DI PALING BAWAH
         $sql .= " ORDER BY spk.id DESC";
 
         $stmt = $pdo->prepare($sql);
@@ -48,6 +46,9 @@ class SPK {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    // =========================================================================
+    // 2. MENGAMBIL 1 DATA SPK BERDASARKAN ID
+    // =========================================================================
     public static function find($id) {
         global $pdo;
         
@@ -68,64 +69,115 @@ class SPK {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    // =========================================================================
+    // 3. MEMBUAT SPK BARU & AUTO-COPY BARANG DARI PO KE SPK_ITEMS
+    // =========================================================================
     public static function create($data) {
         global $pdo;
         
-        $sql = "INSERT INTO spk (nomor_spk, po_id, tanggal, deadline, pic, status, notes, progress) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            $data['nomor_spk'],
-            $data['po_id'],
-            $data['tanggal'],
-            $data['deadline'],
-            $data['pic_id'] ?? null,
-            $data['status'],
-            $data['notes'],
-            $data['progress'] ?? 0
-        ]);
+        // Paksa PDO memunculkan error kalau ada SQL yang salah ketik/gagal
+        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         
-        $spkId = $pdo->lastInsertId();
-        
-        // Auto-copy items from PO to SPK
-        if (!empty($data['po_id'])) {
-            $poItems = $pdo->prepare("SELECT * FROM po_items WHERE po_id = ?");
-            $poItems->execute([$data['po_id']]);
-            $items = $poItems->fetchAll(\PDO::FETCH_ASSOC);
+        try {
+            $pdo->beginTransaction();
+
+            // 1. Simpan Header SPK
+            $sql = "INSERT INTO spk (nomor_spk, po_id, customer_id, tanggal, deadline, pic, status, notes, progress) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                $data['nomor_spk'],
+                $data['po_id'],
+                $data['customer_id'] ?? null,
+                $data['tanggal'],
+                $data['deadline'],
+                $data['pic_id'] ?? null,
+                $data['status'],
+                $data['notes'],
+                $data['progress'] ?? 0
+            ]);
             
-            if ($items) {
+            $spkId = $pdo->lastInsertId();
+            
+            // 2. Salin barang dari PO ke SPK_ITEMS (Sesuai struktur tabelmu)
+            if (!empty($data['po_id'])) {
+                $poItems = $pdo->prepare("SELECT * FROM po_items WHERE po_id = ?");
+                $poItems->execute([$data['po_id']]);
+                $items = $poItems->fetchAll(\PDO::FETCH_ASSOC);
+                
+                if (empty($items)) {
+                    throw new Exception("Data barang pada Pesanan (PO) tersebut kosong di tabel po_items!");
+                }
+                
                 $insertStmt = $pdo->prepare("
-                    INSERT INTO spk_items 
-                    (spk_id, produk_id, nama_barang, stok_gudang, qty_po, qty_schedule, qty_preparation, qty_outstanding, note) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO spk_items (
+                        spk_id, pic_id, produk_id, nama_barang, 
+                        stok_gudang, stok_available, qty_po, qty_schedule, 
+                        qty_preparation, qty_outstanding, status_produksi, note
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 
+                $itemCount = 0;
                 foreach ($items as $item) {
+                    // Mapping persis sesuai foto struktur po_items kamu
+                    $namaBarang = $item['nama_material'] ?? $item['nama_barang'] ?? 'Tanpa Nama';
+                    $qty        = (int)($item['qty'] ?? 0);
+                    $stok       = (int)($item['qty_available'] ?? 0);
+                    $note       = $item['keterangan'] ?? '';
+                    
+                    if ($qty <= 0) {
+                        throw new Exception("Ada barang di PO yang jumlah (qty)-nya bernilai 0!");
+                    }
+
                     $insertStmt->execute([
                         $spkId,
+                        $data['pic_id'] ?? null,   // PIC dari form SPK langsung disalin ke item
                         $item['produk_id'] ?? null,
-                        $item['nama_barang'] ?? '',
-                        $item['stok_gudang'] ?? 0,
-                        $item['qty_po'] ?? 0,
-                        $item['qty_schedule'] ?? 0,
-                        $item['qty_preparation'] ?? 0,
-                        $item['qty_outstanding'] ?? 0,
-                        $item['note'] ?? ''
+                        $namaBarang,               // Masuk ke kolom nama_barang
+                        $stok,                     // Masuk ke stok_gudang
+                        $stok,                     // Masuk ke stok_available
+                        $qty,                      // Masuk ke qty_po
+                        $qty,                      // Masuk ke qty_schedule
+                        0,                         // qty_preparation default 0
+                        $qty,                      // Masuk ke qty_outstanding (Kunci agar dibaca Gudang!)
+                        'pending',                 // status_produksi
+                        $note                      // Masuk ke note
                     ]);
+                    $itemCount++;
                 }
+
+                // 3. Jebakan Pengaman Terakhir: Cek langsung ke database apakah barang masuk
+                $cekMasuk = $pdo->prepare("SELECT COUNT(*) FROM spk_items WHERE spk_id = ?");
+                $cekMasuk->execute([$spkId]);
+                if ($cekMasuk->fetchColumn() < $itemCount) {
+                    throw new Exception("Gagal menyalin barang ke tabel spk_items karena penolakan dari database!");
+                }
+            } else {
+                throw new Exception("PO ID tidak boleh kosong!");
             }
+            
+            $pdo->commit();
+            return $spkId;
+
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
         }
-        
-        return $spkId;
     }
 
+    // =========================================================================
+    // 4. MENGUPDATE DATA HEADER SPK
+    // =========================================================================
     public static function update($id, $data) {
         global $pdo;
         
-        $sql = "UPDATE spk SET nomor_spk=?, po_id=?, tanggal=?, deadline=?, pic=?, status=?, notes=?, progress=? WHERE id=?";
+        $sql = "UPDATE spk SET nomor_spk=?, po_id=?, customer_id=?, tanggal=?, deadline=?, pic=?, status=?, notes=?, progress=? WHERE id=?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             $data['nomor_spk'],
             $data['po_id'],
+            $data['customer_id'] ?? null,
             $data['tanggal'],
             $data['deadline'],
             $data['pic_id'] ?? null,
@@ -136,7 +188,9 @@ class SPK {
         ]);
     }
 
-    // --- FUNGSI DELETE YANG SUDAH DIPERBAIKI ---
+    // =========================================================================
+    // 5. MENGHAPUS SPK DENGAN AMAN (SAFE DELETE)
+    // =========================================================================
     public static function delete($id) {
         global $pdo;
         
@@ -150,7 +204,7 @@ class SPK {
                 throw new Exception("GAGAL: SPK tidak bisa dihapus karena sudah diproses menjadi Pengeluaran oleh Gudang.");
             }
 
-            // 2. Cek apakah SPK masuk tahap Penerimaan (Opsional, buat jaga-jaga)
+            // 2. Cek apakah SPK masuk tahap Penerimaan
             $stmtCekPenerimaan = $pdo->prepare("SELECT COUNT(id) FROM penerimaan WHERE spk_id = ?");
             $stmtCekPenerimaan->execute([$id]);
             if ($stmtCekPenerimaan->fetchColumn() > 0) {
@@ -167,20 +221,19 @@ class SPK {
 
             $pdo->commit();
         } catch (Exception $e) {
-            // Batalkan semua query jika ada yang gagal
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            // Lempar pesan error ke halaman delete.php
             throw $e;
         }
     }
-    // -------------------------------------------
 
+    // =========================================================================
+    // 6. MENGAMBIL DAFTAR BARANG DALAM 1 SPK (DENGAN NAMA PIC)
+    // =========================================================================
     public static function getItems($spkId) {
         global $pdo;
         
-        // Get items with PIC username (for edit form)
         $sql = "SELECT spk_items.*, 
                        COALESCE(users.username, '—') AS pic_username
                 FROM spk_items
@@ -192,64 +245,94 @@ class SPK {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    // =========================================================================
+    // 7. MENGAMBIL DAFTAR BARANG DALAM 1 SPK (MODE SIMPLE / PRINT)
+    // =========================================================================
     public static function getItemsSimple($spkId) {
         global $pdo;
         
-        // Get items without JOIN (for print/simple display)
         $sql = "SELECT * FROM spk_items WHERE spk_id = ? ORDER BY id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$spkId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    // =========================================================================
+    // 8. SINKRONISASI ULANG BARANG DARI PO KE SPK (JIKA PO DIEDIT)
+    // =========================================================================
     public static function syncItemsFromPO($spkId) {
         global $pdo;
         
-        // Get SPK data to get PO ID
-        $spkStmt = $pdo->prepare("SELECT po_id FROM spk WHERE id = ?");
-        $spkStmt->execute([$spkId]);
-        $spk = $spkStmt->fetch(\PDO::FETCH_ASSOC);
-        
-        if (!$spk || empty($spk['po_id'])) {
-            return false;
+        try {
+            $pdo->beginTransaction();
+
+            $spkStmt = $pdo->prepare("SELECT po_id, pic FROM spk WHERE id = ?");
+            $spkStmt->execute([$spkId]);
+            $spk = $spkStmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if (!$spk || empty($spk['po_id'])) {
+                $pdo->rollBack();
+                return false;
+            }
+            
+            // Hapus item lama di SPK ini
+            $deleteStmt = $pdo->prepare("DELETE FROM spk_items WHERE spk_id = ?");
+            $deleteStmt->execute([$spkId]);
+            
+            // Salin ulang dari PO
+            $poItems = $pdo->prepare("SELECT * FROM po_items WHERE po_id = ?");
+            $poItems->execute([$spk['po_id']]);
+            $items = $poItems->fetchAll(\PDO::FETCH_ASSOC);
+            
+            if (empty($items)) {
+                $pdo->commit();
+                return false;
+            }
+            
+            $insertStmt = $pdo->prepare("
+                INSERT INTO spk_items (
+                    spk_id, pic_id, produk_id, nama_barang, 
+                    stok_gudang, stok_available, qty_po, qty_schedule, 
+                    qty_preparation, qty_outstanding, status_produksi, note
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            
+            foreach ($items as $item) {
+                $namaBarang = $item['nama_material'] ?? $item['nama_barang'] ?? 'Tanpa Nama';
+                $qty        = (int)($item['qty'] ?? 0);
+                $stok       = (int)($item['qty_available'] ?? 0);
+                $note       = $item['keterangan'] ?? '';
+
+                $insertStmt->execute([
+                    $spkId,
+                    $spk['pic'] ?? null,
+                    $item['produk_id'] ?? null,
+                    $namaBarang,
+                    $stok,
+                    $stok,
+                    $qty,
+                    $qty,
+                    0,
+                    $qty,
+                    'pending',
+                    $note
+                ]);
+            }
+            
+            $pdo->commit();
+            return true;
+
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
         }
-        
-        // Delete existing items for this SPK
-        $deleteStmt = $pdo->prepare("DELETE FROM spk_items WHERE spk_id = ?");
-        $deleteStmt->execute([$spkId]);
-        
-        // Copy items from PO
-        $poItems = $pdo->prepare("SELECT * FROM po_items WHERE po_id = ?");
-        $poItems->execute([$spk['po_id']]);
-        $items = $poItems->fetchAll(\PDO::FETCH_ASSOC);
-        
-        if (empty($items)) {
-            return false;
-        }
-        
-        $insertStmt = $pdo->prepare("
-            INSERT INTO spk_items 
-            (spk_id, produk_id, nama_barang, stok_gudang, qty_po, qty_schedule, qty_preparation, qty_outstanding, note) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        
-        foreach ($items as $item) {
-            $insertStmt->execute([
-                $spkId,
-                $item['produk_id'] ?? null,
-                $item['nama_barang'] ?? '',
-                $item['stok_gudang'] ?? 0,
-                $item['qty_po'] ?? 0,
-                $item['qty_schedule'] ?? 0,
-                $item['qty_preparation'] ?? 0,
-                $item['qty_outstanding'] ?? 0,
-                $item['note'] ?? ''
-            ]);
-        }
-        
-        return true;
     }
 
+    // =========================================================================
+    // 9. UPDATE PIC KHUSUS UNTUK 1 ITEM BARANG DI SPK
+    // =========================================================================
     public static function updateItemPic($itemId, $picId) {
         global $pdo;
         
@@ -258,6 +341,9 @@ class SPK {
         return $stmt->execute([$picId, $itemId]);
     }
 
+    // =========================================================================
+    // 10. MENGAMBIL DAFTAR ID PIC YANG TERLIBAT DALAM 1 SPK
+    // =========================================================================
     public static function getItemPicIds($spkId) {
         global $pdo;
         
@@ -265,6 +351,33 @@ class SPK {
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$spkId]);
         return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'pic_id');
+    }
+
+    // =========================================================================
+    // 11. OTOMATIS MENYELESAIKAN SPK SAAT MASUK FINISH GOOD
+    // =========================================================================
+    public static function complete($spkId) {
+        global $pdo;
+        
+        try {
+            $pdo->beginTransaction();
+
+            // 1. Ubah status SPK (induk) menjadi 'completed' dan progress jadi 100%
+            $stmtSpk = $pdo->prepare("UPDATE spk SET status = 'completed', progress = 100 WHERE id = ?");
+            $stmtSpk->execute([$spkId]);
+
+            // 2. Ubah juga status barang (spk_items) jadi 'completed' dan habiskan qty_outstanding
+            $stmtItems = $pdo->prepare("UPDATE spk_items SET status_produksi = 'completed', qty_outstanding = 0 WHERE spk_id = ?");
+            $stmtItems->execute([$spkId]);
+
+            $pdo->commit();
+            return true;
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
     }
 }
 ?>

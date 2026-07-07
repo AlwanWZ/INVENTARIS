@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $newStok = (int)($_POST['stok'] ?? 0);
     $stokReserved = (int)($produk['stok_reserved'] ?? 0);
     
-    // RULE 1b: LOGIKA PENTING saat edit produk
+    // RULE 1b: LOGIKA PENTING saat edit barang
     // Kalkulasi ulang stok yang bisa dijual (available)
     // stok_available = stok_fisik - stok_reserved
     $stokAvailable = $newStok - $stokReserved;
@@ -31,19 +31,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'status'         => $_POST['status'] ?? 'aktif',
     ];
     
-    if (!$data['nama']) $errors[] = 'Nama produk wajib diisi.';
+    if (!$data['nama']) $errors[] = 'Nama barang wajib diisi.';
     if ($data['stok'] < 0) $errors[] = 'Stok tidak boleh negatif.';
 
     if (!$errors) {
         try {
             Produk::update($produk['id'], $data);
             echo "<script>
-                alert('✅ Produk berhasil diperbarui!');
+                alert('✅ Barang berhasil diperbarui!');
                 window.location.href = '../index.php?updated=1';
             </script>";
             exit;
         } catch (Exception $e) {
-            $errors[] = 'Gagal menyimpan produk: ' . $e->getMessage();
+            $errors[] = 'Gagal menyimpan barang: ' . $e->getMessage();
         }
     }
     $produk = array_merge($produk, $data);
@@ -59,7 +59,7 @@ $statusCls = match(strtolower($produk['status'] ?? '')) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Edit Produk PCB | InventorySys</title>
+  <title>Edit Barang PCB | InventorySys</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   <link href="/Inventaris/public/assets/css/nav.css" rel="stylesheet">
@@ -79,9 +79,9 @@ $statusCls = match(strtolower($produk['status'] ?? '')) {
         <div class="breadcrumb">
           <a href="/Inventaris/public/dashboard.php">Dashboard</a>
           <i class="bi bi-chevron-right"></i>
-          <a href="../index.php">Produk PCB</a>
+          <a href="../index.php">Barang PCB</a>
           <i class="bi bi-chevron-right"></i>
-          <a href="detail.php?id=<?= $produk['id'] ?>"><?= htmlspecialchars($produk['kode_produk'] ?? $produk['kode'] ?? '-') ?></a>
+          <a href="detail.php?id=<?= $produk['id'] ?>"><?= htmlspecialchars($produk['kode_barang'] ?? $produk['kode_produk'] ?? $produk['kode'] ?? '-') ?></a>
           <i class="bi bi-chevron-right"></i>
           <span>Edit</span>
         </div>
@@ -100,7 +100,7 @@ $statusCls = match(strtolower($produk['status'] ?? '')) {
 
     <div class="page-header">
       <div class="page-header-left">
-        <h1 class="page-title-lg">Edit Produk</h1>
+        <h1 class="page-title-lg">Edit Barang</h1>
         <p class="page-subtitle">
           Mengedit <strong><?= htmlspecialchars($produk['nama']) ?></strong>
           &mdash; <span class="badge <?= $statusCls ?>"><?= htmlspecialchars(ucfirst($produk['status'] ?? '-')) ?></span>
@@ -114,7 +114,7 @@ $statusCls = match(strtolower($produk['status'] ?? '')) {
       <div class="form-main">
         <div class="form-card">
           <div class="form-card-header">
-            <h4><i class="bi bi-pencil-square"></i> Data Produk</h4>
+            <h4><i class="bi bi-pencil-square"></i> Data Barang</h4>
             <span class="badge <?= $statusCls ?>"><?= htmlspecialchars(ucfirst($produk['status'] ?? '-')) ?></span>
           </div>
 
@@ -128,9 +128,9 @@ $statusCls = match(strtolower($produk['status'] ?? '')) {
           <form method="post" class="po-form">
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Kode Produk</label>
-                <input type="text" name="kode" class="form-control"
-                       value="<?= htmlspecialchars($produk['kode_produk'] ?? $produk['kode'] ?? '') ?>" readonly style="background:#f3f4f6; cursor:not-allowed;">
+                <label class="form-label">Kode Barang</label>
+                <input type="text" name="kode_barang" class="form-control"
+                       value="<?= htmlspecialchars($produk['kode_barang'] ?? $produk['kode_produk'] ?? $produk['kode'] ?? '') ?>" readonly style="background:#f3f4f6; cursor:not-allowed;">
               </div>
               <div class="form-group">
                 <label class="form-label">Kategori</label>
@@ -139,7 +139,7 @@ $statusCls = match(strtolower($produk['status'] ?? '')) {
             </div>
 
             <div class="form-group">
-              <label class="form-label">Nama Produk <span class="required">*</span></label>
+              <label class="form-label">Nama Barang <span class="required">*</span></label>
               <input type="text" name="nama" class="form-control"
                      value="<?= htmlspecialchars($produk['nama']) ?>" required>
             </div>
@@ -224,9 +224,9 @@ $statusCls = match(strtolower($produk['status'] ?? '')) {
             <h4><i class="bi bi-shield-exclamation"></i> Zona Berbahaya</h4>
           </div>
           <div class="danger-body">
-            <p>Hapus produk ini secara permanen. Tindakan ini tidak dapat dibatalkan.</p>
+            <p>Hapus barang ini secara permanen. Tindakan ini tidak dapat dibatalkan.</p>
             <button type="button" class="btn-danger" id="deleteBtn">
-              <i class="bi bi-trash"></i> Hapus Produk
+              <i class="bi bi-trash"></i> Hapus Barang
             </button>
           </div>
         </div>
@@ -237,8 +237,8 @@ $statusCls = match(strtolower($produk['status'] ?? '')) {
     <div class="modal-overlay" id="deleteModal">
       <div class="modal-box">
         <div class="modal-icon"><i class="bi bi-exclamation-triangle"></i></div>
-        <h3>Hapus Produk?</h3>
-        <p>Produk <strong><?= htmlspecialchars($produk['nama']) ?></strong> akan dihapus permanen dan tidak bisa dikembalikan.</p>
+        <h3>Hapus Barang?</h3>
+        <p>Barang <strong><?= htmlspecialchars($produk['nama']) ?></strong> akan dihapus permanen dan tidak bisa dikembalikan.</p>
         <div class="modal-actions">
           <form method="post" action="delete.php">
             <input type="hidden" name="id" value="<?= $produk['id'] ?>">

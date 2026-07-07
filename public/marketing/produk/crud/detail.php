@@ -29,7 +29,7 @@ $stokLabel = ($stokAktif <= 0) ? 'Habis' : (($stokAktif <= $batasMin) ? 'Menipis
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Detail Produk PCB | InventorySys</title>
+  <title>Detail Barang PCB | InventorySys</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   <link href="/Inventaris/public/assets/css/nav.css" rel="stylesheet">
@@ -49,9 +49,9 @@ $stokLabel = ($stokAktif <= 0) ? 'Habis' : (($stokAktif <= $batasMin) ? 'Menipis
         <div class="breadcrumb">
           <a href="/Inventaris/public/dashboard.php">Dashboard</a>
           <i class="bi bi-chevron-right"></i>
-          <a href="../index.php">Produk</a>
+          <a href="../index.php">Barang</a>
           <i class="bi bi-chevron-right"></i>
-          <span><?= htmlspecialchars($produk['kode_produk'] ?? $produk['kode'] ?? '-') ?></span>
+          <span><?= htmlspecialchars($produk['kode_barang'] ?? $produk['kode_produk'] ?? $produk['kode'] ?? '-') ?></span>
         </div>
       </div>
       <div class="top-right">
@@ -68,7 +68,7 @@ $stokLabel = ($stokAktif <= 0) ? 'Habis' : (($stokAktif <= $batasMin) ? 'Menipis
 
     <div class="page-header">
       <div class="page-header-left">
-        <h1 class="page-title-lg">Detail Produk</h1>
+        <h1 class="page-title-lg">Detail Barang</h1>
         <p class="page-subtitle">
           <strong><?= htmlspecialchars($produk['nama'] ?? '-') ?></strong>
           &mdash; <span class="badge <?= $statusCls ?>"><?= htmlspecialchars(ucfirst($produk['status'] ?? '-')) ?></span>
@@ -85,20 +85,20 @@ $stokLabel = ($stokAktif <= 0) ? 'Habis' : (($stokAktif <= $batasMin) ? 'Menipis
       <div class="detail-main">
         <div class="form-card">
           <div class="form-card-header">
-            <h4><i class="bi bi-box-seam"></i> Informasi Produk</h4>
+            <h4><i class="bi bi-box-seam"></i> Informasi Barang</h4>
             <span class="badge <?= $statusCls ?>"><?= htmlspecialchars(ucfirst($produk['status'] ?? '-')) ?></span>
           </div>
           <div class="detail-grid">
             <div class="detail-item">
-              <span class="detail-label">Kode Produk</span>
-              <span class="detail-val fw-mid"><?= htmlspecialchars($produk['kode_produk'] ?? $produk['kode'] ?? '-') ?></span>
+              <span class="detail-label">Kode Barang</span>
+              <span class="detail-val fw-mid"><?= htmlspecialchars($produk['kode_barang'] ?? $produk['kode_produk'] ?? $produk['kode'] ?? '-') ?></span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Status</span>
               <span class="detail-val"><span class="badge <?= $statusCls ?>"><?= htmlspecialchars(ucfirst($produk['status'] ?? '-')) ?></span></span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">Nama Produk</span>
+              <span class="detail-label">Nama Barang</span>
               <span class="detail-val"><?= htmlspecialchars($produk['nama'] ?? '-') ?></span>
             </div>
             <div class="detail-item">
@@ -166,7 +166,7 @@ $stokLabel = ($stokAktif <= 0) ? 'Habis' : (($stokAktif <= $batasMin) ? 'Menipis
           </div>
           <div class="danger-body">
             <a href="edit.php?id=<?= $produk['id'] ?>" class="btn-primary full" style="margin-bottom:8px;">
-              <i class="bi bi-pencil"></i> Edit Produk
+              <i class="bi bi-pencil"></i> Edit Barang
             </a>
             <a href="../index.php" class="btn-outline full">
               <i class="bi bi-arrow-left"></i> Kembali ke Daftar

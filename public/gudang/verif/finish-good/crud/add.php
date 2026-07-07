@@ -3,17 +3,19 @@ session_start();
 require_once '../../../../../src/auth.php';
 require_once '../../../../../src/config.php';
 require_once '../../../../../src/models/Verifikasi.php';
+// Memanggil Model SPK untuk mengotomatiskan perubahan status SPK jadi Completed
+require_once '../../../../../src/models/SPK.php';
 
-// Pastiin tidak ada cache
+// Pastikan tidak ada cache browser
 header("Cache-Control: no-cache, no-store, must-revalidate");
 header("Pragma: no-cache");
 header("Expires: 0");
 
 $verifModel = new Verifikasi($pdo);
 
-// 1. Ambil data dari SPK
+// 1. Ambil data dari SPK (Hanya tampilkan yang belum selesai / bukan cancelled)
 try {
-    $spkList = $pdo->query("SELECT id, nomor_spk, tanggal, status FROM spk ORDER BY id DESC")
+    $spkList = $pdo->query("SELECT id, nomor_spk, tanggal, status FROM spk WHERE status NOT IN ('completed', 'cancelled') ORDER BY id DESC")
                    ->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $spkList = [];
@@ -21,34 +23,37 @@ try {
 
 $errors = [];
 $items  = [];
-$isSubmit = $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save']);
+$isSubmit = $_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_draft']) || isset($_POST['save_complete']));
 
 // 2. Tarik items berdasarkan spk_id yang dipilih (Auto-fill)
 $selectedSpk = $_POST['spk_id'] ?? $_GET['spk_id'] ?? '';
 if ($selectedSpk) {
-    /* * PERBAIKAN DI SINI: 
-     * Mengubah qty_schedule/qty_po menjadi kolom 'qty'.
-     * CATATAN: Pastikan kolom 'qty' ini sesuai dengan yang ada di tabel 'spk_items' DB kamu. 
-     * Jika namanya beda (misal: 'jumlah' atau 'target_qty'), ubah tulisan 'si.qty' di bawah.
+    /*
+     * MENGGUNAKAN SMART COALESCE:
+     * Mengambil qty_outstanding terlebih dahulu (sisa yang belum selesai).
+     * Jika tidak ada, baru turun mengambil qty_po atau qty.
      */
     $stmt = $pdo->prepare("SELECT si.id, si.spk_id, si.produk_id, 
-                                  COALESCE(si.qty_po, 0) as qty_diterima, 
-                                  pr.nama AS produk_nama 
+                                  COALESCE(si.qty_outstanding, si.qty_po, si.qty, 0) as qty_diterima, 
+                                  pr.nama AS produk_nama,
+                                  pr.satuan AS produk_satuan
                            FROM spk_items si 
                            LEFT JOIN produk pr ON si.produk_id = pr.id 
-                           WHERE si.spk_id = ? AND si.produk_id IS NOT NULL
+                           WHERE si.spk_id = ? AND si.produk_id IS NOT NULL AND COALESCE(si.qty_outstanding, si.qty_po, si.qty, 0) > 0
                            ORDER BY si.id");
     $stmt->execute([$selectedSpk]);
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 if ($isSubmit) {
+    $isComplete = isset($_POST['save_complete']); // Apakah user memilih simpan langsung Selesai?
+
     $data = [
         'spk_id'        => $_POST['spk_id'] ?? null,
-        'penerimaan_id' => null,                      // Kosongkan untuk Finish Good
+        'penerimaan_id' => null,                      // Kosong untuk Finish Good
         'tanggal'       => $_POST['tanggal']       ?? date('Y-m-d'),
         'pic'           => $_SESSION['user']['id'] ?? null,
-        'status'        => 'draft',
+        'status'        => $isComplete ? 'completed' : 'draft',
         'jenis'         => 'finish_good',
         'keterangan'    => trim($_POST['keterangan'] ?? ''),
     ];
@@ -64,7 +69,7 @@ if ($isSubmit) {
         
         if ($qty_ok > 0) {
             if ($qty_ok > $qty_masuk) {
-                $errors[] = 'Qty OK tidak boleh melebihi target produksi untuk produk ke-'.($i+1).'.';
+                $errors[] = 'Qty Masuk tidak boleh melebihi sisa target SPK pada baris ke-'.($i+1).'.';
             } else {
                 $filteredItems[] = $item;
             }
@@ -72,12 +77,49 @@ if ($isSubmit) {
     }
     $data['items'] = $filteredItems;
     
-    if (empty($data['items'])) $errors[] = 'Minimal 1 item produk dengan Qty OK > 0 harus diisi.';
+    if (empty($data['items'])) $errors[] = 'Minimal 1 item produk dengan Jumlah Masuk > 0 harus diisi.';
     
     if (!$errors) {
-        $verif_id = $verifModel->add($data, $data['items']);
-        header('Location: ../index.php?success=1');
-        exit;
+        try {
+            // Gunakan transaksi untuk menjaga konsistensi database
+            $pdo->beginTransaction();
+
+            // 1. Simpan data verifikasi Finish Good
+            $verif_id = $verifModel->add($data, $data['items']);
+            
+            // 2. Jika user memilih langsung SELESAI, eksekusi penambahan stok & penyelesaian SPK
+            if ($isComplete && $verif_id) {
+                foreach ($data['items'] as $item) {
+                    $qty_add = (int)$item['qty_ok'];
+                    $prod_id = (int)$item['produk_id'];
+                    
+                    // Tambah stok ke master produk
+                    $pdo->exec("UPDATE produk SET stok = stok + $qty_add, stok_available = stok_available + $qty_add WHERE id = $prod_id");
+                    
+                    // Kurangi qty_outstanding di spk_items
+                    $pdo->exec("UPDATE spk_items SET qty_outstanding = GREATEST(0, qty_outstanding - $qty_add) WHERE spk_id = {$data['spk_id']} AND produk_id = $prod_id");
+                }
+                
+                // Cek apakah semua item di SPK ini sudah habis (outstanding = 0)
+                $cekSisa = $pdo->query("SELECT SUM(COALESCE(qty_outstanding, 0)) FROM spk_items WHERE spk_id = {$data['spk_id']}")->fetchColumn();
+                if ($cekSisa <= 0) {
+                    // Panggil fungsi model SPK untuk mengubah status SPK jadi Completed (100%)
+                    if (method_exists('SPK', 'complete')) {
+                        SPK::complete($data['spk_id']);
+                    } else {
+                        $pdo->exec("UPDATE spk SET status = 'completed', progress = 100 WHERE id = {$data['spk_id']}");
+                    }
+                }
+            }
+
+            $pdo->commit();
+            header('Location: ../index.php?success=1');
+            exit;
+            
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            $errors[] = 'Terjadi kesalahan sistem saat menyimpan data: ' . $e->getMessage();
+        }
     }
 }
 ?>
@@ -130,7 +172,7 @@ if ($isSubmit) {
       <a href="../index.php" class="btn-ghost-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
     </div>
 
-    <form method="post">
+    <form method="post" id="fgForm">
       <div class="form-layout">
         <div class="form-main">
 
@@ -153,20 +195,30 @@ if ($isSubmit) {
                   <option value="">— Ketik atau Pilih Nomor SPK —</option>
                   <?php foreach ($spkList as $s): ?>
                     <option value="<?= $s['id'] ?>" <?= $selectedSpk == $s['id'] ? 'selected' : '' ?>>
-                      <?= htmlspecialchars($s['nomor_spk']) ?> (<?= $s['tanggal'] ?>) - <?= $s['status'] ?>
+                      <?= htmlspecialchars($s['nomor_spk']) ?> (<?= $s['tanggal'] ?>) - Status: <?= strtoupper($s['status']) ?>
                     </option>
                   <?php endforeach; ?>
                 </select>
-                <span class="form-hint" style="font-size:0.78rem;color:var(--text3);">Daftar produk akan otomatis muncul sesuai SPK yang dipilih.</span>
+                <span class="form-hint" style="font-size:0.78rem;color:var(--text3);">Hanya menampilkan SPK dengan status On Progress / Draft.</span>
               </div>
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label">Tanggal Masuk Gudang <span class="required">*</span></label>
                   <input type="date" name="tanggal" class="form-control" value="<?= htmlspecialchars($_POST['tanggal'] ?? date('Y-m-d')) ?>" required>
                 </div>
+                <div class="form-group">
+                  <label class="form-label">Catatan Tambahan</label>
+                  <input type="text" name="keterangan" class="form-control" placeholder="Contoh: Penerimaan kloter pertama..." value="<?= htmlspecialchars($_POST['keterangan'] ?? '') ?>">
+                </div>
               </div>  
             </div>
           </div>
+
+          <?php if ($selectedSpk && empty($items)): ?>
+          <div class="alert-warn" style="margin-top:16px;">
+            <i class="bi bi-exclamation-triangle"></i> Seluruh produk pada SPK ini sudah selesai diproduksi dan diterima gudang (Qty Outstanding = 0).
+          </div>
+          <?php endif; ?>
 
           <?php if ($items): ?>
           <div class="form-card">
@@ -179,9 +231,9 @@ if ($isSubmit) {
                 <thead>
                   <tr>
                     <th>Produk / Barang</th>
-                    <th class="col-center">Target SPK</th>
-                    <th class="col-center">Jml Masuk <span style="color:#16a34a">✓</span></th>
-                    <th>Catatan (Opsional)</th>
+                    <th class="col-center">Sisa Target SPK</th>
+                    <th class="col-center" style="width: 160px;">Jml Masuk <span style="color:#16a34a">✓</span></th>
+                    <th>Catatan Item (Opsional)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -192,20 +244,26 @@ if ($isSubmit) {
                   <tr>
                     <td>
                       <span class="fw-mid"><?= htmlspecialchars($item['produk_nama']) ?></span>
+                      <?php if (!empty($item['produk_satuan'])): ?>
+                        <span class="badge neutral" style="font-size:0.7rem;"><?= htmlspecialchars($item['produk_satuan']) ?></span>
+                      <?php endif; ?>
                       <input type="hidden" name="items[<?= $i ?>][produk_id]"  value="<?= (int)$item['produk_id'] ?>">
                       <input type="hidden" name="items[<?= $i ?>][qty_masuk]"  value="<?= (int)$item['qty_diterima'] ?>">
                     </td>
-                    <td class="col-center text-muted"><?= (int)$item['qty_diterima'] ?></td>
+                    <td class="col-center text-muted" style="font-weight: 600;">
+                      <?= number_format((int)$item['qty_diterima']) ?>
+                    </td>
                     <td>
                       <input type="number" name="items[<?= $i ?>][qty_ok]"
-                             class="form-control qty-input" min="0" max="<?= (int)$item['qty_diterima'] ?>"
+                             class="form-control qty-input col-center" min="0" max="<?= (int)$item['qty_diterima'] ?>"
                              value="<?= $defaultQty ?>"
+                             style="font-weight:700; border-color:#22c55e;"
                              required>
                     </td>
                     <td>
                       <input type="text" name="items[<?= $i ?>][keterangan]" class="form-control"
                              value="<?= $defaultKet ?>"
-                             placeholder="Keterangan...">
+                             placeholder="Kondisi barang...">
                     </td>
                   </tr>
                   <?php endforeach; ?>
@@ -214,9 +272,14 @@ if ($isSubmit) {
             </div>
           </div>
           
-          <div class="form-actions-bottom">
-            <button type="submit" name="save" class="btn-primary"><i class="bi bi-check-lg"></i> Simpan (Draft)</button>
-            <a href="../index.php" class="btn-outline">Batal</a>
+          <div class="form-actions-bottom" style="display:flex; gap:12px; align-items:center;">
+            <button type="submit" name="save_complete" class="btn-primary" style="background-color:#16a34a;" onclick="return confirm('Simpan dan langsung tambahkan stok ke gudang? (Jika seluruh target terpenuhi, SPK otomatis Completed)')">
+              <i class="bi bi-check-all"></i> Simpan & Selesai (Masuk Stok)
+            </button>
+            <button type="submit" name="save_draft" class="btn-secondary">
+              <i class="bi bi-file-earmark"></i> Simpan Draft
+            </button>
+            <a href="../index.php" class="btn-outline" style="margin-left:auto;">Batal</a>
           </div>
           <?php endif; ?>
 
@@ -226,9 +289,9 @@ if ($isSubmit) {
           <div class="form-card info-card">
             <div class="form-card-header"><h4><i class="bi bi-info-circle"></i> Info Sistem</h4></div>
             <ul class="info-list">
-              <li><i class="bi bi-dot"></i> <b>Direct SPK</b>: Pilih SPK, sistem otomatis menarik list produk.</li>
-              <li><i class="bi bi-dot"></i> <b>Otomatis</b>: <i>Jml Masuk</i> akan terisi otomatis penuh sesuai target produksi. Bisa lu kurangi jika hasilnya kurang.</li>
-              <li><i class="bi bi-dot"></i> <b>Stok</b>: Disimpan sebagai <b>Draft</b> dulu. Stok gudang bertambah saat status diubah jadi <b>Selesai</b>.</li>
+              <li><i class="bi bi-dot"></i> <b>Direct SPK</b>: Pilih SPK, sistem otomatis menarik list sisa produk yang belum selesai.</li>
+              <li><i class="bi bi-dot"></i> <b>Simpan & Selesai</b>: Stok gudang <b>langsung bertambah</b>. Jika semua kuantitas terpenuhi, status SPK otomatis berubah jadi <b>Completed</b>.</li>
+              <li><i class="bi bi-dot"></i> <b>Simpan Draft</b>: Data dicatat tanpa mengubah stok produk maupun status SPK.</li>
             </ul>
           </div>
         </div>
@@ -237,6 +300,25 @@ if ($isSubmit) {
 
   </div>
 </main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Validasi sederhana agar input jumlah tidak minus atau melebihi batas
+    const inputs = document.querySelectorAll('.qty-input');
+    inputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const max = parseInt(this.getAttribute('max')) || 0;
+            let val = parseInt(this.value) || 0;
+            if (val < 0) val = 0;
+            if (val > max) {
+                alert('Jumlah masuk tidak boleh melebihi sisa target SPK (' + max + ')!');
+                val = max;
+            }
+            this.value = val;
+        });
+    });
+});
+</script>
 
 </body>
 </html>

@@ -43,6 +43,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmtCust = $pdo->prepare("SELECT customer_id FROM po WHERE id = ?");
         $stmtCust->execute([$po_id]);
         $customer_id = $stmtCust->fetchColumn() ?: null;
+        
+        // --- UPGRADE 1: CEK APAKAH PO SUDAH PUNYA BARANG ---
+        // Mencegah SPK terbentuk tapi spk_items kosong (sangat penting untuk Gudang!)
+        $stmtCekItems = $pdo->prepare("SELECT COUNT(*) FROM po_items WHERE po_id = ?");
+        $stmtCekItems->execute([$po_id]);
+        if ($stmtCekItems->fetchColumn() <= 0) {
+            $errors[] = 'PO yang dipilih belum memiliki daftar barang (PO Items kosong). Silakan lengkapi data barang pada PO tersebut terlebih dahulu!';
+        }
+        // ----------------------------------------------------
     }
 
     $data = [
@@ -70,11 +79,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    // --- UPGRADE 2: PAKAI TRY-CATCH SUPAYA ANTI CRASH ---
     if (!$errors) {
-        SPK::create($data);
-        header('Location: ../index.php?success=1');
-        exit;
+        try {
+            SPK::create($data);
+            header('Location: ../index.php?success=1');
+            exit;
+        } catch (Exception $e) {
+            // Jika terjadi kesalahan database saat menyimpan header/copy barang, tampilkan pesan error
+            $errors[] = 'Gagal menyimpan SPK ke database: ' . $e->getMessage();
+        }
     }
+    // ----------------------------------------------------
 }
 ?>
 <!doctype html>

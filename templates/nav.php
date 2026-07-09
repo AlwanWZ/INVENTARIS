@@ -22,9 +22,9 @@ $role = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
     <?php if ($role === 'marketing'): ?>
     <div class="nav-group">
       <span class="nav-title">Menu Marketing</span>
-      <a href="/Inventaris/public/marketing/produk/index.php" class="nav-item"><i class="bi bi-box"></i><span>Barang</span></a>
+      <a href="/Inventaris/public/marketing/barang/index.php" class="nav-item"><i class="bi bi-box"></i><span>Barang</span></a>
       <a href="/Inventaris/public/marketing/customer/index.php" class="nav-item"><i class="bi bi-people"></i><span>Customer</span></a>
-      <a href="/Inventaris/public/marketing/po/index.php" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Pesanan</span></a>
+      <a href="/Inventaris/public/marketing/pesanan/index.php" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Pesanan</span></a>
       <a href="/Inventaris/public/marketing/laporan_order/index.php" class="nav-item"><i class="bi bi-journal-text"></i><span>Laporan Pesanan</span></a>
       <a href="/Inventaris/public/marketing/user/index.php" class="nav-item"><i class="bi bi-person-lines-fill"></i><span>User</span></a>
       <a href="/Inventaris/public/marketing/spk/index.php" class="nav-item"><i class="bi bi-file-earmark-check"></i><span>SPK</span></a>
@@ -43,7 +43,7 @@ $role = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
     <?php if ($role === 'manager'): ?>
     <div class="nav-group">
       <span class="nav-title">Menu Manager</span>
-      <a href="/Inventaris/public/marketing/po/index.php" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Pesanan</span></a>
+      <a href="/Inventaris/public/marketing/pesanan/index.php" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Pesanan</span></a>
       <a href="/Inventaris/public/gudang/laporan_persediaan/index.php" class="nav-item"><i class="bi bi-clipboard-data"></i><span>Laporan Persediaan</span></a>
       <a href="/Inventaris/public/marketing/laporan_order/index.php" class="nav-item"><i class="bi bi-journal-text"></i><span>Laporan Pesanan</span></a>
     </div>

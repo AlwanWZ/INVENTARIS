@@ -35,7 +35,7 @@ class Verifikasi {
                 LEFT JOIN spk s ON v.spk_id = s.id
                 LEFT JOIN users u ON v.pic = u.id
                 LEFT JOIN verifikasi_items vi ON v.id = vi.verifikasi_id
-                LEFT JOIN produk pr ON vi.produk_id = pr.id
+                LEFT JOIN barang pr ON vi.barang_id = pr.id
                 WHERE $whereClause
                 GROUP BY v.id
                 ORDER BY v.id DESC";
@@ -108,11 +108,11 @@ class Verifikasi {
                 $qtyOk    = (int)($item['qty_ok'] ?? $item['qty'] ?? 0);
                 
                 // Simpan Item Verifikasi
-                $sql = "INSERT INTO verifikasi_items (verifikasi_id, produk_id, qty_masuk, qty_ok, keterangan) VALUES (?, ?, ?, ?, ?)";
+                $sql = "INSERT INTO verifikasi_items (verifikasi_id, barang_id, qty_masuk, qty_ok, keterangan) VALUES (?, ?, ?, ?, ?)";
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute([
                     $verif_id, 
-                    $item['produk_id'], 
+                    $item['barang_id'], 
                     $qtyMasuk, 
                     $qtyOk, 
                     $item['keterangan'] ?? ''
@@ -121,7 +121,7 @@ class Verifikasi {
                 // OTOMATIS TAMBAH STOK JIKA DIREKAM SEBAGAI VERIFIED / APPROVED / SELESAI
                 if (in_array($status, ['verified', 'approved', 'selesai', 'completed'])) {
                     $result = $stokTracking->addStok(
-                        $item['produk_id'],
+                        $item['barang_id'],
                         $qtyOk,
                         'verifikasi_bm',
                         $verif_id,
@@ -153,10 +153,10 @@ class Verifikasi {
         $sql = "SELECT vi.*, pr.nama AS produk_nama, pr.satuan AS produk_satuan,
                 COALESCE(vi.qty_masuk, si.qty_po, pi.qty_diterima, 0) AS qty_masuk 
                 FROM verifikasi_items vi 
-                LEFT JOIN produk pr ON vi.produk_id = pr.id 
+                LEFT JOIN barang pr ON vi.barang_id = pr.id 
                 LEFT JOIN verifikasi v ON vi.verifikasi_id = v.id
-                LEFT JOIN penerimaan_items pi ON v.penerimaan_id = pi.penerimaan_id AND vi.produk_id = pi.produk_id
-                LEFT JOIN spk_items si ON v.spk_id = si.spk_id AND vi.produk_id = si.produk_id
+                LEFT JOIN penerimaan_items pi ON v.penerimaan_id = pi.penerimaan_id AND vi.barang_id = pi.barang_id
+                LEFT JOIN spk_items si ON v.spk_id = si.spk_id AND vi.barang_id = si.barang_id
                 WHERE vi.verifikasi_id = ?
                 ORDER BY vi.id";
         $stmt = $this->pdo->prepare($sql);
@@ -217,7 +217,7 @@ class Verifikasi {
                 $currentItems = $this->getItems($data['id']);
                 foreach ($currentItems as $item) {
                     $result = $stokTracking->addStok(
-                        $item['produk_id'],
+                        $item['barang_id'],
                         (int)($item['qty_ok'] ?? 0),
                         'verifikasi_bm',
                         $data['id'],
@@ -234,7 +234,7 @@ class Verifikasi {
                 $currentItems = $this->getItems($data['id']);
                 foreach ($currentItems as $item) {
                     $result = $stokTracking->reduceStok(
-                        $item['produk_id'],
+                        $item['barang_id'],
                         (int)($item['qty_ok'] ?? 0),
                         'verifikasi_rollback',
                         $data['id'],
@@ -291,7 +291,7 @@ class Verifikasi {
                 $currentItems = $this->getItems($id);
                 foreach ($currentItems as $item) {
                     $stokTracking->reduceStok(
-                        $item['produk_id'],
+                        $item['barang_id'],
                         (int)($item['qty_ok'] ?? 0),
                         'verifikasi_deleted',
                         $id,

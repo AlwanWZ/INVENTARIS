@@ -2,21 +2,21 @@
 session_start();
 require_once '../../../../src/auth.php';
 require_once '../../../../src/models/SPK.php';
-require_once '../../../../src/models/PO.php';
+require_once '../../../../src/models/Pesanan.php';
 require_once '../../../../src/models/User.php';
 
 $spk = SPK::find($_GET['id'] ?? null);
 if (!$spk) { header('Location: ../index.php'); exit; }
 
 $errors = [];
-$poList = PO::all();
+$poList = Pesanan::all();
 $users  = User::getAll();
 $items  = SPK::getItems($spk['id']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
         'nomor_spk' => trim($_POST['nomor_spk'] ?? ''),
-        'po_id'     => !empty($_POST['po_id']) ? (int)$_POST['po_id'] : '',
+        'pesanan_id'     => !empty($_POST['pesanan_id']) ? (int)$_POST['pesanan_id'] : '',
         'tanggal'   => $_POST['tanggal']   ?? '',
         'deadline'  => $_POST['deadline']  ?? '',
         'pic_id'    => !empty($_POST['pic_id']) ? (int)$_POST['pic_id'] : null,
@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'progress'  => (int)($_POST['progress'] ?? 0),
     ];
     if (!$data['nomor_spk']) $errors[] = 'Nomor SPK wajib diisi.';
-    if (!$data['po_id'])     $errors[] = 'PO wajib dipilih.';
+    if (!$data['pesanan_id'])     $errors[] = 'PO wajib dipilih.';
     if (!$data['tanggal'])   $errors[] = 'Tanggal wajib diisi.';
     if (!$data['deadline'])  $errors[] = 'Deadline wajib diisi.';
     if (!$data['pic_id'])    $errors[] = 'PIC wajib dipilih.';
@@ -35,6 +35,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $currentUsers = User::getAll();
         if (!array_filter($currentUsers, fn($u) => $u['id'] == $data['pic_id'])) {
             $errors[] = 'PIC yang dipilih tidak valid atau telah dihapus.';
+        }
+    }
+
+    // --- CEK STOK JIKA GANTI PESANAN ---
+    if ($data['pesanan_id'] && $data['pesanan_id'] != $spk['pesanan_id']) {
+        global $pdo; // pdo access from config
+        $stmtCekItems = $pdo->prepare("SELECT COUNT(*) FROM pesanan_items WHERE pesanan_id = ?");
+        $stmtCekItems->execute([$data['pesanan_id']]);
+        if ($stmtCekItems->fetchColumn() <= 0) {
+            $errors[] = 'PO yang dipilih belum memiliki daftar barang (PO Items kosong).';
+        } else {
+            $stmtCekStok = $pdo->prepare("
+                SELECT pi.barang_id, pi.qty, b.stok
+                FROM pesanan_items pi
+                JOIN barang b ON pi.barang_id = b.id
+                WHERE pi.pesanan_id = ?
+            ");
+            $stmtCekStok->execute([$data['pesanan_id']]);
+            $itemsPesanan = $stmtCekStok->fetchAll(PDO::FETCH_ASSOC);
+
+            $butuhSpk = false;
+            foreach ($itemsPesanan as $item) {
+                if ($item['stok'] < $item['qty']) {
+                    $butuhSpk = true;
+                    break;
+                }
+            }
+            if (!$butuhSpk) {
+                $errors[] = 'Stok barang untuk pesanan baru ini sudah aman. Anda tidak perlu menggunakan SPK untuk pesanan ini.';
+            }
         }
     }
     
@@ -48,8 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (!$errors) {
         // Jika PO berubah, sync items dari PO baru
-        $oldPoId = $spk['po_id'];
-        $newPoId = $data['po_id'];
+        $oldPoId = $spk['pesanan_id'];
+        $newPoId = $data['pesanan_id'];
         
         SPK::update($spk['id'], $data);
         
@@ -141,7 +171,7 @@ $statusLabel = match($spk['status']) { 'on_progress' => 'On Progress', 'complete
           </div>
           <?php endif; ?>
 
-          <form method="post" class="po-form">
+          <form method="post" class="pesanan-form">
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Nomor SPK <span class="required">*</span></label>
@@ -150,13 +180,13 @@ $statusLabel = match($spk['status']) { 'on_progress' => 'On Progress', 'complete
               </div>
               <div class="form-group">
                 <label class="form-label">Pilih Pesanan <span class="required">*</span></label>
-                <select name="po_id" class="form-control" required id="poSelect">
+                <select name="pesanan_id" class="form-control" required id="poSelect">
                   <option value="">-- Pilih Pesanan --</option>
-                  <?php foreach ($poList as $po): ?>
-                    <option value="<?= $po['id'] ?>"
-                            data-customer="<?= htmlspecialchars($po['perusahaan'] ?? '') ?>"
-                            <?= $spk['po_id'] == $po['id'] ? 'selected' : '' ?>>
-                      <?= htmlspecialchars($po['nomor_po']) ?>
+                  <?php foreach ($poList as $pesanan): ?>
+                    <option value="<?= $pesanan['id'] ?>"
+                            data-customer="<?= htmlspecialchars($pesanan['perusahaan'] ?? '') ?>"
+                            <?= $spk['pesanan_id'] == $pesanan['id'] ? 'selected' : '' ?>>
+                      <?= htmlspecialchars($pesanan['nomor_pesanan']) ?>
                     </option>
                   <?php endforeach; ?>
                 </select>
@@ -234,7 +264,7 @@ $statusLabel = match($spk['status']) { 'on_progress' => 'On Progress', 'complete
                       <tr style="border-bottom: 1px solid #eee;">
                         <td style="padding: 10px;">
                           <strong><?= htmlspecialchars($item['nama_barang']) ?></strong><br>
-                          <small style="color: #999;">ID: <?= $item['produk_id'] ?></small>
+                          <small style="color: #999;">ID: <?= $item['barang_id'] ?></small>
                         </td>
                         <td style="padding: 10px; text-align: center;">
                           <?= (int)$item['qty_po'] ?>
@@ -282,7 +312,7 @@ $statusLabel = match($spk['status']) { 'on_progress' => 'On Progress', 'complete
             </div>
             <div class="side-info-item">
               <span class="side-info-label">Nomor Pesanan</span>
-              <span class="side-info-val"><?= htmlspecialchars($spk['nomor_po'] ?? '—') ?></span>
+              <span class="side-info-val"><?= htmlspecialchars($spk['nomor_pesanan'] ?? '—') ?></span>
             </div>
             <div class="side-info-item">
               <span class="side-info-label">Deadline</span>

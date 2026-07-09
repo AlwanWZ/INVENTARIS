@@ -7,15 +7,15 @@ class Penerimaan {
 
     // List penerimaan dengan relasi
     public function getAll($search = '', $status = '', $dateFrom = '', $dateTo = '') {
-        $sql = "SELECT p.*, po.nomor_po, spk.nomor_spk, u.username as pic_name
+        $sql = "SELECT p.*, pesanan.nomor_pesanan, spk.nomor_spk, u.username as pic_name
                 FROM penerimaan p
-                LEFT JOIN po ON p.po_id = po.id
+                LEFT JOIN pesanan ON p.pesanan_id = pesanan.id
                 LEFT JOIN spk ON p.spk_id = spk.id
                 LEFT JOIN users u ON p.pic = u.id
                 WHERE 1";
         $params = [];
         if ($search) {
-            $sql .= " AND (p.nomor_penerimaan LIKE :search OR po.nomor_po LIKE :search OR spk.nomor_spk LIKE :search)";
+            $sql .= " AND (p.nomor_penerimaan LIKE :search OR pesanan.nomor_pesanan LIKE :search OR spk.nomor_spk LIKE :search)";
             $params['search'] = "%$search%";
         }
         if ($status) {
@@ -45,9 +45,9 @@ class Penerimaan {
     }
 
     public function getById($id) {
-        $sql = "SELECT p.*, po.nomor_po, spk.nomor_spk, u.username as pic_name
+        $sql = "SELECT p.*, pesanan.nomor_pesanan, spk.nomor_spk, u.username as pic_name
                 FROM penerimaan p
-                LEFT JOIN po ON p.po_id = po.id
+                LEFT JOIN pesanan ON p.pesanan_id = pesanan.id
                 LEFT JOIN spk ON p.spk_id = spk.id
                 LEFT JOIN users u ON p.pic = u.id
                 WHERE p.id = ?";
@@ -59,7 +59,7 @@ class Penerimaan {
     public function getItems($penerimaan_id) {
         $sql = "SELECT pi.*, pr.nama
             FROM penerimaan_items pi
-            LEFT JOIN produk pr ON pi.produk_id = pr.id
+            LEFT JOIN barang pr ON pi.barang_id = pr.id
             WHERE pi.penerimaan_id = ?";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$penerimaan_id]);
@@ -72,11 +72,11 @@ class Penerimaan {
             $stokTracking = new StokTracking($this->pdo);
             
             $this->pdo->beginTransaction();
-            $sql = "INSERT INTO penerimaan (nomor_penerimaan, po_id, spk_id, tanggal, status, pic, notes) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO penerimaan (nomor_penerimaan, pesanan_id, spk_id, tanggal, status, pic, notes) VALUES (?, ?, ?, ?, ?, ?, ?)";
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute([
                 $data['nomor_penerimaan'],
-                $data['po_id'],
+                $data['pesanan_id'],
                 $data['spk_id'],
                 $data['tanggal'],
                 $data['status'],
@@ -86,11 +86,11 @@ class Penerimaan {
             $penerimaan_id = $this->pdo->lastInsertId();
             
             foreach ($items as $item) {
-                $sql = "INSERT INTO penerimaan_items (penerimaan_id, produk_id, qty_order, qty_diterima) VALUES (?, ?, ?, ?)";
+                $sql = "INSERT INTO penerimaan_items (penerimaan_id, barang_id, qty_order, qty_diterima) VALUES (?, ?, ?, ?)";
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute([
                     $penerimaan_id,
-                    $item['produk_id'],
+                    $item['barang_id'],
                     $item['qty_order'],
                     $item['qty_diterima']
                 ]);
@@ -98,7 +98,7 @@ class Penerimaan {
                 // TAMBAH stok jika status completed (MENGGUNAKAN STOKTRACKING)
                 if ($data['status'] === 'completed' && $item['qty_diterima'] > 0) {
                     $result = $stokTracking->addStok(
-                        $item['produk_id'],
+                        $item['barang_id'],
                         $item['qty_diterima'],
                         'penerimaan',
                         $penerimaan_id,
@@ -110,9 +110,9 @@ class Penerimaan {
                     }
                     
                     // UNRESERVE stok dari PO yang sudah diterima
-                    if (!empty($data['po_id'])) {
+                    if (!empty($data['pesanan_id'])) {
                         $result = $stokTracking->unreserveStok(
-                            $item['produk_id'],
+                            $item['barang_id'],
                             $item['qty_diterima'],
                             'penerimaan',
                             $penerimaan_id,
@@ -144,11 +144,11 @@ class Penerimaan {
             $newStatus = $data['status'] ?? 'draft';
             $isStatusChange = ($oldStatus !== $newStatus && $newStatus === 'completed');
             
-            $sql = "UPDATE penerimaan SET nomor_penerimaan=?, po_id=?, spk_id=?, tanggal=?, status=?, pic=?, notes=? WHERE id=?";
+            $sql = "UPDATE penerimaan SET nomor_penerimaan=?, pesanan_id=?, spk_id=?, tanggal=?, status=?, pic=?, notes=? WHERE id=?";
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute([
                 $data['nomor_penerimaan'],
-                $data['po_id'],
+                $data['pesanan_id'],
                 $data['spk_id'],
                 $data['tanggal'],
                 $data['status'],
@@ -163,11 +163,11 @@ class Penerimaan {
             $this->pdo->prepare("DELETE FROM penerimaan_items WHERE penerimaan_id=?")->execute([$id]);
             
             foreach ($items as $item) {
-                $sql = "INSERT INTO penerimaan_items (penerimaan_id, produk_id, qty_order, qty_diterima) VALUES (?, ?, ?, ?)";
+                $sql = "INSERT INTO penerimaan_items (penerimaan_id, barang_id, qty_order, qty_diterima) VALUES (?, ?, ?, ?)";
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute([
                     $id,
-                    $item['produk_id'],
+                    $item['barang_id'],
                     $item['qty_order'],
                     $item['qty_diterima']
                 ]);
@@ -175,7 +175,7 @@ class Penerimaan {
                 // Jika status berubah menjadi completed, tambah stok
                 if ($isStatusChange && $item['qty_diterima'] > 0) {
                     $result = $stokTracking->addStok(
-                        $item['produk_id'],
+                        $item['barang_id'],
                         $item['qty_diterima'],
                         'penerimaan',
                         $id,
@@ -187,9 +187,9 @@ class Penerimaan {
                     }
                     
                     // UNRESERVE stok dari PO
-                    if (!empty($data['po_id'])) {
+                    if (!empty($data['pesanan_id'])) {
                         $result = $stokTracking->unreserveStok(
-                            $item['produk_id'],
+                            $item['barang_id'],
                             $item['qty_diterima'],
                             'penerimaan',
                             $id,
@@ -224,7 +224,7 @@ class Penerimaan {
                     if ($item['qty_diterima'] > 0) {
                         // Kurang balik stok yang sudah ditambah
                         $stokTracking->reduceStok(
-                            $item['produk_id'],
+                            $item['barang_id'],
                             $item['qty_diterima'],
                             'penerimaan_delete',
                             $id,
@@ -233,9 +233,9 @@ class Penerimaan {
                         );
                         
                         // Re-reserve stok kembali ke PO
-                        if (!empty($penerimaan['po_id'])) {
+                        if (!empty($penerimaan['pesanan_id'])) {
                             $stokTracking->reserveStok(
-                                $item['produk_id'],
+                                $item['barang_id'],
                                 $item['qty_diterima'],
                                 'penerimaan_delete',
                                 $id,

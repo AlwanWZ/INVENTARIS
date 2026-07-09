@@ -87,7 +87,7 @@
           </div>
           <?php endif; ?>
 
-          <form method="post" class="po-form" autocomplete="off">
+          <form method="post" class="pesanan-form" autocomplete="off">
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Nama <span class="required">*</span></label>
@@ -137,9 +137,9 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Alamat</label>
+              <label class="form-label">Alamat <span class="required">*</span></label>
               <textarea name="alamat" class="form-control form-textarea"
-                        placeholder="Alamat lengkap (opsional)"><?= htmlspecialchars($customer['alamat'] ?? $_POST['alamat'] ?? '') ?></textarea>
+                        placeholder="Alamat lengkap" required><?= htmlspecialchars($customer['alamat'] ?? $_POST['alamat'] ?? '') ?></textarea>
             </div>
 
             <div class="form-actions">
@@ -210,7 +210,7 @@
             <h4><i class="bi bi-info-circle"></i> Panduan</h4>
           </div>
           <ul class="info-list">
-            <li><i class="bi bi-dot"></i> Hanya nama yang wajib diisi, kolom lain opsional.</li>
+            <li><i class="bi bi-dot"></i> Nama dan alamat wajib diisi, kolom lain opsional.</li>
             <li><i class="bi bi-dot"></i> Email harus valid jika diisi.</li>
             <li><i class="bi bi-dot"></i> Kode customer dibuat otomatis oleh sistem.</li>
             <li><i class="bi bi-dot"></i> Customer <em>Nonaktif</em> tidak muncul di pilihan PO baru.</li>

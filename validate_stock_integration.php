@@ -137,12 +137,12 @@ foreach ($endpoints as $endpoint) {
 print_header("5. Database Tables");
 if ($pdo_ok) {
     $tables = [
-        'produk' => ['stok', 'stok_reserved', 'stok_available'],
-        'stok_log' => ['produk_id', 'tipe_transaksi', 'qty_change'],
+        'barang' => ['stok', 'stok_reserved', 'stok_available'],
+        'stok_log' => ['barang_id', 'tipe_transaksi', 'qty_change'],
         'penerimaan' => ['id', 'status', 'nomor_penerimaan'],
         'pengeluaran' => ['id', 'status', 'nomor_pengeluaran'],
-        'po' => ['id', 'status', 'nomor_po'],
-        'po_items' => ['id', 'po_id', 'produk_id']
+        'pesanan' => ['id', 'status', 'nomor_pesanan'],
+        'pesanan_items' => ['id', 'pesanan_id', 'barang_id']
     ];
     
     foreach ($tables as $table => $columns) {
@@ -168,7 +168,7 @@ print_header("6. Sample Stock Formula Validation");
 if ($pdo_ok) {
     try {
         // Get first 5 products and check formula
-        $stmt = $pdo->query("SELECT id, nama, stok, stok_reserved, stok_available FROM produk LIMIT 5");
+        $stmt = $pdo->query("SELECT id, nama, stok, stok_reserved, stok_available FROM barang LIMIT 5");
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         if (!empty($products)) {
@@ -255,7 +255,7 @@ print_status("  • All operations are logged in stok_log table", 'ok');
 
 print_status("\nQuick Test Commands:", 'bold');
 print_status("  curl 'http://localhost/Inventaris/public/gudang/api/get_stok_realtime.php'", 'ok');
-print_status("  curl 'http://localhost/Inventaris/public/gudang/api/get_stok_history.php?produk_id=1'", 'ok');
+print_status("  curl 'http://localhost/Inventaris/public/gudang/api/get_stok_history.php?barang_id=1'", 'ok');
 
 print_status("\nDocumentation:", 'bold');
 print_status("  • STOCK_INTEGRATION_GUIDE.md - Full documentation", 'ok');

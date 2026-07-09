@@ -35,30 +35,61 @@ if ($lastSJ) {
     $autoNomorSJ = $prefixSJ . '001';
 }
 
-// Ambil daftar SPK yang siap dikirim
-$spkList = $pdo->query("
-    SELECT s.id as spk_id, s.nomor_spk, po.nomor_po, 
-           COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan,
-           c.id as customer_id, c.alamat as alamat_kirim
-    FROM spk s
-    JOIN po ON s.po_id = po.id
-    LEFT JOIN customers c ON po.customer_id = c.id
-    WHERE s.status IN ('selesai', 'completed', 'Completed') 
-    ORDER BY s.id DESC
+// Ambil daftar sumber (SPK selesai ATAU Pesanan tanpa SPK)
+$sumberKirim = $pdo->query("
+    (
+        SELECT 'SPK' as tipe, s.id as spk_id, s.pesanan_id, s.nomor_spk as nomor_ref, p.nomor_pesanan,
+               COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan,
+               c.id as customer_id, c.alamat as alamat_kirim
+        FROM spk s
+        JOIN pesanan p ON s.pesanan_id = p.id
+        LEFT JOIN customers c ON p.customer_id = c.id
+        WHERE s.status IN ('selesai', 'completed', 'Completed')
+    )
+    UNION
+    (
+        SELECT 'PO' as tipe, NULL as spk_id, p.id as pesanan_id, p.nomor_pesanan as nomor_ref, p.nomor_pesanan,
+               COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan,
+               c.id as customer_id, c.alamat as alamat_kirim
+        FROM pesanan p
+        LEFT JOIN customers c ON p.customer_id = c.id
+        WHERE p.status != 'cancelled' 
+          AND NOT EXISTS (SELECT 1 FROM spk s WHERE s.pesanan_id = p.id)
+    )
+    ORDER BY nomor_ref DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// Load items kalau user pilih SPK
+// Load items kalau user pilih sumber
 $items = [];
-if (!empty($_POST['spk_id'])) {
-    $stmt = $pdo->prepare("
-        SELECT pi.produk_id, pi.qty, pr.nama AS produk_nama, pr.satuan 
-        FROM spk s
-        JOIN po_items pi ON s.po_id = pi.po_id
-        JOIN produk pr ON pi.produk_id = pr.id 
-        WHERE s.id = ?
-    ");
-    $stmt->execute([$_POST['spk_id']]);
-    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$selectedSumber = $_POST['sumber'] ?? '';
+$selectedSpkId = null;
+$selectedPesananId = null;
+
+if ($selectedSumber) {
+    $parts = explode('-', $selectedSumber);
+    $tipe = $parts[0];
+    $id = (int)$parts[1];
+
+    if ($tipe === 'SPK') {
+        $selectedSpkId = $id;
+        // Cari pesanan_id dari SPK
+        $stmtP = $pdo->prepare("SELECT pesanan_id FROM spk WHERE id = ?");
+        $stmtP->execute([$id]);
+        $selectedPesananId = $stmtP->fetchColumn();
+    } else {
+        $selectedPesananId = $id;
+    }
+
+    if ($selectedPesananId) {
+        $stmt = $pdo->prepare("
+            SELECT pi.barang_id, pi.qty, pi.qty_dikirim, pr.nama AS produk_nama, pr.satuan 
+            FROM pesanan_items pi
+            JOIN barang pr ON pi.barang_id = pr.id 
+            WHERE pi.pesanan_id = ? AND pi.qty > COALESCE(pi.qty_dikirim, 0)
+        ");
+        $stmt->execute([$selectedPesananId]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
@@ -67,7 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
     $dataPengeluaran = [
         'nomor_pengeluaran' => trim($_POST['nomor_pengeluaran'] ?? $autoNomorPengeluaran),
         'tanggal'           => $_POST['tanggal_kirim'] ?? date('Y-m-d'),
-        'spk_id'            => $_POST['spk_id'] ?? null,
+        'spk_id'            => $_POST['spk_id_hidden'] ?: null,
+        'pesanan_id'        => $_POST['pesanan_id_hidden'] ?: null,
         'status'            => 'completed', 
         'keterangan'        => trim($_POST['catatan'] ?? ''),
         'created_by'        => $_SESSION['user']['id'] ?? null
@@ -86,17 +118,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
 
     $itemsToSave = $_POST['items'] ?? [];
 
-    if (!$dataPengeluaran['spk_id']) $errors[] = 'Anda harus memilih SPK/Pesanan yang akan dikirim.';
+    if (!$dataPengeluaran['spk_id'] && !$dataPengeluaran['pesanan_id']) $errors[] = 'Anda harus memilih SPK/Pesanan yang akan dikirim.';
     if (!$dataSJ['driver'])          $errors[] = 'Driver wajib diisi.';
     if (!$dataSJ['kendaraan'])       $errors[] = 'Kendaraan wajib diisi.';
     if (empty($itemsToSave))         $errors[] = 'Tidak ada item barang yang akan dikirim.';
 
-    // Cari info customer dari SPK yang dipilih
-    if ($dataPengeluaran['spk_id']) {
-        foreach ($spkList as $spk) {
-            if ($spk['spk_id'] == $dataPengeluaran['spk_id']) {
-                $dataSJ['customer_id'] = $spk['customer_id'];
-                $dataSJ['alamat_kirim'] = $spk['alamat_kirim'];
+    // Cari info customer dari sumber yang dipilih
+    if ($dataPengeluaran['spk_id'] || $dataPengeluaran['pesanan_id']) {
+        foreach ($sumberKirim as $s) {
+            if (($dataPengeluaran['spk_id'] && $s['tipe'] === 'SPK' && $s['spk_id'] == $dataPengeluaran['spk_id']) ||
+                ($dataPengeluaran['pesanan_id'] && $s['tipe'] === 'PO' && $s['pesanan_id'] == $dataPengeluaran['pesanan_id'])) {
+                $dataSJ['customer_id'] = $s['customer_id'];
+                $dataSJ['alamat_kirim'] = $s['alamat_kirim'];
                 break;
             }
         }
@@ -107,24 +140,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
             $pdo->beginTransaction();
 
             // 🚀 FIX: INSERT PENGELUARAN (TIDAK PAKAI pic_name)
-            $stmtOut = $pdo->prepare("INSERT INTO pengeluaran (nomor_pengeluaran, tanggal, spk_id, status) VALUES (?, ?, ?, ?)");
+            $stmtOut = $pdo->prepare("INSERT INTO pengeluaran (nomor_pengeluaran, tanggal, spk_id, pesanan_id, status) VALUES (?, ?, ?, ?, ?)");
             $stmtOut->execute([
                 $dataPengeluaran['nomor_pengeluaran'], 
                 $dataPengeluaran['tanggal'], 
                 $dataPengeluaran['spk_id'], 
+                $dataPengeluaran['pesanan_id'],
                 $dataPengeluaran['status']
             ]);
             $pengeluaranId = $pdo->lastInsertId();
 
             // INSERT ITEMS PENGELUARAN SEKALIGUS POTONG STOK
-            $stmtItemOut = $pdo->prepare("INSERT INTO pengeluaran_items (pengeluaran_id, produk_id, qty) VALUES (?, ?, ?)");
+            $stmtItemOut = $pdo->prepare("INSERT INTO pengeluaran_items (pengeluaran_id, barang_id, qty) VALUES (?, ?, ?)");
             // HANYA MENGURANGI STOK FISIK / STOK AVAILABLE PRODUK JIKA BENAR-BENAR KELUAR
-            $stmtUpdateStok = $pdo->prepare("UPDATE produk SET stok_available = stok_available - ?, stok = stok - ? WHERE id = ?");
+            $stmtUpdateStok = $pdo->prepare("UPDATE barang SET stok_available = stok_available - ?, stok = stok - ? WHERE id = ?");
 
             foreach ($itemsToSave as $item) {
-                $stmtItemOut->execute([$pengeluaranId, $item['produk_id'], $item['qty']]);
-                // Potong stok produk
-                $stmtUpdateStok->execute([$item['qty'], $item['qty'], $item['produk_id']]);
+                $stmtItemOut->execute([$pengeluaranId, $item['barang_id'], $item['qty']]);
+                // Potong stok barang
+                $stmtUpdateStok->execute([$item['qty'], $item['qty'], $item['barang_id']]);
+                
+                // Tambah qty_dikirim di pesanan_items
+                if ($dataPengeluaran['pesanan_id']) {
+                    $stmtUpdatePO = $pdo->prepare("UPDATE pesanan_items SET qty_dikirim = qty_dikirim + ? WHERE pesanan_id = ? AND barang_id = ?");
+                    $stmtUpdatePO->execute([$item['qty'], $dataPengeluaran['pesanan_id'], $item['barang_id']]);
+                }
             }
 
             // INSERT SURAT JALAN
@@ -136,9 +176,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
             $sjId = $pdo->lastInsertId();
 
             // INSERT SURAT JALAN ITEMS
-            $stmtSjItem = $pdo->prepare("INSERT INTO surat_jalan_items (surat_jalan_id, produk_id, qty) VALUES (?, ?, ?)");
+            $stmtSjItem = $pdo->prepare("INSERT INTO surat_jalan_items (surat_jalan_id, barang_id, qty) VALUES (?, ?, ?)");
             foreach ($itemsToSave as $item) {
-                $stmtSjItem->execute([$sjId, $item['produk_id'], $item['qty']]);
+                $stmtSjItem->execute([$sjId, $item['barang_id'], $item['qty']]);
             }
 
             $pdo->commit();
@@ -239,18 +279,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
         
         <div class="form-grid-3">
           <div>
-            <label class="form-label">Pilih SPK (Selesai Produksi) <span class="required">*</span></label>
-            <?php if (empty($spkList)): ?>
-              <div class="alert-error">Tidak ada SPK yang statusnya 'Selesai'.</div>
+            <label class="form-label">Pilih Sumber (SPK / Pesanan) <span class="required">*</span></label>
+            <?php if (empty($sumberKirim)): ?>
+              <div class="alert-error">Tidak ada SPK Selesai atau Pesanan siap kirim.</div>
             <?php else: ?>
-              <select name="spk_id" class="form-control" id="spkSelect" required>
-                <option value="">— Pilih Pesanan —</option>
-                <?php foreach ($spkList as $s): ?>
-                  <option value="<?= $s['spk_id'] ?>" <?= ($_POST['spk_id'] ?? '') == $s['spk_id'] ? 'selected' : '' ?>>
-                    SPK: <?= htmlspecialchars($s['nomor_spk']) ?> | PO: <?= htmlspecialchars($s['nomor_po']) ?> | (<?= htmlspecialchars($s['perusahaan']) ?>)
+              <select name="sumber" class="form-control" id="sumberSelect" required>
+                <option value="">— Pilih Sumber —</option>
+                <?php foreach ($sumberKirim as $s): ?>
+                  <?php $val = $s['tipe'] . '-' . ($s['tipe'] === 'SPK' ? $s['spk_id'] : $s['pesanan_id']); ?>
+                  <option value="<?= $val ?>" <?= ($selectedSumber == $val) ? 'selected' : '' ?>>
+                    [<?= $s['tipe'] ?>] <?= htmlspecialchars($s['nomor_ref']) ?> | PO: <?= htmlspecialchars($s['nomor_pesanan']) ?> | (<?= htmlspecialchars($s['perusahaan']) ?>)
                   </option>
                 <?php endforeach; ?>
               </select>          
+              <input type="hidden" name="spk_id_hidden" value="<?= $selectedSpkId ?>">
+              <input type="hidden" name="pesanan_id_hidden" value="<?= $selectedPesananId ?>">
             <?php endif; ?>
           </div>
           <div>
@@ -300,14 +343,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
             </thead>
             <tbody id="itemsBody">
               <?php if ($items): ?>
-              <?php foreach ($items as $i => $item): ?>
+              <?php foreach ($items as $i => $item): 
+                  $sisa = $item['qty'] - ($item['qty_dikirim'] ?? 0);
+              ?>
               <tr class="item-row">
                 <td class="row-num" style="text-align:center;"><?= $i + 1 ?></td>
-                <td style="font-weight: 500; color: var(--text);"><?= htmlspecialchars($item['produk_nama'] ?? '-') ?></td>
+                <td style="font-weight: 500; color: var(--text);">
+                  <?= htmlspecialchars($item['produk_nama'] ?? '-') ?><br>
+                  <small style="color:var(--text3); font-weight:normal;">Total Pesanan: <?= $item['qty'] ?> | Sudah Terkirim: <?= (int)$item['qty_dikirim'] ?> | <b>Sisa: <?= $sisa ?></b></small>
+                </td>
                 <td style="text-align:center;">
                   <input type="number" name="items[<?= $i ?>][qty]" class="form-control" style="text-align:center; font-weight:bold; color:#059669;"
-                         min="1" max="<?= $item['qty'] ?>" value="<?= $item['qty'] ?>" required>
-                  <input type="hidden" name="items[<?= $i ?>][produk_id]" value="<?= $item['produk_id'] ?>">
+                         min="1" max="<?= $sisa ?>" value="<?= $sisa ?>" required>
+                  <input type="hidden" name="items[<?= $i ?>][barang_id]" value="<?= $item['barang_id'] ?>">
                 </td>
                 <td style="text-align: center; color: var(--text3);"><?= htmlspecialchars($item['satuan'] ?? 'pcs') ?></td>
                 <td style="text-align: center;">
@@ -343,12 +391,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    const spkSelect = document.getElementById('spkSelect');
+    const sumberSelect = document.getElementById('sumberSelect');
     const sjForm = document.getElementById('sjForm');
     const tbody = document.getElementById('itemsBody');
     
-    if (spkSelect) {
-      spkSelect.addEventListener('change', function() {
+    if (sumberSelect) {
+      sumberSelect.addEventListener('change', function() {
         if (this.value) {
           const input = document.createElement('input');
           input.type = 'hidden';

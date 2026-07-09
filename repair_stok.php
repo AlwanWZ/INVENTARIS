@@ -14,8 +14,8 @@ require_once __DIR__ . '/src/config.php';
 echo "🔧 STARTING STOK DATA REPAIR...\n\n";
 
 try {
-    // 1. Update semua produk berdasarkan formula UTAMA
-    $sql = "UPDATE produk 
+    // 1. Update semua barang berdasarkan formula UTAMA
+    $sql = "UPDATE barang 
             SET stok_available = GREATEST(0, stok - stok_reserved),
                 updated_at = NOW()
             WHERE stok_available != GREATEST(0, stok - stok_reserved)
@@ -25,7 +25,7 @@ try {
     $stmt->execute();
     
     $affected = $stmt->rowCount();
-    echo "✅ Updated $affected produk dengan formula:\n";
+    echo "✅ Updated $affected barang dengan formula:\n";
     echo "   stok_available = MAX(0, stok - stok_reserved)\n\n";
 
     // 2. Verifikasi hasil repair
@@ -36,7 +36,7 @@ try {
                     stok_reserved,
                     stok_available,
                     (stok - stok_reserved) as expected_available
-                FROM produk
+                FROM barang
                 ORDER BY id";
     
     $stmt = $pdo->prepare($sqlVerify);
@@ -80,7 +80,7 @@ try {
                         SUM(stok) as total_stok_fisik,
                         SUM(stok_reserved) as total_reserved,
                         SUM(stok_available) as total_available
-                        FROM produk";
+                        FROM barang";
         
         $stmt = $pdo->prepare($sqlSummary);
         $stmt->execute();

@@ -4,8 +4,8 @@ require_once __DIR__ . '/src/config.php';
 echo "🔧 Fixing PO status ENUM...\n\n";
 
 try {
-    // ALTER TABLE po untuk tambah pending_review ke ENUM
-    $sql = "ALTER TABLE po 
+    // ALTER TABLE pesanan untuk tambah pending_review ke ENUM
+    $sql = "ALTER TABLE pesanan 
             MODIFY COLUMN status ENUM('draft','pending_review','approved','rejected','completed') 
             DEFAULT 'draft'";
     
@@ -14,7 +14,7 @@ try {
     echo "✅ ENUM status updated successfully!\n\n";
     
     // Verify hasil
-    $result = $pdo->query('DESC po')->fetchAll(PDO::FETCH_ASSOC);
+    $result = $pdo->query('DESC pesanan')->fetchAll(PDO::FETCH_ASSOC);
     
     foreach ($result as $col) {
         if ($col['Field'] === 'status') {

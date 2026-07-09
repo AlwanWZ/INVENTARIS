@@ -1,17 +1,17 @@
 <?php
 require_once '../src/auth.php';
-require_once '../src/models/Produk.php';
+require_once '../src/models/Barang.php';
 require_once '../src/models/Customer.php';
-require_once '../src/models/PO.php';
+require_once '../src/models/Pesanan.php';
 require_once '../src/models/User.php';
 require_once '../app/Models/Kategori.php';
 checkLogin();
 
 // KPI Data
-$produkList = Produk::all();
+$produkList = Barang::all();
 $produkCount = count($produkList);
 $customerCount = count(Customer::getAll());
-$poList = PO::all();
+$poList = Pesanan::all();
 $poCount = count($poList);
 $userCount = count(User::getAll());
 $kategoriList = array_unique(array_map(function($p){return $p['kategori'] ?? '';}, $produkList));
@@ -37,18 +37,18 @@ $totalPengiriman = count($sjBulanIni);
 
 // Chart Data: Orders per Month
 $ordersPerMonth = array_fill(1, 12, 0);
-foreach ($poList as $po) {
-  $month = (int)date('n', strtotime($po['tanggal']));
+foreach ($poList as $pesanan) {
+  $month = (int)date('n', strtotime($pesanan['tanggal']));
   $ordersPerMonth[$month]++;
 }
 
 // Tabel aktivitas: 5 aktivitas terakhir
 $aktivitas = [];
 // PO
-foreach (array_slice($poList,0,5) as $po) {
+foreach (array_slice($poList,0,5) as $pesanan) {
   $aktivitas[] = [
-    'tanggal' => $po['tanggal'],
-    'desc' => 'Marketing membuat PO <b>' . htmlspecialchars($po['nomor_po']) . '</b>'
+    'tanggal' => $pesanan['tanggal'],
+    'desc' => 'Marketing membuat PO <b>' . htmlspecialchars($pesanan['nomor_pesanan']) . '</b>'
   ];
 }
 // Penerimaan
@@ -122,7 +122,7 @@ $aktivitas = array_slice($aktivitas,0,5);
         <div class="kpi-card"><div class="kpi-icon purple"><i class="bi bi-file-earmark-text"></i></div><div class="kpi-body"><span class="kpi-label">Total Pesanan</span><div class="kpi-val"><?= $poCount ?></div><span class="kpi-trend"><i class="bi bi-clipboard-data"></i> Order masuk</span></div></div>
         <div class="kpi-card"><div class="kpi-icon teal"><i class="bi bi-clipboard-data"></i></div><div class="kpi-body"><span class="kpi-label">Total SPK</span><div class="kpi-val"><?= $spkCount ?></div><span class="kpi-trend"><i class="bi bi-clipboard-check"></i> Semua divisi</span></div></div>
         <div class="kpi-card"><div class="kpi-icon red"><i class="bi bi-exclamation-triangle"></i></div><div class="kpi-body"><span class="kpi-label">Stok Menipis (&le;10)</span><div class="kpi-val"><?= $lowStockCount ?></div><span class="kpi-trend warn"><i class="bi bi-arrow-down"></i> Perlu reorder</span></div></div>
-        <div class="kpi-card"><div class="kpi-icon green"><i class="bi bi-stack"></i></div><div class="kpi-body"><span class="kpi-label">Total Stok Barang</span><div class="kpi-val"><?= $totalStok ?></div><span class="kpi-trend"><i class="bi bi-box-seam"></i> Semua produk</span></div></div>
+        <div class="kpi-card"><div class="kpi-icon green"><i class="bi bi-stack"></i></div><div class="kpi-body"><span class="kpi-label">Total Stok Barang</span><div class="kpi-val"><?= $totalStok ?></div><span class="kpi-trend"><i class="bi bi-box-seam"></i> Semua barang</span></div></div>
         <div class="kpi-card"><div class="kpi-icon blue"><i class="bi bi-truck"></i></div><div class="kpi-body"><span class="kpi-label">Pengiriman Bulan Ini</span><div class="kpi-val"><?= $totalPengiriman ?></div><span class="kpi-trend"><i class="bi bi-calendar-event"></i> Surat Jalan</span></div></div>
       </div>
 

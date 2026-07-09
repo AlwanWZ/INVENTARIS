@@ -6,7 +6,7 @@ class SuratJalan {
     }
 
     public function getAll($filters = []) {
-        $sql = "SELECT sj.*, p.nomor_pengeluaran, c.nama AS customer_nama, c.perusahaan, u.username AS created_by_name
+        $sql = "SELECT sj.*, p.nomor_pengeluaran, c.nama AS customer_nama, c.perusahaan, c.alamat AS customer_alamat, u.username AS created_by_name
                 FROM surat_jalan sj
                 LEFT JOIN pengeluaran p ON sj.pengeluaran_id = p.id
                 LEFT JOIN customers c ON sj.customer_id = c.id
@@ -36,7 +36,7 @@ class SuratJalan {
     }
 
     public function getById($id) {
-        $sql = "SELECT sj.*, p.nomor_pengeluaran, c.nama AS customer_nama, c.perusahaan, u.username AS created_by_name
+        $sql = "SELECT sj.*, p.nomor_pengeluaran, c.nama AS customer_nama, c.perusahaan, c.alamat AS customer_alamat, u.username AS created_by_name
                 FROM surat_jalan sj
                 LEFT JOIN pengeluaran p ON sj.pengeluaran_id = p.id
                 LEFT JOIN customers c ON sj.customer_id = c.id
@@ -48,13 +48,13 @@ class SuratJalan {
     }
 
     public function getItems($sj_id) {
-        $sql = "SELECT sji.*, pr.nama AS produk_nama, pr.satuan, po.nomor_po 
+        $sql = "SELECT sji.*, pr.nama AS produk_nama, pr.satuan, pesanan.nomor_pesanan 
                 FROM surat_jalan_items sji 
-                LEFT JOIN produk pr ON sji.produk_id = pr.id 
+                LEFT JOIN barang pr ON sji.barang_id = pr.id 
                 LEFT JOIN surat_jalan sj ON sji.surat_jalan_id = sj.id 
                 LEFT JOIN pengeluaran p ON sj.pengeluaran_id = p.id 
                 LEFT JOIN spk ON p.spk_id = spk.id 
-                LEFT JOIN po ON spk.po_id = po.id 
+                LEFT JOIN pesanan ON spk.pesanan_id = pesanan.id 
                 WHERE sji.surat_jalan_id = ? ORDER BY sji.id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$sj_id]);
@@ -78,11 +78,11 @@ class SuratJalan {
         ]);
         $sj_id = $this->pdo->lastInsertId();
         foreach ($items as $item) {
-            $sql = "INSERT INTO surat_jalan_items (surat_jalan_id, produk_id, qty) VALUES (?, ?, ?)";
+            $sql = "INSERT INTO surat_jalan_items (surat_jalan_id, barang_id, qty) VALUES (?, ?, ?)";
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute([
                 $sj_id,
-                $item['produk_id'],
+                $item['barang_id'],
                 $item['qty']
             ]);
         }
@@ -110,11 +110,11 @@ class SuratJalan {
             ]);
             $this->pdo->prepare("DELETE FROM surat_jalan_items WHERE surat_jalan_id=?")->execute([$id]);
             foreach ($items as $item) {
-                $sql = "INSERT INTO surat_jalan_items (surat_jalan_id, produk_id, qty) VALUES (?, ?, ?)";
+                $sql = "INSERT INTO surat_jalan_items (surat_jalan_id, barang_id, qty) VALUES (?, ?, ?)";
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute([
                     $id,
-                    $item['produk_id'],
+                    $item['barang_id'],
                     $item['qty']
                 ]);
             }

@@ -2,11 +2,11 @@
 /**
  * Real-time Stock Information API
  * 
- * Endpoint untuk menampilkan stok real-time produk
+ * Endpoint untuk menampilkan stok real-time barang
  * Used by: Marketing module, Dashboard, PO form
  * 
  * Query Parameters:
- * - produk_id: ID produk (single)
+ * - barang_id: ID barang (single)
  * - produk_ids: Comma-separated IDs (multiple)
  * - type: 'single', 'multiple', 'all'
  * 
@@ -53,15 +53,15 @@ try {
     $stokTracking = new StokTracking($pdo);
     
     // Determine request type
-    $produk_id = $_GET['produk_id'] ?? null;
+    $barang_id = $_GET['barang_id'] ?? null;
     $produk_ids = $_GET['produk_ids'] ?? null;
     $type = $_GET['type'] ?? 'single';
     
     $data = [];
     
-    if ($produk_id) {
+    if ($barang_id) {
         // Get single product stock
-        $stok = $stokTracking->getStokRealtime((int)$produk_id);
+        $stok = $stokTracking->getStokRealtime((int)$barang_id);
         if ($stok) {
             $persen_fill = 0;
             if (isset($stok['stok']) && (int)$stok['stok'] > 0) {
@@ -80,7 +80,7 @@ try {
             SELECT 
                 id,
                 nama,
-                kode_produk as kode,
+                kode_barang as kode,
                 stok,
                 stok_reserved,
                 stok_available,
@@ -89,7 +89,7 @@ try {
                     WHEN stok_available < 50 THEN 'LOW_STOCK'
                     ELSE 'OK'
                 END AS status_stok
-            FROM produk
+            FROM barang
             WHERE id IN ($placeholders)
             ORDER BY nama ASC
         ");
@@ -111,7 +111,7 @@ try {
             SELECT 
                 id,
                 nama,
-                kode_produk as kode,
+                kode_barang as kode,
                 stok,
                 stok_reserved,
                 stok_available,
@@ -120,7 +120,7 @@ try {
                     WHEN stok_available < 50 THEN 'LOW_STOCK'
                     ELSE 'OK'
                 END AS status_stok
-            FROM produk
+            FROM barang
             WHERE status = 'aktif'
             ORDER BY nama ASC
             LIMIT 100

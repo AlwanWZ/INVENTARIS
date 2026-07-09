@@ -95,7 +95,7 @@
 .form-control::placeholder { color: var(--text3); }
 select.form-control { cursor: pointer; }
 .form-textarea { resize: vertical; min-height: 76px; }
-.po-form { padding: 22px; }
+.pesanan-form { padding: 22px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
 .form-group:last-child { margin-bottom: 0; }

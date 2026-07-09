@@ -172,7 +172,7 @@ tbody tr:hover { background: var(--bg2); }
 /* ── Form layout ────────────────────────────────────────── */
 .form-layout { display: grid; grid-template-columns: 1fr 280px; gap: 20px; align-items: start; }
 .form-side { display: flex; flex-direction: column; gap: 18px; }
-.po-form { padding: 22px; }
+.pesanan-form { padding: 22px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
 .form-group:last-child { margin-bottom: 0; }

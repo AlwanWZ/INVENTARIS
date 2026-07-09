@@ -3,7 +3,7 @@
  * Generate nomor otomatis dengan prefix dan sequence
  * Format: PREFIX-NNN (misal: PCB-001, PROD-002)
  */
-function getNextCode($prefix, $table = 'po', $field = 'nomor_po') {
+function getNextCode($prefix, $table = 'pesanan', $field = 'nomor_pesanan') {
     global $pdo;
     
     try {
@@ -34,11 +34,11 @@ function getNextCode($prefix, $table = 'po', $field = 'nomor_po') {
 }
 
 /**
- * Generate kode produk dengan prefix dari kategori
+ * Generate kode barang dengan prefix dari kategori
  * Ambil prefix dari kategori table, lalu generate sequence
  * 
- * @param int $kategori_id - ID kategori produk
- * @return string - Kode produk format: PREFIX-NNN (misal: PCB-001, RES-042)
+ * @param int $kategori_id - ID kategori barang
+ * @return string - Kode barang format: PREFIX-NNN (misal: PCB-001, RES-042)
  */
 function generateKodeProdukByKategori($kategori_id = null) {
     global $pdo;
@@ -57,7 +57,7 @@ function generateKodeProdukByKategori($kategori_id = null) {
         }
         
         // Generate code dengan prefix yang sudah ditentukan
-        return getNextCode($prefix, 'produk', 'kode_produk');
+        return getNextCode($prefix, 'barang', 'kode_barang');
     } catch (Exception $e) {
         // Fallback: gunakan default
         return 'PROD-001';
@@ -73,9 +73,9 @@ function generateAutoCode($codeType) {
     }
     
     $codeMap = [
-        'PCB' => ['table' => 'po', 'prefix' => 'PCB', 'field' => 'nomor_po'],
-        'PRODUK' => ['table' => 'produk', 'prefix' => 'PROD', 'field' => 'kode_produk'],  // Default PROD jika kategori tidak dipilih
-        'PROD' => ['table' => 'produk', 'prefix' => 'PROD', 'field' => 'kode_produk'],
+        'PCB' => ['table' => 'pesanan', 'prefix' => 'PCB', 'field' => 'nomor_pesanan'],
+        'PRODUK' => ['table' => 'barang', 'prefix' => 'PROD', 'field' => 'kode_barang'],  // Default PROD jika kategori tidak dipilih
+        'PROD' => ['table' => 'barang', 'prefix' => 'PROD', 'field' => 'kode_barang'],
         'MRK' => ['table' => 'customers', 'prefix' => 'MRK', 'field' => 'nomor_customer'],
         'USR' => ['table' => 'users', 'prefix' => 'USR', 'field' => 'username'],
         'MNG' => ['table' => 'users', 'prefix' => 'MNG', 'field' => 'username'],
@@ -146,8 +146,8 @@ function generatePONumber() {
         
         // Query untuk mendapatkan urutan PO terakhir di bulan-tahun ini
         $sql = "SELECT COUNT(*) + 1 as next_sequence 
-                FROM po 
-                WHERE nomor_po LIKE ?";
+                FROM pesanan 
+                WHERE nomor_pesanan LIKE ?";
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['PO-' . $monthYear . '-%']);
@@ -175,7 +175,7 @@ function generatePONumber() {
 /**
  * Get real-time stock info for a product
  * 
- * @param int $produk_id - Product ID
+ * @param int $barang_id - Product ID
  * @param PDO $pdo - Database connection (optional, uses global if not provided)
  * @return array - Stock info with status
  * 
@@ -183,7 +183,7 @@ function generatePONumber() {
  * $stok = getStokInfo(5);
  * // Returns: ['id' => 5, 'nama' => 'PCB', 'stok' => 500, 'stok_available' => 400, 'status_stok' => 'OK']
  */
-function getStokInfo($produk_id, $pdo = null) {
+function getStokInfo($barang_id, $pdo = null) {
     if (!$pdo) {
         global $pdo;
     }
@@ -191,7 +191,7 @@ function getStokInfo($produk_id, $pdo = null) {
     try {
         require_once __DIR__ . '/models/StokTracking.php';
         $stokTracking = new StokTracking($pdo);
-        return $stokTracking->getStokRealtime((int)$produk_id);
+        return $stokTracking->getStokRealtime((int)$barang_id);
     } catch (Exception $e) {
         return [
             'success' => false,
@@ -203,14 +203,14 @@ function getStokInfo($produk_id, $pdo = null) {
 /**
  * Reserve stock when PO is created
  * 
- * @param int $produk_id - Product ID
+ * @param int $barang_id - Product ID
  * @param int $qty - Quantity to reserve
  * @param int|null $reference_id - PO ID
  * @param int|null $user_id - User ID
  * @param PDO $pdo - Database connection
  * @return array - Result with success flag and message
  */
-function reserveStock($produk_id, $qty, $reference_id = null, $user_id = null, $pdo = null) {
+function reserveStock($barang_id, $qty, $reference_id = null, $user_id = null, $pdo = null) {
     if (!$pdo) {
         global $pdo;
     }
@@ -219,9 +219,9 @@ function reserveStock($produk_id, $qty, $reference_id = null, $user_id = null, $
         require_once __DIR__ . '/models/StokTracking.php';
         $stokTracking = new StokTracking($pdo);
         return $stokTracking->reserveStok(
-            (int)$produk_id,
+            (int)$barang_id,
             (int)$qty,
-            'po',
+            'pesanan',
             $reference_id,
             $user_id,
             'PO reserve'
@@ -234,14 +234,14 @@ function reserveStock($produk_id, $qty, $reference_id = null, $user_id = null, $
 /**
  * Unreserve stock when PO is cancelled or goods are received
  * 
- * @param int $produk_id - Product ID
+ * @param int $barang_id - Product ID
  * @param int $qty - Quantity to unreserve
  * @param int|null $reference_id - PO ID or Penerimaan ID
  * @param int|null $user_id - User ID
  * @param PDO $pdo - Database connection
  * @return array - Result with success flag and message
  */
-function unreserveStock($produk_id, $qty, $reference_id = null, $user_id = null, $pdo = null) {
+function unreserveStock($barang_id, $qty, $reference_id = null, $user_id = null, $pdo = null) {
     if (!$pdo) {
         global $pdo;
     }
@@ -250,9 +250,9 @@ function unreserveStock($produk_id, $qty, $reference_id = null, $user_id = null,
         require_once __DIR__ . '/models/StokTracking.php';
         $stokTracking = new StokTracking($pdo);
         return $stokTracking->unreserveStok(
-            (int)$produk_id,
+            (int)$barang_id,
             (int)$qty,
-            'po',
+            'pesanan',
             $reference_id,
             $user_id,
             'Unreserve'
@@ -265,7 +265,7 @@ function unreserveStock($produk_id, $qty, $reference_id = null, $user_id = null,
 /**
  * Add stock when goods are received
  * 
- * @param int $produk_id - Product ID
+ * @param int $barang_id - Product ID
  * @param int $qty - Quantity received
  * @param int|null $reference_id - Penerimaan ID
  * @param int|null $user_id - User ID
@@ -273,7 +273,7 @@ function unreserveStock($produk_id, $qty, $reference_id = null, $user_id = null,
  * @param PDO $pdo - Database connection
  * @return array - Result with success flag and message
  */
-function addStock($produk_id, $qty, $reference_id = null, $user_id = null, $notes = '', $pdo = null) {
+function addStock($barang_id, $qty, $reference_id = null, $user_id = null, $notes = '', $pdo = null) {
     if (!$pdo) {
         global $pdo;
     }
@@ -282,7 +282,7 @@ function addStock($produk_id, $qty, $reference_id = null, $user_id = null, $note
         require_once __DIR__ . '/models/StokTracking.php';
         $stokTracking = new StokTracking($pdo);
         return $stokTracking->addStok(
-            (int)$produk_id,
+            (int)$barang_id,
             (int)$qty,
             'penerimaan',
             $reference_id,
@@ -297,7 +297,7 @@ function addStock($produk_id, $qty, $reference_id = null, $user_id = null, $note
 /**
  * Reduce stock when goods are shipped
  * 
- * @param int $produk_id - Product ID
+ * @param int $barang_id - Product ID
  * @param int $qty - Quantity shipped
  * @param int|null $reference_id - Pengeluaran ID
  * @param int|null $user_id - User ID
@@ -305,7 +305,7 @@ function addStock($produk_id, $qty, $reference_id = null, $user_id = null, $note
  * @param PDO $pdo - Database connection
  * @return array - Result with success flag and message
  */
-function reduceStock($produk_id, $qty, $reference_id = null, $user_id = null, $notes = '', $pdo = null) {
+function reduceStock($barang_id, $qty, $reference_id = null, $user_id = null, $notes = '', $pdo = null) {
     if (!$pdo) {
         global $pdo;
     }
@@ -314,7 +314,7 @@ function reduceStock($produk_id, $qty, $reference_id = null, $user_id = null, $n
         require_once __DIR__ . '/models/StokTracking.php';
         $stokTracking = new StokTracking($pdo);
         return $stokTracking->reduceStok(
-            (int)$produk_id,
+            (int)$barang_id,
             (int)$qty,
             'pengeluaran',
             $reference_id,
@@ -329,12 +329,12 @@ function reduceStock($produk_id, $qty, $reference_id = null, $user_id = null, $n
 /**
  * Get stock history/audit log for a product
  * 
- * @param int $produk_id - Product ID
+ * @param int $barang_id - Product ID
  * @param int $limit - Number of records to fetch
  * @param PDO $pdo - Database connection
  * @return array - History records
  */
-function getStockHistory($produk_id, $limit = 50, $pdo = null) {
+function getStockHistory($barang_id, $limit = 50, $pdo = null) {
     if (!$pdo) {
         global $pdo;
     }
@@ -342,7 +342,7 @@ function getStockHistory($produk_id, $limit = 50, $pdo = null) {
     try {
         require_once __DIR__ . '/models/StokTracking.php';
         $stokTracking = new StokTracking($pdo);
-        return $stokTracking->getStokLog((int)$produk_id, (int)$limit);
+        return $stokTracking->getStokLog((int)$barang_id, (int)$limit);
     } catch (Exception $e) {
         return [];
     }
@@ -351,13 +351,13 @@ function getStockHistory($produk_id, $limit = 50, $pdo = null) {
 /**
  * Check if product has sufficient available stock
  * 
- * @param int $produk_id - Product ID
+ * @param int $barang_id - Product ID
  * @param int $qty_needed - Quantity needed
  * @param PDO $pdo - Database connection
  * @return bool - True if sufficient stock, false otherwise
  */
-function hasEnoughStock($produk_id, $qty_needed, $pdo = null) {
-    $stok = getStokInfo($produk_id, $pdo);
+function hasEnoughStock($barang_id, $qty_needed, $pdo = null) {
+    $stok = getStokInfo($barang_id, $pdo);
     if (!isset($stok['stok_available'])) {
         return false;
     }
@@ -367,24 +367,24 @@ function hasEnoughStock($produk_id, $qty_needed, $pdo = null) {
 /**
  * Get stock status for display (OK, LOW_STOCK, OUT_OF_STOCK)
  * 
- * @param int $produk_id - Product ID
+ * @param int $barang_id - Product ID
  * @param PDO $pdo - Database connection
  * @return string - Status code
  */
-function getStockStatus($produk_id, $pdo = null) {
-    $stok = getStokInfo($produk_id, $pdo);
+function getStockStatus($barang_id, $pdo = null) {
+    $stok = getStokInfo($barang_id, $pdo);
     return $stok['status_stok'] ?? 'UNKNOWN';
 }
 
 /**
  * Get stock percentage fill (0-100)
  * 
- * @param int $produk_id - Product ID
+ * @param int $barang_id - Product ID
  * @param PDO $pdo - Database connection
  * @return int - Percentage (0-100)
  */
-function getStockPercentage($produk_id, $pdo = null) {
-    $stok = getStokInfo($produk_id, $pdo);
+function getStockPercentage($barang_id, $pdo = null) {
+    $stok = getStokInfo($barang_id, $pdo);
     if (!isset($stok['stok']) || $stok['stok'] == 0) {
         return 0;
     }

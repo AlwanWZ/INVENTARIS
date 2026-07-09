@@ -193,7 +193,7 @@ function badgeLabel($s) {
               <td class="text-muted"><?= $i + 1 ?></td>
               <td class="fw-mid"><?= htmlspecialchars($row['nomor_penerimaan']) ?></td>
               <td class="text-muted">
-                <?= $row['nomor_po'] ? htmlspecialchars($row['nomor_po']) : htmlspecialchars($row['nomor_spk'] ?? '—') ?>
+                <?= $row['nomor_pesanan'] ? htmlspecialchars($row['nomor_pesanan']) : htmlspecialchars($row['nomor_spk'] ?? '—') ?>
               </td>
               <td class="text-muted"><?= htmlspecialchars($row['tanggal']) ?></td>
               <td><span class="badge <?= badgeCls($row['status']) ?>"><?= badgeLabel($row['status']) ?></span></td>

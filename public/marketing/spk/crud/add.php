@@ -3,7 +3,7 @@ session_start();
 require_once '../../../../src/auth.php';
 require_once '../../../../src/config.php';
 require_once '../../../../src/models/SPK.php';
-require_once '../../../../src/models/PO.php';
+require_once '../../../../src/models/Pesanan.php';
 require_once '../../../../src/models/User.php';
 require_once '../../../../src/functions.php';
 
@@ -26,35 +26,59 @@ if ($lastSPK) {
 
 // --- KUERI PO + CUSTOMER ---
 $poList = $pdo->query("
-    SELECT po.id, po.nomor_po, 
+    SELECT pesanan.id, pesanan.nomor_pesanan, 
            COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan
-    FROM po
-    LEFT JOIN customers c ON po.customer_id = c.id
-    ORDER BY po.id DESC
+    FROM pesanan
+    LEFT JOIN customers c ON pesanan.customer_id = c.id
+    ORDER BY pesanan.id DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 $users  = User::getAll();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $po_id = !empty($_POST['po_id']) ? (int)$_POST['po_id'] : '';
+    $pesanan_id = !empty($_POST['pesanan_id']) ? (int)$_POST['pesanan_id'] : '';
     $customer_id = null;
     
-    if ($po_id) {
-        $stmtCust = $pdo->prepare("SELECT customer_id FROM po WHERE id = ?");
-        $stmtCust->execute([$po_id]);
+    if ($pesanan_id) {
+        $stmtCust = $pdo->prepare("SELECT customer_id FROM pesanan WHERE id = ?");
+        $stmtCust->execute([$pesanan_id]);
         $customer_id = $stmtCust->fetchColumn() ?: null;
         
         // --- UPGRADE 1: CEK APAKAH PO SUDAH PUNYA BARANG ---
-        $stmtCekItems = $pdo->prepare("SELECT COUNT(*) FROM po_items WHERE po_id = ?");
-        $stmtCekItems->execute([$po_id]);
+        $stmtCekItems = $pdo->prepare("SELECT COUNT(*) FROM pesanan_items WHERE pesanan_id = ?");
+        $stmtCekItems->execute([$pesanan_id]);
         if ($stmtCekItems->fetchColumn() <= 0) {
             $errors[] = 'PO yang dipilih belum memiliki daftar barang (PO Items kosong). Silakan lengkapi data barang pada PO tersebut terlebih dahulu!';
+        } else {
+            // --- UPGRADE 1.5: CEK APAKAH STOK CUKUP UNTUK SEMUA BARANG ---
+            // Jika stok barang aman (>= qty pesanan) untuk semua item, tidak perlu SPK.
+            $stmtCekStok = $pdo->prepare("
+                SELECT pi.barang_id, pi.qty, b.stok_available
+                FROM pesanan_items pi
+                JOIN barang b ON pi.barang_id = b.id
+                WHERE pi.pesanan_id = ?
+            ");
+            $stmtCekStok->execute([$pesanan_id]);
+            $itemsPesanan = $stmtCekStok->fetchAll(PDO::FETCH_ASSOC);
+
+            $butuhSpk = false;
+            foreach ($itemsPesanan as $item) {
+                // Jika stok_available kurang dari 0 (minus), berarti ada backorder dan kita BUTUH SPK!
+                if ($item['stok_available'] < 0) {
+                    $butuhSpk = true;
+                    break;
+                }
+            }
+            
+            if (!$butuhSpk) {
+                $errors[] = 'Stok barang untuk pesanan ini masih aman (mencukupi). Anda tidak perlu membuat SPK, silakan proses langsung ke pengeluaran/pengiriman.';
+            }
         }
     }
 
     $data = [
         'nomor_spk'   => trim($_POST['nomor_spk'] ?? ''),
-        'po_id'       => $po_id,
+        'pesanan_id'       => $pesanan_id,
         'customer_id' => $customer_id,
         'tanggal'     => $_POST['tanggal']   ?? '',
         'deadline'    => $_POST['deadline']  ?? '',
@@ -65,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
     
     if (!$data['nomor_spk']) $errors[] = 'Nomor SPK wajib diisi.';
-    if (!$data['po_id'])     $errors[] = 'PO wajib dipilih.';
+    if (!$data['pesanan_id'])     $errors[] = 'PO wajib dipilih.';
     if (!$data['tanggal'])   $errors[] = 'Tanggal wajib diisi.';
     if (!$data['deadline'])  $errors[] = 'Deadline wajib diisi.';
     if (!$data['pic_id'])    $errors[] = 'PIC wajib dipilih.';
@@ -156,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
           <?php endif; ?>
 
-          <form method="post" class="po-form">
+          <form method="post" class="pesanan-form">
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Nomor SPK <span class="required">*</span></label>
@@ -165,13 +189,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               </div>
               <div class="form-group">
                 <label class="form-label">Pilih Pesanan <span class="required">*</span></label>
-                <select name="po_id" class="form-control" required id="poSelect">
+                <select name="pesanan_id" class="form-control" required id="poSelect">
                   <option value="">-- Pilih Pesanan --</option>
-                  <?php foreach ($poList as $po): ?>
-                    <option value="<?= $po['id'] ?>"
-                            data-customer="<?= htmlspecialchars($po['perusahaan']) ?>"
-                            <?= ($_POST['po_id'] ?? '') == $po['id'] ? 'selected' : '' ?>>
-                      <?= htmlspecialchars($po['nomor_po']) ?>
+                  <?php foreach ($poList as $pesanan): ?>
+                    <option value="<?= $pesanan['id'] ?>"
+                            data-customer="<?= htmlspecialchars($pesanan['perusahaan']) ?>"
+                            <?= ($_POST['pesanan_id'] ?? '') == $pesanan['id'] ? 'selected' : '' ?>>
+                      <?= htmlspecialchars($pesanan['nomor_pesanan']) ?>
                     </option>
                   <?php endforeach; ?>
                 </select>

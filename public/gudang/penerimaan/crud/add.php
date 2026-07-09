@@ -25,7 +25,7 @@ if ($lastKode) {
 
 $penerimaanModel = new Penerimaan($pdo);
 
-$poList = $pdo->query("SELECT id, nomor_po FROM po ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+$poList = $pdo->query("SELECT id, nomor_pesanan FROM pesanan ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
 
 // Tarik sekalian nama PIC dari SPK
 $spkList = $pdo->query("
@@ -35,7 +35,7 @@ $spkList = $pdo->query("
     ORDER BY s.id DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-$produkList = $pdo->query("SELECT id, nama FROM produk ORDER BY nama")->fetchAll(PDO::FETCH_ASSOC);
+$produkList = $pdo->query("SELECT id, nama FROM barang ORDER BY nama")->fetchAll(PDO::FETCH_ASSOC);
 
 // --- LOGIKA BARU: AMBIL DATA ITEMS DARI DATABASE UNTUK AUTO-FILL JS ---
 $poItemsData = [];
@@ -43,10 +43,10 @@ $spkItemsData = [];
 
 try {
     // Ambil Item dari PO
-    $stmtPO = $pdo->query("SELECT po_id, produk_id, qty FROM po_items");
+    $stmtPO = $pdo->query("SELECT pesanan_id, barang_id, qty FROM pesanan_items");
     while ($row = $stmtPO->fetch(PDO::FETCH_ASSOC)) {
-        $poItemsData[$row['po_id']][] = [
-            'produk_id' => $row['produk_id'],
+        $poItemsData[$row['pesanan_id']][] = [
+            'barang_id' => $row['barang_id'],
             'qty_order' => $row['qty']
         ];
     }
@@ -55,13 +55,13 @@ try {
 try {
     // Ambil Item dari SPK (Lewat relasi PO)
     $stmtSPK = $pdo->query("
-        SELECT s.id as spk_id, pi.produk_id, pi.qty 
+        SELECT s.id as spk_id, pi.barang_id, pi.qty 
         FROM spk s 
-        JOIN po_items pi ON s.po_id = pi.po_id
+        JOIN pesanan_items pi ON s.pesanan_id = pi.pesanan_id
     ");
     while ($row = $stmtSPK->fetch(PDO::FETCH_ASSOC)) {
         $spkItemsData[$row['spk_id']][] = [
-            'produk_id' => $row['produk_id'],
+            'barang_id' => $row['barang_id'],
             'qty_order' => $row['qty']
         ];
     }
@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $data = [
         'nomor_penerimaan' => trim($_POST['nomor_penerimaan'] ?? ''),
-        'po_id'            => $_POST['po_id']  ?: null,
+        'pesanan_id'            => $_POST['pesanan_id']  ?: null,
         'spk_id'           => $spk_id,
         'tanggal'          => $_POST['tanggal'] ?? '',
         'status'           => $_POST['status']  ?? 'draft',
@@ -411,11 +411,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-grid-3">
           <div>
             <label class="form-label">Nomor PO</label>
-            <select name="po_id" id="poSelect" class="form-control">
+            <select name="pesanan_id" id="poSelect" class="form-control">
               <option value="">— Pilih PO (opsional) —</option>
-              <?php foreach ($poList as $po): ?>
-                <option value="<?= $po['id'] ?>" <?= ($_POST['po_id'] ?? '') == $po['id'] ? 'selected' : '' ?>>
-                  <?= htmlspecialchars($po['nomor_po']) ?>
+              <?php foreach ($poList as $pesanan): ?>
+                <option value="<?= $pesanan['id'] ?>" <?= ($_POST['pesanan_id'] ?? '') == $pesanan['id'] ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($pesanan['nomor_pesanan']) ?>
                 </option>
               <?php endforeach; ?>
             </select>
@@ -507,7 +507,7 @@ document.addEventListener('DOMContentLoaded', function() {
       rowCount = 0;
       if (items && items.length > 0) {
           items.forEach(item => {
-              addItemRow(item.produk_id, item.qty_order);
+              addItemRow(item.barang_id, item.qty_order);
           });
       } else {
           addItemRow(); // Minimal 1 baris kosong kalau gak ada data
@@ -576,7 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
     tr.className = 'item-row';
     const idx = rowCount;
     
-    // Bikin opsi produk dinamis dari JSON
+    // Bikin opsi barang dinamis dari JSON
     let productOptions = '<option value="">— Pilih Produk —</option>';
     produkList.forEach(pr => {
         const isSelected = (pr.id == selectedProdukId) ? 'selected' : '';
@@ -586,7 +586,7 @@ document.addEventListener('DOMContentLoaded', function() {
     tr.innerHTML = `
       <td class="row-num">${idx + 1}</td>
       <td>
-        <select name="items[${idx}][produk_id]" class="form-control select-produk" required>
+        <select name="items[${idx}][barang_id]" class="form-control select-barang" required>
           ${productOptions}
         </select>
       </td>

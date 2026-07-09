@@ -123,7 +123,7 @@ $statusLabel = badgeLabel($data['status']);
             </div>
             <?php endif; ?>
 
-            <div class="po-form">
+            <div class="pesanan-form">
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label">Nomor Surat Jalan <span class="required">*</span></label>
@@ -191,7 +191,7 @@ $statusLabel = badgeLabel($data['status']);
                     <td class="col-right">
                       <input type="number" name="items[<?= $i ?>][qty]" class="form-control qty-input"
                              min="1" max="<?= $item['qty'] ?>" value="<?= $item['qty'] ?>" required>
-                      <input type="hidden" name="items[<?= $i ?>][produk_id]" value="<?= $item['produk_id'] ?>">
+                      <input type="hidden" name="items[<?= $i ?>][barang_id]" value="<?= $item['barang_id'] ?>">
                     </td>
                     <td class="col-right text-muted"><?= htmlspecialchars($item['satuan'] ?? '-') ?></td>
                   </tr>

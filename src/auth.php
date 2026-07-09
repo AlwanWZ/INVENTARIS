@@ -4,6 +4,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+function preventCache() {
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
+
 function login($username, $password) {
     global $pdo;
     $stmt = $pdo->prepare('SELECT * FROM users WHERE username = ? LIMIT 1');
@@ -23,6 +29,7 @@ function login($username, $password) {
 }
 
 function checkLogin() {
+    preventCache();
     if (!isset($_SESSION['user'])) {
         header('Location: /Inventaris/public/login.php');
         exit;
@@ -30,6 +37,7 @@ function checkLogin() {
 }
 
 function checkRole($role) {
+    preventCache();
     if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== $role) {
         header('Location: /Inventaris/public/login.php');
         exit;

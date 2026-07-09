@@ -6,7 +6,7 @@
  * Used by: Kartu Stok, Stock Analytics, Audit Trail
  * 
  * Query Parameters:
- * - produk_id: ID produk (required)
+ * - barang_id: ID barang (required)
  * - limit: Jumlah record (default: 50, max: 500)
  * - offset: Pagination offset (default: 0)
  * - start_date: Filter dari tanggal (YYYY-MM-DD)
@@ -19,13 +19,13 @@
  *   "data": [
  *     {
  *       "id": 123,
- *       "produk_id": 5,
+ *       "barang_id": 5,
  *       "produk_nama": "PCB Controller",
  *       "tipe_transaksi": "po_reserve",
  *       "qty_change": -100,
  *       "stok_before": 500,
  *       "stok_after": 400,
- *       "reference_type": "po",
+ *       "reference_type": "pesanan",
  *       "reference_id": 12,
  *       "keterangan": "PO-001 dibuat",
  *       "created_by_name": "John Doe",
@@ -59,18 +59,18 @@ try {
     );
     
     // Get parameters
-    $produk_id = (int)($_GET['produk_id'] ?? 0);
+    $barang_id = (int)($_GET['barang_id'] ?? 0);
     $limit = min((int)($_GET['limit'] ?? 50), 500);
     $offset = (int)($_GET['offset'] ?? 0);
     $start_date = $_GET['start_date'] ?? null;
     $end_date = $_GET['end_date'] ?? null;
     $tipe_transaksi = $_GET['tipe_transaksi'] ?? null;
     
-    if (!$produk_id) {
+    if (!$barang_id) {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'produk_id parameter is required'
+            'message' => 'barang_id parameter is required'
         ]);
         exit;
     }
@@ -79,9 +79,9 @@ try {
     $sql = "
         SELECT 
             sl.id,
-            sl.produk_id,
+            sl.barang_id,
             p.nama as produk_nama,
-            p.kode_produk,
+            p.kode_barang,
             sl.tipe_transaksi,
             sl.qty_change,
             sl.stok_before,
@@ -94,12 +94,12 @@ try {
             u.username as created_by_name,
             sl.created_at
         FROM stok_log sl
-        LEFT JOIN produk p ON sl.produk_id = p.id
+        LEFT JOIN barang p ON sl.barang_id = p.id
         LEFT JOIN users u ON sl.created_by = u.id
-        WHERE sl.produk_id = ?
+        WHERE sl.barang_id = ?
     ";
     
-    $params = [$produk_id];
+    $params = [$barang_id];
     
     if ($tipe_transaksi) {
         $sql .= " AND sl.tipe_transaksi = ?";
@@ -125,8 +125,8 @@ try {
     $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Get total count
-    $countSql = "SELECT COUNT(*) as total FROM stok_log WHERE produk_id = ?";
-    $countParams = [$produk_id];
+    $countSql = "SELECT COUNT(*) as total FROM stok_log WHERE barang_id = ?";
+    $countParams = [$barang_id];
     
     if ($tipe_transaksi) {
         $countSql .= " AND tipe_transaksi = ?";

@@ -8,7 +8,7 @@ if (!$spk) { header('Location: ../index.php'); exit; }
 
 // Auto-sync items jika kosong atau berbeda dengan PO
 $items = SPK::getItems($spk['id']);
-if (empty($items) && !empty($spk['po_id'])) {
+if (empty($items) && !empty($spk['pesanan_id'])) {
     SPK::syncItemsFromPO($spk['id']);
     $items = SPK::getItems($spk['id']);
 }
@@ -98,7 +98,7 @@ function badgeLabel($s) {
             </div>
             <div class="detail-item">
               <span class="detail-label">Nomor Pesanan</span>
-              <span class="detail-val"><?= htmlspecialchars($spk['nomor_po']) ?></span>
+              <span class="detail-val"><?= htmlspecialchars($spk['nomor_pesanan']) ?></span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Customer</span>

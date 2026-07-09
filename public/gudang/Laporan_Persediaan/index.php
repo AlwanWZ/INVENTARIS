@@ -12,7 +12,7 @@ $kategori    = $_GET['kategori'] ?? '';
 $filterStok  = $_GET['filter_stok'] ?? 'all'; 
 $hasFilter   = $search || $kategori || ($filterStok !== 'all');
 
-$listKategori = $pdo->query("SELECT id, nama_kategori FROM kategori ORDER BY nama_kategori")->fetchAll(PDO::FETCH_ASSOC);
+$listKategori = $pdo->query("SELECT DISTINCT kategori as id, kategori as nama_kategori FROM barang WHERE kategori IS NOT NULL AND kategori != '' ORDER BY kategori")->fetchAll(PDO::FETCH_ASSOC);
 
 // ==========================================
 // 🚀 EXPORT EXCEL (KOLOM KATEGORI DIHAPUS)
@@ -36,17 +36,17 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
                 <th>Status</th>
               </tr>";
         
-        $sql = "SELECT p.id, COALESCE(p.kode, '') AS kode, COALESCE(p.kode_produk, '') AS kode_produk_alt, p.nama, p.satuan, p.harga, p.harga AS harga_jual, p.stok, p.stok_available, COALESCE(p.stok_min, 10) AS stok_min, k.nama_kategori FROM produk p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE 1=1";
+        $sql = "SELECT p.id, COALESCE(p.kode, '') AS kode, COALESCE(p.kode_barang, '') AS kode_produk_alt, p.nama, p.satuan, p.harga, p.harga AS harga_jual, p.stok, p.stok_available, COALESCE(p.stok_min, 10) AS stok_min, p.kategori AS nama_kategori FROM barang p WHERE 1=1";
         $params = [];
         
         if ($search) {
-                $sql .= " AND (p.nama LIKE ? OR p.kode LIKE ? OR p.kode_produk LIKE ?)";
+                $sql .= " AND (p.nama LIKE ? OR p.kode LIKE ? OR p.kode_barang LIKE ?)";
                 $params[] = "%$search%";
                 $params[] = "%$search%";
                 $params[] = "%$search%";
         }
         if ($kategori) {
-                $sql .= " AND p.kategori_id = ?";
+                $sql .= " AND p.kategori = ?";
                 $params[] = $kategori;
         }
         if ($filterStok === 'available') {
@@ -95,16 +95,16 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
 // ==========================================
 // 🚀 QUERY DASHBOARD UTAMA
 // ==========================================
-$sql = "SELECT p.id, COALESCE(p.kode, '') AS kode, COALESCE(p.kode_produk, '') AS kode_produk_alt, p.nama, p.satuan, p.harga, p.harga AS harga_jual, p.stok, p.stok_available, COALESCE(p.stok_min, 10) AS stok_min, k.nama_kategori FROM produk p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE 1=1";
+$sql = "SELECT p.id, COALESCE(p.kode, '') AS kode, COALESCE(p.kode_barang, '') AS kode_produk_alt, p.nama, p.satuan, p.harga, p.harga AS harga_jual, p.stok, p.stok_available, COALESCE(p.stok_min, 10) AS stok_min, p.kategori AS nama_kategori FROM barang p WHERE 1=1";
 $params = [];
 if ($search) {
-        $sql .= " AND (p.nama LIKE ? OR p.kode LIKE ? OR p.kode_produk LIKE ?)";
+        $sql .= " AND (p.nama LIKE ? OR p.kode LIKE ? OR p.kode_barang LIKE ?)";
         $params[] = "%$search%";
         $params[] = "%$search%";
         $params[] = "%$search%";
 }
 if ($kategori) {
-        $sql .= " AND p.kategori_id = ?";
+        $sql .= " AND p.kategori = ?";
         $params[] = $kategori;
 }
 if ($filterStok === 'available') {
@@ -168,9 +168,38 @@ function formatRp($n) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         @media print {
-            .topbar, .page-header .header-actions, .filter-card, nav, .btn-ghost-sm { display:none !important; }
-            .main { margin:0 !important; }
-            .table-card { box-shadow:none; border:none; }
+            .no-print, .topbar, .page-header, .filter-card, nav, .btn-ghost-sm, .section-label, .kpi-row, .charts-row { display:none !important; }
+            .main { margin:0 !important; padding: 0 !important; }
+            .content { padding: 0 !important; }
+            .table-card { box-shadow:none !important; border:none !important; padding: 0 !important; }
+            .table-header { display: none !important; }
+            .print-header-container { display: block !important; margin-bottom: 20px; }
+            body { background: #fff; color: #000; }
+            @page { size: A4 landscape; margin: 15mm; }
+            table th, table td { color: #000 !important; border-color: #000 !important; }
+            .total-row td { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+        
+        .print-header-container { display: none; }
+        .kop-surat { display: flex; align-items: center; margin-bottom: 5px; color: #000; }
+        .kop-logo { width: 140px; margin-right: 20px; }
+        .kop-text { flex-grow: 1; text-align: left; }
+        .kop-text h1 { margin: 0 0 5px 0; font-size: 16pt; font-weight: bold; letter-spacing: 0.5px; }
+        .kop-text p { margin: 0; font-size: 8.5pt; line-height: 1.3; }
+        .garis-tebal { border: 0; border-bottom: 3px solid #000; margin-bottom: 2px; }
+        .garis-tipis { border: 0; border-bottom: 1px solid #000; margin-bottom: 20px; }
+        .judul-surat { text-align: center; margin-bottom: 25px; color: #000; }
+        .judul-surat h2 { margin: 0; font-size: 14pt; text-decoration: underline; font-weight: bold; }
+        .judul-surat p { margin: 5px 0 0 0; font-size: 11pt; }
+        
+        /* ttd */
+        .ttd-container { display: none; }
+        @media print {
+            .ttd-container { display: flex !important; justify-content: space-between; margin-top: 40px; text-align: center; font-size: 10pt; color: #000; page-break-inside: avoid; }
+            .ttd-box { width: 250px; }
+            .ttd-box p { margin: 0; }
+            .ttd-space { height: 80px; }
+            .ttd-name { font-weight: bold; text-decoration: underline; text-transform: uppercase; }
         }
         .filter-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px; box-shadow: var(--shadow); }
         .filter-form { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
@@ -186,6 +215,25 @@ function formatRp($n) {
 
 <main class="main">
     <div class="content">
+        <!-- HEADER PRINT (CELEBIT KOP) -->
+        <div class="print-header-container">
+            <div class="kop-surat">
+                <img src="/Inventaris/public/assets/img/celebit-logo.png" alt="Logo Celebit" class="kop-logo" onerror="this.style.display='none'">
+                <div class="kop-text">
+                    <h1>PT. CELEBIT CIRCUIT TECHNOLOGY INDONESIA</h1>
+                    <p>BANDUNG FACTORY : JL.BUAH DUA RT.01/RW.04 RANCAEKEK - BANDUNG-INDONESIA<br>
+                    TEL 62-22-7798 561/7798542, FAX: 62-22-7798 562 E-MAIL: celebit@celebit.id</p>
+                </div>
+            </div>
+            <hr class="garis-tebal">
+            <hr class="garis-tipis">
+            
+            <div class="judul-surat">
+                <h2>LAPORAN PERSEDIAAN GUDANG (FINISH GOOD)</h2>
+                <p>Tanggal Cetak: <?= date('d F Y') ?></p>
+            </div>
+        </div>
+
         <div class="topbar">
             <div class="top-left">
                 <button class="menu-btn" id="menuBtn"><i class="bi bi-list"></i></button>
@@ -210,7 +258,7 @@ function formatRp($n) {
         <?php if (!empty($kritisItems)): ?>
         <div class="alert-late" style="margin-bottom: 20px;">
             <i class="bi bi-exclamation-triangle"></i>
-            <strong><?= count($kritisItems) ?> produk</strong> stok kritis atau habis. Segera lakukan restocking.
+            <strong><?= count($kritisItems) ?> barang</strong> stok kritis atau habis. Segera lakukan restocking.
         </div>
         <?php endif; ?>
 
@@ -281,7 +329,7 @@ function formatRp($n) {
                 <div class="chart-wrap"><canvas id="chartKategori"></canvas></div>
             </div>
             <div class="form-card chart-card">
-                <div class="form-card-header"><h4><i class="bi bi-trophy"></i> Top 5 Stok Produk</h4></div>
+                <div class="form-card-header"><h4><i class="bi bi-trophy"></i> Top 5 Stok Barang</h4></div>
                 <div class="top-customer-list">
                     <?php
                     $maxValProduk = max(array_column($top5Produk, 'stok_available') ?: [1]); $rank = 1;
@@ -325,7 +373,7 @@ function formatRp($n) {
                     </thead>
                     <tbody>
                         <?php if (empty($listProduk)): ?>
-                        <tr><td colspan="10" class="empty-state"><i class="bi bi-inboxes"></i><span>Tidak ada data produk sesuai filter.</span></td></tr>
+                        <tr><td colspan="10" class="empty-state"><i class="bi bi-inboxes"></i><span>Tidak ada data barang sesuai filter.</span></td></tr>
                         <?php else: ?>
                         <?php foreach ($listProduk as $i => $row):
                             $stok_fisik = $row['stok'] ?? 0;
@@ -368,8 +416,23 @@ function formatRp($n) {
                 </table>
             </div>
             <?php if (!empty($listProduk)): ?>
-            <div class="table-footer"><span class="text-muted" id="tableCount">Menampilkan <?= count($listProduk) ?> data</span></div>
+            <div class="table-footer no-print"><span class="text-muted" id="tableCount">Menampilkan <?= count($listProduk) ?> data</span></div>
             <?php endif; ?>
+        </div>
+
+        <!-- TTD SECTION PRINT -->
+        <div class="ttd-container">
+            <div class="ttd-box">
+                <p>Dibuat Oleh,<br><strong>Admin Gudang</strong></p>
+                <div class="ttd-space"></div>
+                <p class="ttd-name">( <?= htmlspecialchars($_SESSION['user']['username'] ?? '.......................') ?> )</p>
+            </div>
+            
+            <div class="ttd-box">
+                <p>Mengetahui,<br><strong>Manager Operasional</strong></p>
+                <div class="ttd-space"></div>
+                <p class="ttd-name">( ...................................... )</p>
+            </div>
         </div>
     </div>
 </main>

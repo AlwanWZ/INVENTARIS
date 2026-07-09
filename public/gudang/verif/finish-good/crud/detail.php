@@ -73,7 +73,7 @@ $totalOK = array_sum(array_column($items, 'qty_ok'));
         <div class="form-card">
           <div class="form-card-header">
             <h4><i class="bi bi-patch-check"></i> Item Verifikasi</h4>
-            <span class="count-badge"><?= count($items) ?> produk</span>
+            <span class="count-badge"><?= count($items) ?> barang</span>
           </div>
           <div class="table-wrap">
             <table>

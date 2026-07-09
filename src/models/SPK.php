@@ -10,10 +10,10 @@ class SPK {
     public static function all($filter = []) {
         global $pdo;
 
-        $sql = "SELECT spk.*, po.nomor_po, customers.perusahaan, users.username as pic_username
+        $sql = "SELECT spk.*, pesanan.nomor_pesanan, customers.perusahaan, users.username as pic_username
                 FROM spk
-                LEFT JOIN po ON spk.po_id = po.id
-                LEFT JOIN customers ON po.customer_id = customers.id
+                LEFT JOIN pesanan ON spk.pesanan_id = pesanan.id
+                LEFT JOIN customers ON pesanan.customer_id = customers.id
                 LEFT JOIN users ON spk.pic = users.id
                 WHERE 1=1";
 
@@ -36,7 +36,7 @@ class SPK {
         }
 
         if (!empty($filter['search'])) {
-            $sql .= " AND (spk.nomor_spk LIKE :search1 OR po.nomor_po LIKE :search2 OR customers.perusahaan LIKE :search3)";
+            $sql .= " AND (spk.nomor_spk LIKE :search1 OR pesanan.nomor_pesanan LIKE :search2 OR customers.perusahaan LIKE :search3)";
             $searchTerm = '%' . $filter['search'] . '%';
 
             $params['search1'] = $searchTerm;
@@ -58,15 +58,15 @@ class SPK {
         global $pdo;
 
         $sql = "SELECT spk.*,
-                po.nomor_po,
+                pesanan.nomor_pesanan,
                 customers.id as customer_id,
                 customers.nama as customer_nama,
                 customers.perusahaan,
                 users.username AS pic_username,
                 spk.pic AS pic_id
                 FROM spk
-                LEFT JOIN po ON spk.po_id = po.id
-                LEFT JOIN customers ON po.customer_id = customers.id
+                LEFT JOIN pesanan ON spk.pesanan_id = pesanan.id
+                LEFT JOIN customers ON pesanan.customer_id = customers.id
                 LEFT JOIN users ON spk.pic = users.id
                 WHERE spk.id = ?";
         $stmt = $pdo->prepare($sql);
@@ -90,11 +90,11 @@ class SPK {
             $status_db = trim($data['status'] ?? 'draft');
 
             // 1. Simpan Header SPK
-            $sql = "INSERT INTO spk (nomor_spk, po_id, customer_id, tanggal, deadline, pic, status, notes, progress) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO spk (nomor_spk, pesanan_id, customer_id, tanggal, deadline, pic, status, notes, progress) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 $data['nomor_spk'],
-                $data['po_id'],
+                $data['pesanan_id'],
                 $data['customer_id'] ?? null,
                 $data['tanggal'],
                 $data['deadline'],
@@ -107,18 +107,18 @@ class SPK {
             $spkId = $pdo->lastInsertId();
 
             // 2. Salin barang dari PO ke SPK_ITEMS
-            if (!empty($data['po_id'])) {
-                $poItems = $pdo->prepare("SELECT * FROM po_items WHERE po_id = ?");
-                $poItems->execute([$data['po_id']]);
+            if (!empty($data['pesanan_id'])) {
+                $poItems = $pdo->prepare("SELECT * FROM pesanan_items WHERE pesanan_id = ?");
+                $poItems->execute([$data['pesanan_id']]);
                 $items = $poItems->fetchAll(\PDO::FETCH_ASSOC);
 
                 if (empty($items)) {
-                    throw new Exception("Data barang pada Pesanan (PO) tersebut kosong di tabel po_items!");
+                    throw new Exception("Data barang pada Pesanan (PO) tersebut kosong di tabel pesanan_items!");
                 }
 
                 $insertStmt = $pdo->prepare("
                     INSERT INTO spk_items (
-                        spk_id, pic_id, produk_id, nama_barang,
+                        spk_id, pic_id, barang_id, nama_barang,
                         stok_gudang, stok_available, qty_po, qty_schedule,
                         qty_preparation, qty_outstanding, status_produksi, note
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -138,7 +138,7 @@ class SPK {
                     $insertStmt->execute([
                         $spkId,
                         $data['pic_id'] ?? null,
-                        $item['produk_id'] ?? null,
+                        $item['barang_id'] ?? null,
                         $namaBarang,
                         $stok,
                         $stok,
@@ -182,11 +182,11 @@ class SPK {
         // PERBAIKAN: Hapus strtolower dan str_replace.
         $status_db = trim($data['status'] ?? 'draft');
 
-        $sql = "UPDATE spk SET nomor_spk=?, po_id=?, customer_id=?, tanggal=?, deadline=?, pic=?, status=?, notes=?, progress=? WHERE id=?";
+        $sql = "UPDATE spk SET nomor_spk=?, pesanan_id=?, customer_id=?, tanggal=?, deadline=?, pic=?, status=?, notes=?, progress=? WHERE id=?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             $data['nomor_spk'],
-            $data['po_id'],
+            $data['pesanan_id'],
             $data['customer_id'] ?? null,
             $data['tanggal'],
             $data['deadline'],
@@ -276,11 +276,11 @@ class SPK {
         try {
             $pdo->beginTransaction();
 
-            $spkStmt = $pdo->prepare("SELECT po_id, pic FROM spk WHERE id = ?");
+            $spkStmt = $pdo->prepare("SELECT pesanan_id, pic FROM spk WHERE id = ?");
             $spkStmt->execute([$spkId]);
             $spk = $spkStmt->fetch(\PDO::FETCH_ASSOC);
 
-            if (!$spk || empty($spk['po_id'])) {
+            if (!$spk || empty($spk['pesanan_id'])) {
                 $pdo->rollBack();
                 return false;
             }
@@ -290,8 +290,8 @@ class SPK {
             $deleteStmt->execute([$spkId]);
 
             // Salin ulang dari PO
-            $poItems = $pdo->prepare("SELECT * FROM po_items WHERE po_id = ?");
-            $poItems->execute([$spk['po_id']]);
+            $poItems = $pdo->prepare("SELECT * FROM pesanan_items WHERE pesanan_id = ?");
+            $poItems->execute([$spk['pesanan_id']]);
             $items = $poItems->fetchAll(\PDO::FETCH_ASSOC);
 
             if (empty($items)) {
@@ -301,7 +301,7 @@ class SPK {
 
             $insertStmt = $pdo->prepare("
                 INSERT INTO spk_items (
-                    spk_id, pic_id, produk_id, nama_barang,
+                    spk_id, pic_id, barang_id, nama_barang,
                     stok_gudang, stok_available, qty_po, qty_schedule,
                     qty_preparation, qty_outstanding, status_produksi, note
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -316,7 +316,7 @@ class SPK {
                 $insertStmt->execute([
                     $spkId,
                     $spk['pic'] ?? null,
-                    $item['produk_id'] ?? null,
+                    $item['barang_id'] ?? null,
                     $namaBarang,
                     $stok,
                     $stok,

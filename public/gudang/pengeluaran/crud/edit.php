@@ -22,13 +22,22 @@ $stmtSJ = $pdo->prepare("SELECT * FROM surat_jalan WHERE pengeluaran_id = ?");
 $stmtSJ->execute([$id]);
 $dataSJ = $stmtSJ->fetch(PDO::FETCH_ASSOC);
 
-// Ambil List SPK buat nampilin label doang
-$spkList = $pdo->query("
-    SELECT s.id as spk_id, s.nomor_spk, po.nomor_po, 
-           COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan
-    FROM spk s
-    JOIN po ON s.po_id = po.id
-    LEFT JOIN customers c ON po.customer_id = c.id
+// Ambil List Sumber buat nampilin label doang
+$sumberList = $pdo->query("
+    (
+        SELECT 'SPK' as tipe, s.id as spk_id, NULL as pesanan_id, s.nomor_spk as nomor_ref, p.nomor_pesanan,
+               COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan
+        FROM spk s
+        JOIN pesanan p ON s.pesanan_id = p.id
+        LEFT JOIN customers c ON p.customer_id = c.id
+    )
+    UNION
+    (
+        SELECT 'PO' as tipe, NULL as spk_id, p.id as pesanan_id, p.nomor_pesanan as nomor_ref, p.nomor_pesanan,
+               COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan
+        FROM pesanan p
+        LEFT JOIN customers c ON p.customer_id = c.id
+    )
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 $errors = [];
@@ -48,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
             $pdo->beginTransaction();
 
             // 1. Update Pengeluaran
-            $stmtUpd = $pdo->prepare("UPDATE pengeluaran SET tanggal = ?, keterangan = ? WHERE id = ?");
+            $stmtUpd = $pdo->prepare("UPDATE pengeluaran SET tanggal = ?, notes = ? WHERE id = ?");
             $stmtUpd->execute([$tanggal, $catatan, $id]);
 
             // 2. Update Surat Jalan
@@ -151,15 +160,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
         
         <div class="form-grid-3">
           <div>
-            <label class="form-label">SPK Yang Dipilih (Terkunci)</label>
+            <label class="form-label">Sumber Yang Dipilih (Terkunci)</label>
             <select class="form-control" disabled style="background:#f3f4f6;">
-                <?php foreach ($spkList as $s): ?>
-                  <option value="<?= $s['spk_id'] ?>" <?= $data['spk_id'] == $s['spk_id'] ? 'selected' : '' ?>>
-                    SPK: <?= htmlspecialchars($s['nomor_spk']) ?> | (<?= htmlspecialchars($s['perusahaan']) ?>)
-                  </option>
+                <?php foreach ($sumberList as $s): ?>
+                  <?php if ($data['spk_id'] && $s['tipe'] === 'SPK' && $s['spk_id'] == $data['spk_id']): ?>
+                      <option selected>[SPK] <?= htmlspecialchars($s['nomor_ref']) ?> | (<?= htmlspecialchars($s['perusahaan']) ?>)</option>
+                  <?php elseif ($data['pesanan_id'] && !$data['spk_id'] && $s['tipe'] === 'PO' && $s['pesanan_id'] == $data['pesanan_id']): ?>
+                      <option selected>[PO] <?= htmlspecialchars($s['nomor_ref']) ?> | (<?= htmlspecialchars($s['perusahaan']) ?>)</option>
+                  <?php endif; ?>
                 <?php endforeach; ?>
             </select>
-            <small style="color:var(--text3); font-size:0.75rem;">Hapus transaksi jika ingin mengganti SPK.</small>
+            <small style="color:var(--text3); font-size:0.75rem;">Hapus transaksi jika ingin mengganti sumber.</small>
           </div>
           <div>
             <label class="form-label">Tanggal Kirim <span class="required">*</span></label>
@@ -184,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
 
         <div style="margin-top: 16px;">
           <label class="form-label">Catatan Pengiriman</label>
-          <textarea name="catatan" class="form-control" style="min-height: 80px;"><?= htmlspecialchars($dataSJ['catatan'] ?? $data['keterangan'] ?? '') ?></textarea>
+          <textarea name="catatan" class="form-control" style="min-height: 80px;"><?= htmlspecialchars($dataSJ['catatan'] ?? $data['notes'] ?? '') ?></textarea>
         </div>
       </div>
 
@@ -206,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
               <?php foreach ($items as $i => $item): ?>
               <tr class="item-row">
                 <td class="row-num" style="text-align:center;"><?= $i + 1 ?></td>
-                <td style="font-weight: 500; color: var(--text);"><?= htmlspecialchars($item['produk_nama'] ?? 'Produk ID: '.$item['produk_id']) ?></td>
+                <td style="font-weight: 500; color: var(--text);"><?= htmlspecialchars($item['produk_nama'] ?? 'Produk ID: '.$item['barang_id']) ?></td>
                 <td style="text-align:center;">
                   <input type="number" class="form-control" style="text-align:center; font-weight:bold; color:#059669; background:#f3f4f6;" value="<?= $item['qty'] ?>" disabled>
                 </td>

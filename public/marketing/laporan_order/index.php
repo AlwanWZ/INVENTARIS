@@ -6,30 +6,97 @@ if (!isset($_SESSION['user']) || !in_array($_SESSION['user']['role'], ['marketin
 }
 require_once '../../../src/auth.php';
 require_once '../../../src/config.php';
-require_once '../../../src/models/PO.php';
+require_once '../../../src/models/Pesanan.php';
 require_once '../../../src/models/Customer.php';
 
 // 🚀 LOGIKA POST UNTUK MANAGER APPROVE/REJECT DENGAN ALASAN
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
     if ($_SESSION['user']['role'] === 'manager') {
-        $poId = (int)$_POST['po_id'];
+        $poId = (int)$_POST['pesanan_id'];
         $newStatus = $_POST['new_status']; // 'approved' atau 'rejected'
         $alasanReject = trim($_POST['alasan_reject'] ?? '');
         
         if (in_array($newStatus, ['approved', 'rejected'])) {
             if ($newStatus === 'rejected') {
                 // Simpan status REJECTED beserta alasannya
-                $stmt = $pdo->prepare("UPDATE po SET status = ?, alasan_reject = ? WHERE id = ?");
+                $stmt = $pdo->prepare("UPDATE pesanan SET status = ?, alasan_reject = ? WHERE id = ?");
                 $stmt->execute([$newStatus, $alasanReject, $poId]);
             } else {
                 // Simpan status APPROVED dan bersihkan alasan reject lama (jika ada)
-                $stmt = $pdo->prepare("UPDATE po SET status = ?, alasan_reject = NULL WHERE id = ?");
+                $stmt = $pdo->prepare("UPDATE pesanan SET status = ?, alasan_reject = NULL WHERE id = ?");
                 $stmt->execute([$newStatus, $poId]);
             }
             header("Location: index.php?updated=1");
             exit;
         }
     }
+}
+
+// ==========================================
+// 🚀 EXPORT EXCEL
+// ==========================================
+if (isset($_GET['export']) && $_GET['export'] === 'excel') {
+    header('Content-Type: application/vnd.ms-excel');
+    header('Content-Disposition: attachment; filename="laporan_pesanan.xls"');
+    echo "<table border='1'>";
+    echo "<tr>
+            <th>No</th>
+            <th>Nomor Pesanan</th>
+            <th>Pelanggan</th>
+            <th>Tanggal</th>
+            <th>Status</th>
+            <th>Total (Rp)</th>
+          </tr>";
+
+    // Re-build filter & query for export
+    $filter = [
+        'period'   => $_GET['period']   ?? '',
+        'from'     => $_GET['from']     ?? '',
+        'to'       => $_GET['to']       ?? '',
+        'customer' => $_GET['customer'] ?? '',
+        'status'   => $_GET['status']   ?? '',
+        'search'   => $_GET['search']   ?? '',
+    ];
+    if ($filter['period'] === 'this_week') {
+        $filter['from'] = date('Y-m-d', strtotime('monday this week'));
+        $filter['to'] = date('Y-m-d', strtotime('sunday this week'));
+    } elseif ($filter['period'] === 'this_month') {
+        $filter['from'] = date('Y-m-01');
+        $filter['to'] = date('Y-m-t');
+    }
+
+    $sql = "SELECT pesanan.*, customers.perusahaan, 
+                   (SELECT SUM(qty * harga_satuan) FROM pesanan_items WHERE pesanan_items.pesanan_id = pesanan.id) AS total
+            FROM pesanan
+            LEFT JOIN customers ON pesanan.customer_id = customers.id
+            WHERE 1=1";
+    $params = [];
+    if ($filter['from'])     { $sql .= " AND pesanan.tanggal >= :from";          $params['from']     = $filter['from']; }
+    if ($filter['to'])       { $sql .= " AND pesanan.tanggal <= :to";            $params['to']       = $filter['to']; }
+    if ($filter['customer']) { $sql .= " AND pesanan.customer_id = :customer";   $params['customer'] = $filter['customer']; }
+    if ($filter['status'])   { $sql .= " AND pesanan.status = :status";          $params['status']   = $filter['status']; }
+    if ($filter['search'])   {
+        $sql .= " AND (pesanan.nomor_pesanan LIKE :search OR customers.perusahaan LIKE :search)";
+        $params['search'] = "%{$filter['search']}%";
+    }
+    $sql .= " ORDER BY pesanan.tanggal DESC";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($data as $i => $row) {
+        echo "<tr>";
+        echo "<td>".($i+1)."</td>";
+        echo "<td>".htmlspecialchars($row['nomor_pesanan'] ?? '')."</td>";
+        echo "<td>".htmlspecialchars($row['perusahaan'] ?? '—')."</td>";
+        echo "<td>".htmlspecialchars($row['tanggal'] ?? '')."</td>";
+        echo "<td>".htmlspecialchars(ucfirst($row['status'] ?? ''))."</td>";
+        echo "<td>".($row['total'] ?? 0)."</td>";
+        echo "</tr>";
+    }
+    echo "</table>";
+    exit;
 }
 
 // --- Filters ---
@@ -53,42 +120,42 @@ if ($filter['period'] === 'this_week') {
 
 $customers = Customer::getAll();
 
-// --- Query (Ditambahkan po.alasan_reject) ---
+// --- Query (Ditambahkan pesanan.alasan_reject) ---
 function getFilteredPOs($filter) {
     global $pdo;
-    $sql = "SELECT po.*, customers.perusahaan, 
-                   (SELECT SUM(qty * harga_satuan) FROM po_items WHERE po_items.po_id = po.id) AS total
-            FROM po
-            LEFT JOIN customers ON po.customer_id = customers.id
+    $sql = "SELECT pesanan.*, customers.perusahaan, 
+                   (SELECT SUM(qty * harga_satuan) FROM pesanan_items WHERE pesanan_items.pesanan_id = pesanan.id) AS total
+            FROM pesanan
+            LEFT JOIN customers ON pesanan.customer_id = customers.id
             WHERE 1=1";
     $params = [];
-    if ($filter['from'])     { $sql .= " AND po.tanggal >= :from";          $params['from']     = $filter['from']; }
-    if ($filter['to'])       { $sql .= " AND po.tanggal <= :to";            $params['to']       = $filter['to']; }
-    if ($filter['customer']) { $sql .= " AND po.customer_id = :customer";   $params['customer'] = $filter['customer']; }
-    if ($filter['status'])   { $sql .= " AND po.status = :status";          $params['status']   = $filter['status']; }
+    if ($filter['from'])     { $sql .= " AND pesanan.tanggal >= :from";          $params['from']     = $filter['from']; }
+    if ($filter['to'])       { $sql .= " AND pesanan.tanggal <= :to";            $params['to']       = $filter['to']; }
+    if ($filter['customer']) { $sql .= " AND pesanan.customer_id = :customer";   $params['customer'] = $filter['customer']; }
+    if ($filter['status'])   { $sql .= " AND pesanan.status = :status";          $params['status']   = $filter['status']; }
     if ($filter['search'])   {
-        $sql .= " AND (po.nomor_po LIKE :search OR customers.perusahaan LIKE :search)";
+        $sql .= " AND (pesanan.nomor_pesanan LIKE :search OR customers.perusahaan LIKE :search)";
         $params['search'] = "%{$filter['search']}%";
     }
-    $sql .= " ORDER BY po.tanggal DESC";
+    $sql .= " ORDER BY pesanan.tanggal DESC";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-$pos = getFilteredPOs($filter);
+$pesanans = getFilteredPOs($filter);
 
 // --- Summary ---
-$totalPO         = count($pos);
-$totalTransaksi  = array_sum(array_map(fn($p) => $p['total'] ?? 0, $pos));
-$approvedCount   = count(array_filter($pos, fn($p) => strtolower($p['status']) === 'approved'));
-$completedCount  = count(array_filter($pos, fn($p) => strtolower($p['status']) === 'completed'));
-$draftCount      = count(array_filter($pos, fn($p) => strtolower($p['status']) === 'draft'));
-$rejectedCount   = count(array_filter($pos, fn($p) => strtolower($p['status']) === 'rejected'));
+$totalPO         = count($pesanans);
+$totalTransaksi  = array_sum(array_map(fn($p) => $p['total'] ?? 0, $pesanans));
+$approvedCount   = count(array_filter($pesanans, fn($p) => strtolower($p['status']) === 'approved'));
+$completedCount  = count(array_filter($pesanans, fn($p) => strtolower($p['status']) === 'completed'));
+$draftCount      = count(array_filter($pesanans, fn($p) => strtolower($p['status']) === 'draft'));
+$rejectedCount   = count(array_filter($pesanans, fn($p) => strtolower($p['status']) === 'rejected'));
 
 // --- Chart data ---
 $byMonth = [];
-foreach ($pos as $p) {
+foreach ($pesanans as $p) {
     $month = substr($p['tanggal'], 0, 7);
     if (!isset($byMonth[$month])) $byMonth[$month] = ['count' => 0, 'total' => 0];
     $byMonth[$month]['count']++;
@@ -100,7 +167,7 @@ $chartCounts = json_encode(array_column(array_values($byMonth), 'count'));
 $chartTotals = json_encode(array_column(array_values($byMonth), 'total'));
 
 $byCustomer = [];
-foreach ($pos as $p) {
+foreach ($pesanans as $p) {
     $name = $p['perusahaan'] ?: 'Unknown';
     if (!isset($byCustomer[$name])) $byCustomer[$name] = 0;
     $byCustomer[$name] += $p['total'] ?? 0;
@@ -137,6 +204,44 @@ $hasFilter = array_filter($filter);
   <link href="/Inventaris/public/assets/css/marketing-css/dashboard.css" rel="stylesheet">
   <link href="/Inventaris/public/assets/css/marketing-css/laporan.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+      @media print {
+          .no-print, .topbar, .page-header, .filter-card, nav, .btn-ghost-sm, .btn-ghost-xs, .section-label, .kpi-row, .charts-row, .search-wrap, .btn-icon { display:none !important; }
+          .main { margin:0 !important; padding: 0 !important; }
+          .content { padding: 0 !important; }
+          .form-card { box-shadow:none !important; border:none !important; padding: 0 !important; }
+          .form-card-header { display: none !important; }
+          .print-header-container { display: block !important; margin-bottom: 20px; }
+          body { background: #fff; color: #000; }
+          @page { size: A4 landscape; margin: 15mm; }
+          table th, table td { color: #000 !important; border-color: #000 !important; }
+          .total-row td { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          td.col-center { display: none; }
+          th.col-center { display: none; }
+      }
+      
+      .print-header-container { display: none; }
+      .kop-surat { display: flex; align-items: center; margin-bottom: 5px; color: #000; }
+      .kop-logo { width: 140px; margin-right: 20px; }
+      .kop-text { flex-grow: 1; text-align: left; }
+      .kop-text h1 { margin: 0 0 5px 0; font-size: 16pt; font-weight: bold; letter-spacing: 0.5px; }
+      .kop-text p { margin: 0; font-size: 8.5pt; line-height: 1.3; }
+      .garis-tebal { border: 0; border-bottom: 3px solid #000; margin-bottom: 2px; }
+      .garis-tipis { border: 0; border-bottom: 1px solid #000; margin-bottom: 20px; }
+      .judul-surat { text-align: center; margin-bottom: 25px; color: #000; }
+      .judul-surat h2 { margin: 0; font-size: 14pt; text-decoration: underline; font-weight: bold; }
+      .judul-surat p { margin: 5px 0 0 0; font-size: 11pt; }
+      
+      /* ttd */
+      .ttd-container { display: none; }
+      @media print {
+          .ttd-container { display: flex !important; justify-content: space-between; margin-top: 40px; text-align: center; font-size: 10pt; color: #000; page-break-inside: avoid; }
+          .ttd-box { width: 250px; }
+          .ttd-box p { margin: 0; }
+          .ttd-space { height: 80px; }
+          .ttd-name { font-weight: bold; text-decoration: underline; text-transform: uppercase; }
+      }
+  </style>
 </head>
 <body>
 
@@ -144,6 +249,25 @@ $hasFilter = array_filter($filter);
 
 <main class="main">
   <div class="content">
+
+    <!-- HEADER PRINT (CELEBIT KOP) -->
+    <div class="print-header-container">
+        <div class="kop-surat">
+            <img src="/Inventaris/public/assets/img/celebit-logo.png" alt="Logo Celebit" class="kop-logo" onerror="this.style.display='none'">
+            <div class="kop-text">
+                <h1>PT. CELEBIT CIRCUIT TECHNOLOGY INDONESIA</h1>
+                <p>BANDUNG FACTORY : JL.BUAH DUA RT.01/RW.04 RANCAEKEK - BANDUNG-INDONESIA<br>
+                TEL 62-22-7798 561/7798542, FAX: 62-22-7798 562 E-MAIL: celebit@celebit.id</p>
+            </div>
+        </div>
+        <hr class="garis-tebal">
+        <hr class="garis-tipis">
+        
+        <div class="judul-surat">
+            <h2>LAPORAN PESANAN (ORDER)</h2>
+            <p>Tanggal Cetak: <?= date('d F Y') ?></p>
+        </div>
+    </div>
 
     <div class="topbar">
       <div class="top-left">
@@ -177,9 +301,14 @@ $hasFilter = array_filter($filter);
         <h1 class="page-title-lg">Laporan Pesanan </h1>
         <p class="page-subtitle">Rekap dan analisis transaksi Pesanan<?= $hasFilter ? ' — <strong>Filter aktif</strong>' : '' ?></p>
       </div>
-      <button class="btn-primary" onclick="window.print()">
-        <i class="bi bi-printer"></i> Cetak
-      </button>
+      <div class="header-actions" style="display: flex; gap: 10px;">
+        <button class="btn-primary" onclick="window.print()">
+          <i class="bi bi-printer"></i> Cetak
+        </button>
+        <a href="?export=excel&period=<?= urlencode($filter['period']) ?>&from=<?= urlencode($filter['from']) ?>&to=<?= urlencode($filter['to']) ?>&customer=<?= urlencode($filter['customer']) ?>&status=<?= urlencode($filter['status']) ?>&search=<?= urlencode($filter['search']) ?>" class="btn-ghost-sm" style="display:flex; align-items:center; gap:6px; border:1px solid var(--border); padding:0 12px; border-radius:6px; color:var(--text); text-decoration:none; font-weight:600;">
+          <i class="bi bi-file-earmark-excel" style="color:#10b981;"></i> Export Excel
+        </a>
+      </div>
     </div>
 
     <div class="form-card filter-card">
@@ -278,43 +407,43 @@ $hasFilter = array_filter($filter);
             </tr>
           </thead>
           <tbody>
-            <?php if (empty($pos)): ?>
+            <?php if (empty($pesanans)): ?>
             <tr><td colspan="7" class="empty-state"><i class="bi bi-inbox"></i><span>Tidak ada pesanan .</span></td></tr>
             <?php else: ?>
-            <?php foreach ($pos as $i => $po): ?>
+            <?php foreach ($pesanans as $i => $pesanan): ?>
             <tr>
               <td class="text-muted"><?= $i + 1 ?></td>
-              <td class="fw-mid"><?= htmlspecialchars($po['nomor_po']) ?></td>
-              <td><?= htmlspecialchars($po['perusahaan'] ?? '—') ?></td>
-              <td class="text-muted"><?= htmlspecialchars($po['tanggal']) ?></td>
+              <td class="fw-mid"><?= htmlspecialchars($pesanan['nomor_pesanan']) ?></td>
+              <td><?= htmlspecialchars($pesanan['perusahaan'] ?? '—') ?></td>
+              <td class="text-muted"><?= htmlspecialchars($pesanan['tanggal']) ?></td>
               
               <td>
-                <span class="badge <?= badgeCls($po['status']) ?>"><?= htmlspecialchars(ucfirst($po['status'])) ?></span>
-                <?php if (strtolower($po['status']) === 'rejected' && !empty($po['alasan_reject'])): ?>
+                <span class="badge <?= badgeCls($pesanan['status']) ?>"><?= htmlspecialchars(ucfirst($pesanan['status'])) ?></span>
+                <?php if (strtolower($pesanan['status']) === 'rejected' && !empty($pesanan['alasan_reject'])): ?>
                     <div style="font-size: 0.75rem; color: #e11d48; margin-top: 4px; max-width: 180px; font-style: italic; font-weight: 500; line-height: 1.2;">
-                        ❌ Alasan: <?= htmlspecialchars($po['alasan_reject']) ?>
+                        ❌ Alasan: <?= htmlspecialchars($pesanan['alasan_reject']) ?>
                     </div>
                 <?php endif; ?>
               </td>
               
-              <td class="col-right fw-mid"><?= formatRp($po['total']) ?></td>
+              <td class="col-right fw-mid"><?= formatRp($pesanan['total']) ?></td>
               
               <td class="col-center">
-                <?php if ($_SESSION['user']['role'] === 'manager' && strtolower($po['status']) === 'draft'): ?>
-                    <form method="post" style="display: flex; gap: 6px; justify-content: center;" id="form-po-<?= $po['id'] ?>">
+                <?php if ($_SESSION['user']['role'] === 'manager' && strtolower($pesanan['status']) === 'draft'): ?>
+                    <form method="post" style="display: flex; gap: 6px; justify-content: center;" id="form-pesanan-<?= $pesanan['id'] ?>">
                         <input type="hidden" name="action" value="update_status">
-                        <input type="hidden" name="po_id" value="<?= $po['id'] ?>">
-                        <input type="hidden" name="alasan_reject" id="alasan-input-<?= $po['id'] ?>" value="">
+                        <input type="hidden" name="pesanan_id" value="<?= $pesanan['id'] ?>">
+                        <input type="hidden" name="alasan_reject" id="alasan-input-<?= $pesanan['id'] ?>" value="">
                         
                         <button type="submit" name="new_status" value="approved" class="btn-icon" style="background:#ecfdf5; color:#059669; border:1px solid #34d399;" title="Approve Pesanan" onclick="return confirm('Apakah Anda yakin menyetujui pesanan ini?');">
                             <i class="bi bi-check-lg"></i>
                         </button>
                         
-                        <button type="button" class="btn-icon" style="background:#fff1f2; color:#e11d48; border:1px solid #fda4af;" title="Reject Pesanan" onclick="mintaAlasanReject(<?= $po['id'] ?>)">
+                        <button type="button" class="btn-icon" style="background:#fff1f2; color:#e11d48; border:1px solid #fda4af;" title="Reject Pesanan" onclick="mintaAlasanReject(<?= $pesanan['id'] ?>)">
                             <i class="bi bi-x-lg"></i>
                         </button>
                         
-                        <button type="submit" name="new_status" value="rejected" id="btn-submit-reject-<?= $po['id'] ?>" style="display:none;"></button>
+                        <button type="submit" name="new_status" value="rejected" id="btn-submit-reject-<?= $pesanan['id'] ?>" style="display:none;"></button>
                     </form>
                 <?php else: ?>
                     <span style="font-size: 0.75rem; color: #9ca3af;"><i class="bi bi-shield-check"></i> Terkunci</span>
@@ -327,6 +456,21 @@ $hasFilter = array_filter($filter);
           </tbody>
         </table>
       </div>
+    </div>
+
+    <!-- TTD SECTION PRINT -->
+    <div class="ttd-container">
+        <div class="ttd-box">
+            <p>Dibuat Oleh,<br><strong>Admin Marketing</strong></p>
+            <div class="ttd-space"></div>
+            <p class="ttd-name">( <?= htmlspecialchars($_SESSION['user']['username'] ?? '.......................') ?> )</p>
+        </div>
+        
+        <div class="ttd-box">
+            <p>Mengetahui,<br><strong>Manager Operasional</strong></p>
+            <div class="ttd-space"></div>
+            <p class="ttd-name">( ...................................... )</p>
+        </div>
     </div>
   </div>
 </main>

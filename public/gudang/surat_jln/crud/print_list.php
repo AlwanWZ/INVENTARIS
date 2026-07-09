@@ -30,7 +30,7 @@ $driver         = $suratJalan['driver'] ?? '-';
 $kendaraan      = $suratJalan['kendaraan'] ?? '-';
 $customer       = $suratJalan['customer_nama'] ?? 'Customer';
 $perusahaan     = $suratJalan['perusahaan'] ?? '-';
-$alamat_kirim   = $suratJalan['alamat_kirim'] ?? '-';
+$alamat_kirim   = !empty($suratJalan['alamat_kirim']) ? $suratJalan['alamat_kirim'] : ($suratJalan['customer_alamat'] ?? '-');
 $catatan        = $suratJalan['catatan'] ?? 'Tidak ada catatan khusus.';
 $totalQty       = 0;
 ?>
@@ -165,7 +165,7 @@ $totalQty       = 0;
         <tr>
           <td><?= $i + 1 ?></td>
           <td><?= htmlspecialchars($row['produk_nama'] ?? '-') ?></td>
-          <td><?= htmlspecialchars($row['nomor_po'] ?? '-') ?></td>
+          <td><?= htmlspecialchars($row['nomor_pesanan'] ?? '-') ?></td>
           <td><?= number_format($row['qty'] ?? 0, 0, ',', '.') ?></td>
         </tr>
         <?php $totalQty += $row['qty'] ?? 0; endforeach; ?>

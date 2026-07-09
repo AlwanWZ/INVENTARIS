@@ -191,7 +191,7 @@ function badgeLabel($s) {
             <?php else: ?>
             <?php foreach ($spks as $i => $spk):
               $spk['nomor_spk'] = $spk['nomor_spk'] ?? '-';
-              $spk['nomor_po']  = $spk['nomor_po'] ?? '-';
+              $spk['nomor_pesanan']  = $spk['nomor_pesanan'] ?? '-';
               $spk['perusahaan'] = $spk['perusahaan'] ?? '-';
               $spk['pic_username'] = $spk['pic_username'] ?? '-';
               
@@ -201,7 +201,7 @@ function badgeLabel($s) {
             <tr class="<?= $isLate ? 'row-late' : '' ?>">
               <td class="text-muted"><?= $i + 1 ?></td>
               <td class="fw-mid"><?= htmlspecialchars($spk['nomor_spk']) ?></td>
-              <td class="text-muted"><?= htmlspecialchars($spk['nomor_po']) ?></td>
+              <td class="text-muted"><?= htmlspecialchars($spk['nomor_pesanan']) ?></td>
               <td><?= htmlspecialchars($spk['perusahaan']) ?></td>
               <td class="text-muted"><?= htmlspecialchars($spk['tanggal']) ?></td>
               <td class="<?= $isLate ? 'late-text' : 'text-muted' ?>">

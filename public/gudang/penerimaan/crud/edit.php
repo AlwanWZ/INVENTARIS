@@ -11,9 +11,9 @@ $data  = $penerimaanModel->getById($id);
 $items = $penerimaanModel->getItems($id);
 if (!$data) { header('Location: ../index.php'); exit; }
 
-$poList     = $pdo->query("SELECT id, nomor_po FROM po ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+$poList     = $pdo->query("SELECT id, nomor_pesanan FROM pesanan ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
 $spkList    = $pdo->query("SELECT id, nomor_spk FROM spk ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
-$produkList = $pdo->query("SELECT id, nama FROM produk ORDER BY nama")->fetchAll(PDO::FETCH_ASSOC);
+$produkList = $pdo->query("SELECT id, nama FROM barang ORDER BY nama")->fetchAll(PDO::FETCH_ASSOC);
 $userList   = $pdo->query("SELECT id, username FROM users ORDER BY username")->fetchAll(PDO::FETCH_ASSOC);
 
 $errors = [];
@@ -21,7 +21,7 @@ $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dataUpdate = [
         'nomor_penerimaan' => trim($_POST['nomor_penerimaan'] ?? ''),
-        'po_id'            => $_POST['po_id']  ?: null,
+        'pesanan_id'            => $_POST['pesanan_id']  ?: null,
         'spk_id'           => $_POST['spk_id'] ?: null,
         'tanggal'          => $_POST['tanggal'] ?? '',
         'status'           => $_POST['status']  ?? 'draft',
@@ -122,7 +122,7 @@ $statusLabel = match($data['status']) { 'completed' => 'Completed', 'checked' =>
             </div>
             <?php endif; ?>
 
-            <div class="po-form">
+            <div class="pesanan-form">
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label">Nomor Penerimaan <span class="required">*</span></label>
@@ -138,11 +138,11 @@ $statusLabel = match($data['status']) { 'completed' => 'Completed', 'checked' =>
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label">Nomor PO</label>
-                  <select name="po_id" class="form-control">
+                  <select name="pesanan_id" class="form-control">
                     <option value="">— Pilih PO —</option>
-                    <?php foreach ($poList as $po): ?>
-                      <option value="<?= $po['id'] ?>" <?= $data['po_id'] == $po['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($po['nomor_po']) ?>
+                    <?php foreach ($poList as $pesanan): ?>
+                      <option value="<?= $pesanan['id'] ?>" <?= $data['pesanan_id'] == $pesanan['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($pesanan['nomor_pesanan']) ?>
                       </option>
                     <?php endforeach; ?>
                   </select>
@@ -209,10 +209,10 @@ $statusLabel = match($data['status']) { 'completed' => 'Completed', 'checked' =>
                   <?php foreach ($items as $idx => $item): ?>
                   <tr>
                     <td>
-                      <select name="items[<?= $idx ?>][produk_id]" class="form-control" required>
+                      <select name="items[<?= $idx ?>][barang_id]" class="form-control" required>
                         <option value="">— Pilih Produk —</option>
                         <?php foreach ($produkList as $pr): ?>
-                          <option value="<?= $pr['id'] ?>" <?= $item['produk_id'] == $pr['id'] ? 'selected' : '' ?>>
+                          <option value="<?= $pr['id'] ?>" <?= $item['barang_id'] == $pr['id'] ? 'selected' : '' ?>>
                             <?= htmlspecialchars($pr['nama']) ?>
                           </option>
                         <?php endforeach; ?>
@@ -302,14 +302,14 @@ $statusLabel = match($data['status']) { 'completed' => 'Completed', 'checked' =>
 </main>
 
 <script>
-  const produkOptions = `<option value="">— Pilih Produk —</option><?php foreach ($produkList as $pr): ?><option value="<?= $pr['id'] ?>"><?= addslashes(htmlspecialchars($pr['nama_produk'])) ?> (<?= addslashes(htmlspecialchars($pr['kode_produk'])) ?>)</option><?php endforeach; ?>`;
+  const produkOptions = `<option value="">— Pilih Produk —</option><?php foreach ($produkList as $pr): ?><option value="<?= $pr['id'] ?>"><?= addslashes(htmlspecialchars($pr['nama_produk'])) ?> (<?= addslashes(htmlspecialchars($pr['kode_barang'])) ?>)</option><?php endforeach; ?>`;
   let rowIdx = <?= count($items) ?>;
 
   function addItemRow() {
     const tbody = document.getElementById('itemRows');
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><select name="items[${rowIdx}][produk_id]" class="form-control" required>${produkOptions}</select></td>
+      <td><select name="items[${rowIdx}][barang_id]" class="form-control" required>${produkOptions}</select></td>
       <td><input type="number" name="items[${rowIdx}][qty_order]"    class="form-control qty-input" min="1" placeholder="0" required></td>
       <td><input type="number" name="items[${rowIdx}][qty_diterima]" class="form-control qty-input" min="0" placeholder="0" required></td>
       <td><button type="button" class="btn-icon danger" onclick="removeRow(this)"><i class="bi bi-x"></i></button></td>

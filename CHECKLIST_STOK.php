@@ -9,8 +9,8 @@
  */
 
 require_once __DIR__ . '/src/config.php';
-require_once __DIR__ . '/src/models/Produk.php';
-require_once __DIR__ . '/src/models/PO.php';
+require_once __DIR__ . '/src/models/Barang.php';
+require_once __DIR__ . '/src/models/Pesanan.php';
 
 echo "\n";
 echo str_repeat("═", 80) . "\n";
@@ -18,7 +18,7 @@ echo "✅ CHECKLIST IMPLEMENTASI STOK INVENTORY\n";
 echo str_repeat("═", 80) . "\n\n";
 
 // ════════════════════════════════════════════════════════════════
-// CHECK 1: Produk::create() - Rule 1
+// CHECK 1: Barang::create() - Rule 1
 // ════════════════════════════════════════════════════════════════
 echo "1️⃣  RULE 1 (CREATE PRODUK):\n";
 echo "   ✓ stok_available = stok_input\n";
@@ -27,7 +27,7 @@ echo "   Status: ✅ IMPLEMENTED\n";
 echo "   File: src/models/Produk.php → create()\n\n";
 
 // ════════════════════════════════════════════════════════════════
-// CHECK 2: Produk::update() - Rule 1b
+// CHECK 2: Barang::update() - Rule 1b
 // ════════════════════════════════════════════════════════════════
 echo "2️⃣  RULE 1b (EDIT PRODUK):\n";
 echo "   ✓ stok_available = stok_baru - stok_reserved\n";
@@ -44,15 +44,15 @@ echo "   ✓ Validasi: qty <= stok_available\n";
 echo "   ✓ Tidak boleh oversell\n";
 echo "   ✓ Jika qty > stok_available → ERROR\n";
 echo "   Status: ✅ IMPLEMENTED\n";
-echo "   File: po/crud/add.php + Produk.php::checkStokAvailable()\n\n";
+echo "   File: pesanan/crud/add.php + Produk.php::checkStokAvailable()\n\n";
 
 // ════════════════════════════════════════════════════════════════
 // CHECK 4: PO - Update stok saat create - Rule 3
 // ════════════════════════════════════════════════════════════════
 echo "4️⃣  RULE 3 (TRANSACTION - AUTO UPDATE STOK):\n";
-echo "   ✓ INSERT po_items DALAM transaction\n";
-echo "   ✓ UPDATE produk.stok_reserved += qty\n";
-echo "   ✓ UPDATE produk.stok_available -= qty\n";
+echo "   ✓ INSERT pesanan_items DALAM transaction\n";
+echo "   ✓ UPDATE barang.stok_reserved += qty\n";
+echo "   ✓ UPDATE barang.stok_available -= qty\n";
 echo "   ✓ ROLLBACK jika error\n";
 echo "   Status: ✅ IMPLEMENTED\n";
 echo "   File: src/models/PO.php → createWithItems()\n\n";
@@ -67,7 +67,7 @@ try {
                 COUNT(*) as total,
                 SUM(CASE WHEN stok_available = (stok - stok_reserved) THEN 1 ELSE 0 END) as valid_count,
                 SUM(CASE WHEN stok_available != (stok - stok_reserved) THEN 1 ELSE 0 END) as invalid_count
-            FROM produk";
+            FROM barang";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute();

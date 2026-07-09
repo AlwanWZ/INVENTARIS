@@ -12,29 +12,29 @@ $where = [];
 $params = [];
 
 if ($from) {
-  $where[] = "po.tanggal >= ?";
+  $where[] = "pesanan.tanggal >= ?";
   $params[] = $from;
 }
 if ($to) {
-  $where[] = "po.tanggal <= ?";
+  $where[] = "pesanan.tanggal <= ?";
   $params[] = $to;
 }
 if ($status && $status !== 'Semua') {
-  $where[] = "po.status = ?";
+  $where[] = "pesanan.status = ?";
   $params[] = $status;
 }
 
 $sql = "
-SELECT po.*, customers.nama_perusahaan 
-FROM po
-JOIN customers ON po.customer_id = customers.id
+SELECT pesanan.*, customers.nama_perusahaan 
+FROM pesanan
+JOIN customers ON pesanan.customer_id = customers.id
 ";
 
 if ($where) {
   $sql .= " WHERE " . implode(" AND ", $where);
 }
 
-$sql .= " ORDER BY po.tanggal DESC";
+$sql .= " ORDER BY pesanan.tanggal DESC";
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
@@ -112,7 +112,7 @@ $topName = array_key_first($topCustomer);
     <?php foreach ($data as $i => $d): ?>
     <tr>
       <td><?= $i+1 ?></td>
-      <td><?= $d['nomor_po'] ?></td>
+      <td><?= $d['nomor_pesanan'] ?></td>
       <td><?= $d['nama_perusahaan'] ?></td>
       <td><?= $d['tanggal'] ?></td>
       <td><?= $d['status'] ?></td>

@@ -28,11 +28,12 @@
   </nav>
 
   <section class="hero">
-    <div class="container hero-inner">
-      <div class="hero-text">
+    <div class="hero-card">
+      <div class="container hero-inner">
+        <div class="hero-text">
         <div class="hero-badge"><span class="badge-dot"></span> Sistem Aktif &amp; Siap Digunakan</div>
         <h1 class="hero-title">Inventaris Lebih Cerdas,<br><em>Operasional Lebih Lancar</em></h1>
-        <p class="hero-desc">Kelola PO, SPK, stok gudang, dan distribusi dalam satu sistem terintegrasi untuk efisiensi nyata setiap divisi.</p>
+        <p class="hero-desc">Kelola Pesanan, SPK, stok gudang, dan distribusi dalam satu sistem terintegrasi untuk efisiensi nyata setiap divisi.</p>
         <div class="hero-actions">
           <a href="login.php" class="btn-primary">Mulai Sekarang <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
           <a href="#features" class="btn-ghost">Lihat Fitur</a>
@@ -49,7 +50,7 @@
         <div class="mockup">
           <div class="mockup-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="mockup-label">Dashboard Inventaris</span></div>
           <div class="kpi-row">
-            <div class="kpi"><span class="kpi-l">PO Aktif</span><span class="kpi-v">48</span><span class="kpi-t up">▲ 12%</span></div>
+            <div class="kpi"><span class="kpi-l">Pesanan Aktif</span><span class="kpi-v">48</span><span class="kpi-t up">▲ 12%</span></div>
             <div class="kpi"><span class="kpi-l">Stok Menipis</span><span class="kpi-v warn">7</span><span class="kpi-t warn">⚠ Reorder</span></div>
             <div class="kpi"><span class="kpi-l">Pengiriman</span><span class="kpi-v">23</span><span class="kpi-t up">▲ On time</span></div>
           </div>
@@ -57,9 +58,10 @@
             <div class="chart-ttl">Transaksi 7 Hari Terakhir</div>
             <div class="bars"><div class="b" style="height:45%"><s>Sen</s></div><div class="b" style="height:62%"><s>Sel</s></div><div class="b" style="height:38%"><s>Rab</s></div><div class="b hi" style="height:80%"><s>Kam</s></div><div class="b" style="height:70%"><s>Jum</s></div><div class="b" style="height:55%"><s>Sab</s></div><div class="b" style="height:30%"><s>Min</s></div></div>
           </div>
-          <div class="tbl"><div class="tr hd"><span>No. PO</span><span>Status</span><span>Total</span></div><div class="tr"><span>PO-2024-081</span><span class="st ok">Disetujui</span><span>Rp 14.2jt</span></div><div class="tr"><span>PO-2024-082</span><span class="st pnd">Proses</span><span>Rp 8.7jt</span></div><div class="tr"><span>PO-2024-083</span><span class="st ok">Disetujui</span><span>Rp 21.0jt</span></div></div>
+          <div class="tbl"><div class="tr hd"><span>No. Pesanan</span><span>Status</span><span>Total</span></div><div class="tr"><span>PCB-2024-081</span><span class="st ok">Disetujui</span><span>Rp 14.2jt</span></div><div class="tr"><span>PCB-2024-082</span><span class="st pnd">Proses</span><span>Rp 8.7jt</span></div><div class="tr"><span>PCB-2024-083</span><span class="st ok">Disetujui</span><span>Rp 21.0jt</span></div></div>
         </div>
       </div>
+    </div>
     </div>
   </section>
 
@@ -78,7 +80,7 @@
       <span class="divisi-label">Untuk Divisi</span>
       <div class="divisi-card-row">
         <div class="divisi-card">Marketing</div>
-        <div class="divisi-card">Warehouse</div>
+        <div class="divisi-card">Gudang</div>
         <div class="divisi-card">Manager</div>
       </div>
     </div>
@@ -88,7 +90,7 @@
     <div class="container">
       <div class="sec-hd"><span class="sec-tag">Fitur Unggulan</span><h2>Semua dalam Satu Platform</h2></div>
       <div class="feat-grid">
-        <div class="feat large"><div class="fi orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><h3>Manajemen PO &amp; SPK</h3><p>Buat, ajukan, dan pantau Purchase Order serta SPK dengan alur persetujuan digital bertahap dan riwayat revisi lengkap.</p></div>
+        <div class="feat large"><div class="fi orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><h3>Manajemen Pesanan &amp; SPK</h3><p>Buat, ajukan, dan pantau Purchase Order serta SPK dengan alur persetujuan digital bertahap dan riwayat revisi lengkap.</p></div>
         <div class="feat"><div class="fi blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div><h3>Kontrol Stok</h3><p>Pantau barang masuk dan keluar secara real-time dengan notifikasi otomatis saat stok mendekati batas minimum.</p></div>
         <div class="feat"><div class="fi green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><h3>Laporan Terintegrasi</h3><p>Ekspor laporan ke PDF dan Excel. Data lengkap untuk mendukung evaluasi dan pengambilan keputusan.</p></div>
         <div class="feat"><div class="fi purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><h3>Audit Trail</h3><p>Setiap perubahan tercatat otomatis. Lacak aktivitas pengguna secara transparan dan akuntabel.</p></div>

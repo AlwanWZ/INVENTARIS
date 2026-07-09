@@ -18,8 +18,8 @@ $sql = "SELECT p.id, p.nomor_pengeluaran, p.tanggal, p.status,
                COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), '—') AS customer_nama
         FROM pengeluaran p
         LEFT JOIN spk s ON p.spk_id = s.id
-        LEFT JOIN po ON s.po_id = po.id
-        LEFT JOIN customers c ON po.customer_id = c.id
+        LEFT JOIN pesanan ON s.pesanan_id = pesanan.id
+        LEFT JOIN customers c ON pesanan.customer_id = c.id
         LEFT JOIN surat_jalan sj ON sj.pengeluaran_id = p.id
         WHERE 1=1";
 
@@ -208,6 +208,10 @@ function badgeLabel($s) {
                     <i class="bi bi-printer-fill"></i>
                   </a>
                   <?php endif; ?>
+
+                  <a href="crud/edit.php?id=<?= $row['id'] ?>" class="btn-icon" title="Edit Pengeluaran" style="background: #fffbeb; color: #d97706; border: 1px solid #fde68a;">
+                    <i class="bi bi-pencil-square"></i>
+                  </a>
 
                   <button type="button" class="btn-icon danger" onclick="confirmDelete(<?= $row['id'] ?>, '<?= htmlspecialchars($row['nomor_pengeluaran'], ENT_QUOTES) ?>')" title="Hapus Pengeluaran & Surat Jalan">
                     <i class="bi bi-trash"></i>

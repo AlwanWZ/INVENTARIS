@@ -27,12 +27,12 @@ $isSubmit = $_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_draft']
 // 2. Tarik items berdasarkan spk_id yang dipilih (Auto-fill)
 $selectedSpk = $_POST['spk_id'] ?? $_GET['spk_id'] ?? '';
 if ($selectedSpk) {
-    $stmt = $pdo->prepare("SELECT si.id, si.spk_id, COALESCE(si.produk_id, 0) as produk_id, 
+    $stmt = $pdo->prepare("SELECT si.id, si.spk_id, COALESCE(si.barang_id, 0) as barang_id, 
                                   COALESCE(si.qty_outstanding, si.qty_po, 0) as qty_diterima, 
                                   COALESCE(pr.nama, si.nama_barang, 'Barang SPK') AS produk_nama,
                                   COALESCE(pr.satuan, 'pcs') AS produk_satuan
                            FROM spk_items si 
-                           LEFT JOIN produk pr ON si.produk_id = pr.id 
+                           LEFT JOIN barang pr ON si.barang_id = pr.id 
                            WHERE si.spk_id = ? AND COALESCE(si.qty_outstanding, si.qty_po, 0) > 0
                            ORDER BY si.id");
     $stmt->execute([$selectedSpk]);
@@ -80,7 +80,7 @@ if ($isSubmit) {
     }
     $data['items'] = $filteredItems;
     
-    if (empty($data['items'])) $errors[] = 'Minimal 1 item produk dengan Jumlah Masuk > 0 harus diisi.';
+    if (empty($data['items'])) $errors[] = 'Minimal 1 item barang dengan Jumlah Masuk > 0 harus diisi.';
     
     if (!$errors) {
         try {
@@ -93,18 +93,18 @@ if ($isSubmit) {
                 // 🔥 SOLUSI: KITA TIDAK PAKAI $pdo->beginTransaction() DI SINI AGAR TIDAK BENTROK!
                 foreach ($data['items'] as $item) {
                     $qty_add     = (int)($item['qty_ok'] ?? $item['qty'] ?? 0);
-                    $prod_id     = (int)($item['produk_id'] ?? 0);
+                    $prod_id     = (int)($item['barang_id'] ?? 0);
                     $spk_item_id = (int)($item['spk_item_id'] ?? $item['id'] ?? 0);
                     
                     if ($prod_id > 0 && $qty_add > 0) {
-                        $pdo->exec("UPDATE produk SET stok = stok + $qty_add, stok_available = stok_available + $qty_add WHERE id = $prod_id");
+                        $pdo->exec("UPDATE barang SET stok = stok + $qty_add, stok_available = stok_available + $qty_add WHERE id = $prod_id");
                     }
                     
                     if ($qty_add > 0) {
                         if ($spk_item_id > 0) {
                             $pdo->exec("UPDATE spk_items SET qty_outstanding = GREATEST(0, COALESCE(qty_outstanding, qty_po, 0) - $qty_add) WHERE id = $spk_item_id");
                         } else if ($prod_id > 0) {
-                            $pdo->exec("UPDATE spk_items SET qty_outstanding = GREATEST(0, COALESCE(qty_outstanding, qty_po, 0) - $qty_add) WHERE spk_id = {$data['spk_id']} AND produk_id = $prod_id");
+                            $pdo->exec("UPDATE spk_items SET qty_outstanding = GREATEST(0, COALESCE(qty_outstanding, qty_po, 0) - $qty_add) WHERE spk_id = {$data['spk_id']} AND barang_id = $prod_id");
                         }
                     }
                 }
@@ -173,7 +173,7 @@ if ($isSubmit) {
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-title-lg">Barang Masuk (Finish Good)</h1>
-        <p class="page-subtitle">Tarik otomatis data produk dari SPK produksi ke Gudang.</p>
+        <p class="page-subtitle">Tarik otomatis data barang dari SPK produksi ke Gudang.</p>
       </div>
       <a href="../index.php" class="btn-ghost-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
     </div>
@@ -194,7 +194,7 @@ if ($isSubmit) {
             </div>
             <?php endif; ?>
 
-            <div class="po-form">
+            <div class="pesanan-form">
               <div class="form-group">
                 <label class="form-label">Pilih Nomor SPK <span class="required">*</span></label>
                 <select name="spk_id" class="form-control" onchange="this.form.submit()" required>
@@ -222,7 +222,7 @@ if ($isSubmit) {
 
           <?php if ($selectedSpk && empty($items)): ?>
           <div class="alert-warn" style="margin-top:16px;">
-            <i class="bi bi-exclamation-triangle"></i> Seluruh produk pada SPK ini sudah selesai diproduksi dan diterima gudang (Qty Outstanding = 0).
+            <i class="bi bi-exclamation-triangle"></i> Seluruh barang pada SPK ini sudah selesai diproduksi dan diterima gudang (Qty Outstanding = 0).
           </div>
           <?php endif; ?>
 
@@ -230,7 +230,7 @@ if ($isSubmit) {
           <div class="form-card">
             <div class="form-card-header">
               <h4><i class="bi bi-list-check"></i> List Produk Finish Good</h4>
-              <span class="count-badge"><?= count($items) ?> produk</span>
+              <span class="count-badge"><?= count($items) ?> barang</span>
             </div>
             <div class="table-wrap">
               <table class="item-table">
@@ -255,7 +255,7 @@ if ($isSubmit) {
                       <?php endif; ?>
                       <input type="hidden" name="items[<?= $i ?>][id]"          value="<?= (int)$item['id'] ?>">
                       <input type="hidden" name="items[<?= $i ?>][spk_item_id]" value="<?= (int)$item['id'] ?>">
-                      <input type="hidden" name="items[<?= $i ?>][produk_id]"   value="<?= (int)($item['produk_id'] ?? 0) ?>">
+                      <input type="hidden" name="items[<?= $i ?>][barang_id]"   value="<?= (int)($item['barang_id'] ?? 0) ?>">
                       <input type="hidden" name="items[<?= $i ?>][qty_masuk]"   value="<?= (int)$item['qty_diterima'] ?>">
                     </td>
                     <td class="col-center text-muted" style="font-weight: 600;">
@@ -297,9 +297,9 @@ if ($isSubmit) {
           <div class="form-card info-card">
             <div class="form-card-header"><h4><i class="bi bi-info-circle"></i> Info Sistem</h4></div>
             <ul class="info-list">
-              <li><i class="bi bi-dot"></i> <b>Direct SPK</b>: Pilih SPK, sistem otomatis menarik list sisa produk yang belum selesai.</li>
-              <li><i class="bi bi-dot"></i> <b>Simpan & Selesai</b>: Stok gudang <b>langsung bertambah</b>. Jika semua kuantitas terpenuhi, status SPK otomatis berubah jadi <b>Completed</b>.</li>
-              <li><i class="bi bi-dot"></i> <b>Simpan Draft</b>: Data dicatat tanpa mengubah stok produk maupun status SPK.</li>
+              <li><i class="bi bi-dot"></i> <span><b>Direct SPK</b>: Pilih SPK, sistem otomatis menarik list sisa barang yang belum selesai.</span></li>
+              <li><i class="bi bi-dot"></i> <span><b>Simpan & Selesai</b>: Stok gudang <b>langsung bertambah</b>. Jika semua kuantitas terpenuhi, status SPK otomatis berubah jadi <b>Completed</b>.</span></li>
+              <li><i class="bi bi-dot"></i> <span><b>Simpan Draft</b>: Data dicatat tanpa mengubah stok barang maupun status SPK.</span></li>
             </ul>
           </div>
         </div>

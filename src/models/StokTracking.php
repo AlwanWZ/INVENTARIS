@@ -22,7 +22,7 @@ class StokTracking {
      * RESERVE stok saat PO dibuat/approved
      * Kurangi stok_available, nambah stok_reserved
      */
-    public function reserveStok($produk_id, $qty, $reference_type = 'po', $reference_id = null, $created_by = null, $keterangan = '') {
+    public function reserveStok($barang_id, $qty, $reference_type = 'pesanan', $reference_id = null, $created_by = null, $keterangan = '') {
         $isRootTransaction = false;
         try {
             if (!$this->pdo->inTransaction()) {
@@ -33,47 +33,47 @@ class StokTracking {
             // 1. Get current stok
             $stmt = $this->pdo->prepare("
                 SELECT stok, stok_reserved, stok_available 
-                FROM produk 
+                FROM barang 
                 WHERE id = ? 
                 FOR UPDATE
             ");
-            $stmt->execute([$produk_id]);
-            $produk = $stmt->fetch();
+            $stmt->execute([$barang_id]);
+            $barang = $stmt->fetch();
             
-            if (!$produk) {
+            if (!$barang) {
                 throw new Exception("Produk tidak ditemukan");
             }
             
             // 2. Validate stok_available >= qty
-            if ($produk['stok_available'] < $qty) {
+            if ($barang['stok_available'] < $qty) {
                 throw new Exception(
                     "Stok tidak cukup untuk " . htmlspecialchars($reference_type) . 
-                    ". Dibutuhkan: {$qty} pcs, Tersedia: {$produk['stok_available']} pcs"
+                    ". Dibutuhkan: {$qty} pcs, Tersedia: {$barang['stok_available']} pcs"
                 );
             }
             
-            // 3. Update produk stok
-            $stok_before = $produk['stok_available'];
-            $stok_after = $produk['stok_available'] - $qty;
-            $stok_reserved_new = $produk['stok_reserved'] + $qty;
+            // 3. Update barang stok
+            $stok_before = $barang['stok_available'];
+            $stok_after = $barang['stok_available'] - $qty;
+            $stok_reserved_new = $barang['stok_reserved'] + $qty;
             
             $updateStmt = $this->pdo->prepare("
-                UPDATE produk 
+                UPDATE barang 
                 SET stok_reserved = ?,
                     stok_available = ?,
                     updated_at = NOW()
                 WHERE id = ?
             ");
-            $updateStmt->execute([$stok_reserved_new, $stok_after, $produk_id]);
+            $updateStmt->execute([$stok_reserved_new, $stok_after, $barang_id]);
             
             // 4. Log transaksi
             $this->logStok(
-                $produk_id,
+                $barang_id,
                 'po_reserve',
                 $qty,
-                $produk['stok_available'],
+                $barang['stok_available'],
                 $stok_after,
-                $produk['stok_reserved'],
+                $barang['stok_reserved'],
                 $stok_reserved_new,
                 $reference_type,
                 $reference_id,
@@ -98,7 +98,7 @@ class StokTracking {
      * UNRESERVE stok (batalkan reserve)
      * Nambah stok_available, kurangi stok_reserved
      */
-    public function unreserveStok($produk_id, $qty, $reference_type = 'po', $reference_id = null, $created_by = null, $keterangan = '') {
+    public function unreserveStok($barang_id, $qty, $reference_type = 'pesanan', $reference_id = null, $created_by = null, $keterangan = '') {
         $isRootTransaction = false;
         try {
             if (!$this->pdo->inTransaction()) {
@@ -109,44 +109,44 @@ class StokTracking {
             // Get current stok
             $stmt = $this->pdo->prepare("
                 SELECT stok, stok_reserved, stok_available 
-                FROM produk 
+                FROM barang 
                 WHERE id = ? 
                 FOR UPDATE
             ");
-            $stmt->execute([$produk_id]);
-            $produk = $stmt->fetch();
+            $stmt->execute([$barang_id]);
+            $barang = $stmt->fetch();
             
-            if (!$produk) {
+            if (!$barang) {
                 throw new Exception("Produk tidak ditemukan");
             }
             
             // Validate stok_reserved >= qty
-            if ($produk['stok_reserved'] < $qty) {
+            if ($barang['stok_reserved'] < $qty) {
                 throw new Exception("Reserve stok tidak valid");
             }
             
             // Update
-            $stok_available_before = $produk['stok_available'];
-            $stok_available_after = $produk['stok_available'] + $qty;
-            $stok_reserved_new = $produk['stok_reserved'] - $qty;
+            $stok_available_before = $barang['stok_available'];
+            $stok_available_after = $barang['stok_available'] + $qty;
+            $stok_reserved_new = $barang['stok_reserved'] - $qty;
             
             $updateStmt = $this->pdo->prepare("
-                UPDATE produk 
+                UPDATE barang 
                 SET stok_reserved = ?,
                     stok_available = ?,
                     updated_at = NOW()
                 WHERE id = ?
             ");
-            $updateStmt->execute([$stok_reserved_new, $stok_available_after, $produk_id]);
+            $updateStmt->execute([$stok_reserved_new, $stok_available_after, $barang_id]);
             
             // Log
             $this->logStok(
-                $produk_id,
+                $barang_id,
                 'po_unreserve',
                 -$qty,
                 $stok_available_before,
                 $stok_available_after,
-                $produk['stok_reserved'],
+                $barang['stok_reserved'],
                 $stok_reserved_new,
                 $reference_type,
                 $reference_id,
@@ -170,7 +170,7 @@ class StokTracking {
     /**
      * NAMBAH stok saat verifikasi (barang masuk dari produksi)
      */
-    public function addStok($produk_id, $qty, $reference_type = 'verifikasi', $reference_id = null, $created_by = null, $keterangan = '') {
+    public function addStok($barang_id, $qty, $reference_type = 'verifikasi', $reference_id = null, $created_by = null, $keterangan = '') {
         $isRootTransaction = false;
         try {
             if (!$this->pdo->inTransaction()) {
@@ -181,40 +181,40 @@ class StokTracking {
             // Get current stok
             $stmt = $this->pdo->prepare("
                 SELECT stok, stok_reserved, stok_available 
-                FROM produk 
+                FROM barang 
                 WHERE id = ? 
                 FOR UPDATE
             ");
-            $stmt->execute([$produk_id]);
-            $produk = $stmt->fetch();
+            $stmt->execute([$barang_id]);
+            $barang = $stmt->fetch();
             
-            if (!$produk) {
+            if (!$barang) {
                 throw new Exception("Produk tidak ditemukan");
             }
             
             // Update
-            $stok_before = $produk['stok'];
-            $stok_after = $produk['stok'] + $qty;
-            $stok_available_after = $produk['stok_available'] + $qty;
+            $stok_before = $barang['stok'];
+            $stok_after = $barang['stok'] + $qty;
+            $stok_available_after = $barang['stok_available'] + $qty;
             
             $updateStmt = $this->pdo->prepare("
-                UPDATE produk 
+                UPDATE barang 
                 SET stok = ?,
                     stok_available = ?,
                     updated_at = NOW()
                 WHERE id = ?
             ");
-            $updateStmt->execute([$stok_after, $stok_available_after, $produk_id]);
+            $updateStmt->execute([$stok_after, $stok_available_after, $barang_id]);
             
             // Log
             $this->logStok(
-                $produk_id,
+                $barang_id,
                 'verifikasi_add',
                 $qty,
                 $stok_before,
                 $stok_after,
-                $produk['stok_reserved'],
-                $produk['stok_reserved'],
+                $barang['stok_reserved'],
+                $barang['stok_reserved'],
                 $reference_type,
                 $reference_id,
                 $keterangan,
@@ -237,7 +237,7 @@ class StokTracking {
     /**
      * KURANG stok saat pengeluaran (shipment ke customer)
      */
-    public function reduceStok($produk_id, $qty, $reference_type = 'pengeluaran', $reference_id = null, $created_by = null, $keterangan = '') {
+    public function reduceStok($barang_id, $qty, $reference_type = 'pengeluaran', $reference_id = null, $created_by = null, $keterangan = '') {
         $isRootTransaction = false;
         try {
             if (!$this->pdo->inTransaction()) {
@@ -248,48 +248,48 @@ class StokTracking {
             // Get current stok
             $stmt = $this->pdo->prepare("
                 SELECT stok, stok_reserved, stok_available 
-                FROM produk 
+                FROM barang 
                 WHERE id = ? 
                 FOR UPDATE
             ");
-            $stmt->execute([$produk_id]);
-            $produk = $stmt->fetch();
+            $stmt->execute([$barang_id]);
+            $barang = $stmt->fetch();
             
-            if (!$produk) {
+            if (!$barang) {
                 throw new Exception("Produk tidak ditemukan");
             }
             
             // Validate
-            if ($produk['stok'] < $qty) {
+            if ($barang['stok'] < $qty) {
                 throw new Exception(
                     "Stok tidak cukup untuk pengeluaran. " .
-                    "Dibutuhkan: {$qty} pcs, Tersedia: {$produk['stok']} pcs"
+                    "Dibutuhkan: {$qty} pcs, Tersedia: {$barang['stok']} pcs"
                 );
             }
             
             // Update
-            $stok_before = $produk['stok'];
-            $stok_after = $produk['stok'] - $qty;
-            $stok_available_after = $produk['stok_available'] - $qty;
+            $stok_before = $barang['stok'];
+            $stok_after = $barang['stok'] - $qty;
+            $stok_available_after = $barang['stok_available'] - $qty;
             
             $updateStmt = $this->pdo->prepare("
-                UPDATE produk 
+                UPDATE barang 
                 SET stok = ?,
                     stok_available = ?,
                     updated_at = NOW()
                 WHERE id = ?
             ");
-            $updateStmt->execute([$stok_after, $stok_available_after, $produk_id]);
+            $updateStmt->execute([$stok_after, $stok_available_after, $barang_id]);
             
             // Log
             $this->logStok(
-                $produk_id,
+                $barang_id,
                 'pengeluaran_sub',
                 -$qty,
                 $stok_before,
                 $stok_after,
-                $produk['stok_reserved'],
-                $produk['stok_reserved'],
+                $barang['stok_reserved'],
+                $barang['stok_reserved'],
                 $reference_type,
                 $reference_id,
                 $keterangan,
@@ -312,7 +312,7 @@ class StokTracking {
     /**
      * ADJUSTMENT stok manual (untuk koreksi/selisih)
      */
-    public function adjustmentStok($produk_id, $qty_change, $keterangan = '', $created_by = null) {
+    public function adjustmentStok($barang_id, $qty_change, $keterangan = '', $created_by = null) {
         $isRootTransaction = false;
         try {
             if (!$this->pdo->inTransaction()) {
@@ -323,45 +323,45 @@ class StokTracking {
             // Get current stok
             $stmt = $this->pdo->prepare("
                 SELECT stok, stok_reserved, stok_available 
-                FROM produk 
+                FROM barang 
                 WHERE id = ? 
                 FOR UPDATE
             ");
-            $stmt->execute([$produk_id]);
-            $produk = $stmt->fetch();
+            $stmt->execute([$barang_id]);
+            $barang = $stmt->fetch();
             
-            if (!$produk) {
+            if (!$barang) {
                 throw new Exception("Produk tidak ditemukan");
             }
             
             // Validate
-            $stok_after = $produk['stok'] + $qty_change;
+            $stok_after = $barang['stok'] + $qty_change;
             if ($stok_after < 0) {
                 throw new Exception("Adjustment akan membuat stok negatif");
             }
             
             // Update
-            $stok_before = $produk['stok'];
-            $stok_available_after = $produk['stok_available'] + $qty_change;
+            $stok_before = $barang['stok'];
+            $stok_available_after = $barang['stok_available'] + $qty_change;
             
             $updateStmt = $this->pdo->prepare("
-                UPDATE produk 
+                UPDATE barang 
                 SET stok = ?,
                     stok_available = ?,
                     updated_at = NOW()
                 WHERE id = ?
             ");
-            $updateStmt->execute([$stok_after, $stok_available_after, $produk_id]);
+            $updateStmt->execute([$stok_after, $stok_available_after, $barang_id]);
             
             // Log
             $this->logStok(
-                $produk_id,
+                $barang_id,
                 'adjustment',
                 $qty_change,
                 $stok_before,
                 $stok_after,
-                $produk['stok_reserved'],
-                $produk['stok_reserved'],
+                $barang['stok_reserved'],
+                $barang['stok_reserved'],
                 'adjustment',
                 null,
                 $keterangan,
@@ -382,9 +382,9 @@ class StokTracking {
     }
     
     /**
-     * Get stok realtime untuk produk
+     * Get stok realtime untuk barang
      */
-    public function getStokRealtime($produk_id) {
+    public function getStokRealtime($barang_id) {
         $stmt = $this->pdo->prepare("
             SELECT 
                 id,
@@ -397,17 +397,17 @@ class StokTracking {
                     WHEN stok_available < 50 THEN 'LOW_STOCK'
                     ELSE 'OK'
                 END AS status_stok
-            FROM produk
+            FROM barang
             WHERE id = ?
         ");
-        $stmt->execute([$produk_id]);
+        $stmt->execute([$barang_id]);
         return $stmt->fetch();
     }
     
     /**
      * Get stok history/audit trail
      */
-    public function getStokLog($produk_id, $limit = 50) {
+    public function getStokLog($barang_id, $limit = 50) {
         $stmt = $this->pdo->prepare("
             SELECT 
                 sl.*,
@@ -415,30 +415,30 @@ class StokTracking {
                 p.nama AS produk_nama
             FROM stok_log sl
             LEFT JOIN users u ON sl.created_by = u.id
-            LEFT JOIN produk p ON sl.produk_id = p.id
-            WHERE sl.produk_id = ?
+            LEFT JOIN barang p ON sl.barang_id = p.id
+            WHERE sl.barang_id = ?
             ORDER BY sl.created_at DESC
             LIMIT ?
         ");
-        $stmt->execute([$produk_id, $limit]);
+        $stmt->execute([$barang_id, $limit]);
         return $stmt->fetchAll();
     }
     
     /**
      * Private: Log setiap transaksi stok
      */
-    private function logStok($produk_id, $tipe, $qty_change, $stok_before, $stok_after, 
+    private function logStok($barang_id, $tipe, $qty_change, $stok_before, $stok_after, 
                              $stok_reserved_before, $stok_reserved_after, 
                              $reference_type, $reference_id, $keterangan, $created_by) {
         $stmt = $this->pdo->prepare("
             INSERT INTO stok_log 
-            (produk_id, tipe_transaksi, qty_change, stok_before, stok_after, 
+            (barang_id, tipe_transaksi, qty_change, stok_before, stok_after, 
              stok_reserved_before, stok_reserved_after, reference_type, reference_id, 
              keterangan, created_by, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ");
         $stmt->execute([
-            $produk_id, $tipe, $qty_change, $stok_before, $stok_after,
+            $barang_id, $tipe, $qty_change, $stok_before, $stok_after,
             $stok_reserved_before, $stok_reserved_after, $reference_type, $reference_id,
             $keterangan, $created_by
         ]);

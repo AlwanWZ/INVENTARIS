@@ -3,15 +3,15 @@ session_start();
 require_once '../../../src/auth.php';
 require_once '../../../src/config.php';
 
-$produk_id = $_GET['produk_id'] ?? null;
-if (!$produk_id) {
+$barang_id = $_GET['barang_id'] ?? null;
+if (!$barang_id) {
         header('Location: index.php');
         exit;
 }
 
-$produk = $pdo->prepare("SELECT p.*, k.nama_kategori FROM produk p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE p.id = ?");
-$produk->execute([$produk_id]);
-$row = $produk->fetch(PDO::FETCH_ASSOC);
+$barang = $pdo->prepare("SELECT p.*, k.nama_kategori FROM barang p LEFT JOIN kategori k ON p.kategori_id = k.id WHERE p.id = ?");
+$barang->execute([$barang_id]);
+$row = $barang->fetch(PDO::FETCH_ASSOC);
 if (!$row) {
         echo '<div style="padding:2em">Produk tidak ditemukan.</div>';
         exit;
@@ -22,8 +22,8 @@ if (!$row) {
 $tgl_awal = $_GET['tgl_awal'] ?? null;
 $tgl_akhir = $_GET['tgl_akhir'] ?? null;
 if (!$tgl_awal || !$tgl_akhir) {
-    $range = $pdo->prepare("SELECT MIN(created_at) as min_tgl, MAX(created_at) as max_tgl FROM stok_log WHERE produk_id = ?");
-    $range->execute([$produk_id]);
+    $range = $pdo->prepare("SELECT MIN(created_at) as min_tgl, MAX(created_at) as max_tgl FROM stok_log WHERE barang_id = ?");
+    $range->execute([$barang_id]);
     $r = $range->fetch(PDO::FETCH_ASSOC);
     if (!$tgl_awal) $tgl_awal = $r['min_tgl'] ? date('Y-m-d', strtotime($r['min_tgl'])) : date('Y-m-01');
     if (!$tgl_akhir) $tgl_akhir = $r['max_tgl'] ? date('Y-m-d', strtotime($r['max_tgl'])) : date('Y-m-d');
@@ -37,10 +37,10 @@ $mutasi = $pdo->prepare("
         u.username as created_by_name
     FROM stok_log sl
     LEFT JOIN users u ON sl.created_by = u.id
-    WHERE sl.produk_id = ? AND DATE(sl.created_at) BETWEEN ? AND ? 
+    WHERE sl.barang_id = ? AND DATE(sl.created_at) BETWEEN ? AND ? 
     ORDER BY sl.created_at ASC, sl.id ASC
 ");
-$mutasi->execute([$produk_id, $tgl_awal, $tgl_akhir]);
+$mutasi->execute([$barang_id, $tgl_awal, $tgl_akhir]);
 $listMutasi = $mutasi->fetchAll(PDO::FETCH_ASSOC);
 
 function tipeMutasi($tipe) {
@@ -98,7 +98,7 @@ function tipeMutasi($tipe) {
         <div class="page-header">
             <div class="page-header-left">
                 <h1 class="page-title-lg">Kartu Stok</h1>
-                <p class="page-subtitle">Mutasi stok produk: <b><?= htmlspecialchars($row['nama'] ?? '') ?></b></p>
+                <p class="page-subtitle">Mutasi stok barang: <b><?= htmlspecialchars($row['nama'] ?? '') ?></b></p>
             </div>
             <a href="javascript:history.back()" class="btn-ghost-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
         </div>
@@ -106,7 +106,7 @@ function tipeMutasi($tipe) {
         <div class="stat-row">
             <div class="stat-pill">
                 <span class="stat-pill-label">Kode</span>
-                <span class="stat-pill-val"><?= htmlspecialchars($row['kode_produk'] ?? $row['kode'] ?? '') ?></span>
+                <span class="stat-pill-val"><?= htmlspecialchars($row['kode_barang'] ?? $row['kode'] ?? '') ?></span>
             </div>
             <div class="stat-pill">
                 <span class="stat-pill-label">Kategori</span>
@@ -136,7 +136,7 @@ function tipeMutasi($tipe) {
                 <h4><i class="bi bi-calendar"></i> Filter Tanggal</h4>
             </div>
             <form method="get" class="filter-form" style="display:flex;gap:1em;align-items:end;">
-                <input type="hidden" name="produk_id" value="<?= htmlspecialchars($produk_id) ?>">
+                <input type="hidden" name="barang_id" value="<?= htmlspecialchars($barang_id) ?>">
                 <div class="filter-group">
                     <label class="form-label">Dari</label>
                     <input type="date" name="tgl_awal" class="form-control" value="<?= htmlspecialchars($tgl_awal ?? '') ?>">

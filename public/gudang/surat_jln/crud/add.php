@@ -26,23 +26,23 @@ $suratJalanModel = new SuratJalan($pdo);
 
 // --- PERBAIKAN KUERI CUSTOMER TINGKAT DEWA ---
 // Masalah kemarin: customer_id ternyata nempel di PO, bukan di SPK.
-// Solusi: Kita pakai COALESCE(po.customer_id, s.customer_id) biar nyari di dua-duanya.
+// Solusi: Kita pakai COALESCE(pesanan.customer_id, s.customer_id) biar nyari di dua-duanya.
 $pengeluaranList = $pdo->query("
     SELECT p.id, p.nomor_pengeluaran, 
            COALESCE(s.nomor_spk, 'Tanpa SPK') as nomor_spk, 
-           COALESCE(po.nomor_po, 'Tanpa PO') as nomor_po, 
+           COALESCE(pesanan.nomor_pesanan, 'Tanpa PO') as nomor_pesanan, 
            COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan 
     FROM pengeluaran p
     LEFT JOIN spk s ON p.spk_id = s.id
-    LEFT JOIN po ON s.po_id = po.id
-    LEFT JOIN customers c ON c.id = COALESCE(po.customer_id, s.customer_id)
+    LEFT JOIN pesanan ON s.pesanan_id = pesanan.id
+    LEFT JOIN customers c ON c.id = COALESCE(pesanan.customer_id, s.customer_id)
     ORDER BY p.id DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 // ---------------------------------------------
 
 $items = [];
 if (!empty($_POST['pengeluaran_id'])) {
-  $stmt = $pdo->prepare("SELECT pi.*, pr.nama AS produk_nama, pr.satuan FROM pengeluaran_items pi LEFT JOIN produk pr ON pi.produk_id = pr.id WHERE pi.pengeluaran_id = ?");
+  $stmt = $pdo->prepare("SELECT pi.*, pr.nama AS produk_nama, pr.satuan FROM pengeluaran_items pi LEFT JOIN barang pr ON pi.barang_id = pr.id WHERE pi.pengeluaran_id = ?");
   $stmt->execute([$_POST['pengeluaran_id']]);
   $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
@@ -63,12 +63,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
     $data['alamat_kirim'] = '';
     if (!empty($data['pengeluaran_id'])) {
       $stmt = $pdo->prepare("
-          SELECT COALESCE(po.customer_id, s.customer_id) as customer_id, 
+          SELECT COALESCE(pesanan.customer_id, s.customer_id) as customer_id, 
                  c.alamat AS alamat_kirim 
           FROM pengeluaran p 
           LEFT JOIN spk s ON p.spk_id = s.id 
-          LEFT JOIN po ON s.po_id = po.id
-          LEFT JOIN customers c ON c.id = COALESCE(po.customer_id, s.customer_id)
+          LEFT JOIN pesanan ON s.pesanan_id = pesanan.id
+          LEFT JOIN customers c ON c.id = COALESCE(pesanan.customer_id, s.customer_id)
           WHERE p.id = ?
       ");
       $stmt->execute([$data['pengeluaran_id']]);
@@ -349,7 +349,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
                   <option value="<?= $p['id'] ?>" <?= ($_POST['pengeluaran_id'] ?? '') == $p['id'] ? 'selected' : '' ?>>
                     <?= htmlspecialchars($p['nomor_pengeluaran']) ?> | 
                     SPK: <?= htmlspecialchars($p['nomor_spk'] ?? '-') ?> | 
-                    PO: <?= htmlspecialchars($p['nomor_po'] ?? '-') ?> | 
+                    PO: <?= htmlspecialchars($p['nomor_pesanan'] ?? '-') ?> | 
                     (<?= htmlspecialchars($p['perusahaan'] ?? 'Customer Tidak Ditemukan') ?>)
                   </option>
                 <?php endforeach; ?>
@@ -405,7 +405,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
                 <td>
                   <input type="number" name="items[<?= $i ?>][qty]" class="form-control qty-input"
                          min="1" max="<?= $item['qty'] ?>" value="<?= $item['qty'] ?>" required>
-                  <input type="hidden" name="items[<?= $i ?>][produk_id]" value="<?= $item['produk_id'] ?>">
+                  <input type="hidden" name="items[<?= $i ?>][barang_id]" value="<?= $item['barang_id'] ?>">
                 </td>
                 <td style="text-align: center; color: var(--text3);"><?= htmlspecialchars($item['satuan'] ?? 'pcs') ?></td>
                 <td style="text-align: center;">

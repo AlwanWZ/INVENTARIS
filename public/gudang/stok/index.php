@@ -15,7 +15,7 @@ $sql = "
     SELECT p.id, p.kode, p.nama, p.satuan,
            COALESCE(p.stok_min, 10) AS stok_min,
            k.nama_kategori
-    FROM produk p
+    FROM barang p
     LEFT JOIN kategori k ON p.kategori_id = k.id
     WHERE p.status = 'aktif'
 ";
@@ -87,7 +87,7 @@ function levelCls($stok, $min) {
     <?php if (!empty($kritisItems)): ?>
     <div class="alert-late" id="alertKritis" style="display:none;">
       <i class="bi bi-exclamation-triangle"></i>
-      <strong id="kritisCount">0 produk</strong> stok kritis atau habis. Segera lakukan restocking.
+      <strong id="kritisCount">0 barang</strong> stok kritis atau habis. Segera lakukan restocking.
     </div>
     <?php endif; ?>
 
@@ -150,12 +150,12 @@ function levelCls($stok, $min) {
             <tr>
               <td colspan="10" class="empty-state">
                 <i class="bi bi-inboxes"></i>
-                <span>Tidak ada data produk.</span>
+                <span>Tidak ada data barang.</span>
               </td>
             </tr>
             <?php else: ?>
             <?php foreach ($listProduk as $i => $row): ?>
-            <tr class="produk-row" data-produk-id="<?= $row['id'] ?>" data-stok-min="<?= $row['stok_min'] ?>">
+            <tr class="barang-row" data-barang-id="<?= $row['id'] ?>" data-stok-min="<?= $row['stok_min'] ?>">
               <td class="text-muted"><?= $i + 1 ?></td>
               <td class="fw-mid" style="font-size:0.8rem;"><?= htmlspecialchars($row['kode'] ?? '') ?></td>
               <td><?= htmlspecialchars($row['nama'] ?? '') ?></td>
@@ -185,7 +185,7 @@ function levelCls($stok, $min) {
                 <small class="stok-status" style="color: #999;"><i>Loading...</i></small>
               </td>
               <td class="col-center">
-                 <a href="../laporan_persediaan/kartu_stok.php?produk_id=<?= $row['id'] ?>"
+                 <a href="../laporan_persediaan/kartu_stok.php?barang_id=<?= $row['id'] ?>"
                    class="btn-outline"><i class="bi bi-clock-history"></i> Histori</a>
               </td>
             </tr>
@@ -215,7 +215,7 @@ let allStokData = {};
 let maxStokValue = 1;
 
 // Get all product IDs for batch fetch
-const produkIds = Array.from(document.querySelectorAll('.produk-row')).map(row => row.dataset.produkId);
+const produkIds = Array.from(document.querySelectorAll('.barang-row')).map(row => row.dataset.produkId);
 
 // Function to level class based on stock
 function getLevelClass(stok, stokMin) {
@@ -268,7 +268,7 @@ async function fetchRealtimeStock() {
 function updateTableRows() {
   maxStokValue = 1;
   
-  document.querySelectorAll('.produk-row').forEach(row => {
+  document.querySelectorAll('.barang-row').forEach(row => {
     const produkId = row.dataset.produkId;
     const stokData = allStokData[produkId];
     
@@ -289,7 +289,7 @@ function updateTableRows() {
     const pct = maxStokValue > 0 ? Math.min(100, Math.round((stokFisik / maxStokValue) * 100)) : 0;
     
     // Update row class
-    row.className = 'produk-row ' + (levelClass === 'danger' ? 'row-kritis' : '');
+    row.className = 'barang-row ' + (levelClass === 'danger' ? 'row-kritis' : '');
     
     // Update stok fisik (column 1)
     const stokFisikElem = row.querySelector('.stok-fisik');
@@ -338,7 +338,7 @@ function updateStats() {
   Object.values(allStokData).forEach(item => {
     totalStok += item.stok;
     totalDipesan += item.stok_reserved;
-    const stokMin = parseInt(document.querySelector(`[data-produk-id="${item.id}"]`)?.dataset.stokMin) || 10;
+    const stokMin = parseInt(document.querySelector(`[data-barang-id="${item.id}"]`)?.dataset.stokMin) || 10;
     // Check berdasarkan stok_available, bukan stok fisik
     if (item.stok_available <= stokMin) kritisCount++;
   });
@@ -352,7 +352,7 @@ function updateAlerts() {
   let kritisCount = 0;
   
   Object.values(allStokData).forEach(item => {
-    const stokMin = parseInt(document.querySelector(`[data-produk-id="${item.id}"]`)?.dataset.stokMin) || 10;
+    const stokMin = parseInt(document.querySelector(`[data-barang-id="${item.id}"]`)?.dataset.stokMin) || 10;
     // Check berdasarkan stok_available, bukan stok fisik
     if (item.stok_available <= stokMin) kritisCount++;
   });
@@ -361,7 +361,7 @@ function updateAlerts() {
   if (alertElem) {
     if (kritisCount > 0) {
       alertElem.style.display = 'flex';
-      document.getElementById('kritisCount').textContent = kritisCount + ' produk';
+      document.getElementById('kritisCount').textContent = kritisCount + ' barang';
     } else {
       alertElem.style.display = 'none';
     }

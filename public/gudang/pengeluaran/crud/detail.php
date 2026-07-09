@@ -66,7 +66,7 @@ $lowStok  = array_filter($items, fn($i) => ($i['stok'] - $i['qty']) < 10);
     <?php if (!empty($lowStok)): ?>
     <div class="alert-late">
       <i class="bi bi-exclamation-triangle"></i>
-      <strong><?= count($lowStok) ?> produk</strong> memiliki sisa stok di bawah 10 unit setelah pengeluaran ini.
+      <strong><?= count($lowStok) ?> barang</strong> memiliki sisa stok di bawah 10 unit setelah pengeluaran ini.
     </div>
     <?php endif; ?>
 
@@ -198,7 +198,7 @@ $lowStok  = array_filter($items, fn($i) => ($i['stok'] - $i['qty']) < 10);
             </div>
             <div class="summary-row">
               <span>Stok Kritis</span>
-              <span class="fw-mid <?= count($lowStok) > 0 ? 'stok-danger' : 'stok-ok' ?>"><?= count($lowStok) ?> produk</span>
+              <span class="fw-mid <?= count($lowStok) > 0 ? 'stok-danger' : 'stok-ok' ?>"><?= count($lowStok) ?> barang</span>
             </div>
             <div class="summary-row">
               <span>Status</span>

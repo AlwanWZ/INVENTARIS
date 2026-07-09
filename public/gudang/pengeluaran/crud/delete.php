@@ -7,37 +7,13 @@ $id = $_POST['id'] ?? $_GET['id'] ?? null;
 
 if ($id) {
     try {
-        $pdo->beginTransaction();
+        require_once '../../../../src/models/Pengeluaran.php';
+        $pengeluaranModel = new Pengeluaran($pdo);
+        
+        // Model akan menangani transaksi, pengembalian stok, log stok_tracking,
+        // sinkronisasi qty_dikirim ke pesanan_items, dan penghapusan surat_jalan.
+        $pengeluaranModel->delete($id);
 
-        // 1. KEMBALIKAN STOK BARANG (RESTORE STOK KE GUDANG)
-        // Kita cari tau dulu barang apa aja dan berapa jumlah yang kemarin dikeluarin
-        $stmtItems = $pdo->prepare("SELECT produk_id, qty FROM pengeluaran_items WHERE pengeluaran_id = ?");
-        $stmtItems->execute([$id]);
-        $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
-
-        // Balikin angkanya ke tabel produk
-        $stmtRestore = $pdo->prepare("UPDATE produk SET stok_available = stok_available + ?, stok = stok + ? WHERE id = ?");
-        foreach ($items as $item) {
-            $stmtRestore->execute([$item['qty'], $item['qty'], $item['produk_id']]);
-        }
-
-        // 2. HAPUS SURAT JALAN & ITEMS-NYA
-        $stmtSj = $pdo->prepare("SELECT id FROM surat_jalan WHERE pengeluaran_id = ?");
-        $stmtSj->execute([$id]);
-        $sjId = $stmtSj->fetchColumn();
-
-        if ($sjId) {
-            // Hapus anak surat_jalan dulu
-            $pdo->prepare("DELETE FROM surat_jalan_items WHERE surat_jalan_id = ?")->execute([$sjId]);
-            // Baru hapus bapak surat_jalan
-            $pdo->prepare("DELETE FROM surat_jalan WHERE id = ?")->execute([$sjId]);
-        }
-
-        // 3. HAPUS PENGELUARAN & ITEMS-NYA
-        $pdo->prepare("DELETE FROM pengeluaran_items WHERE pengeluaran_id = ?")->execute([$id]);
-        $pdo->prepare("DELETE FROM pengeluaran WHERE id = ?")->execute([$id]);
-
-        $pdo->commit();
         header('Location: ../index.php?deleted=1');
         exit;
 

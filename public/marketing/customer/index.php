@@ -77,7 +77,7 @@ $customers = Customer::getAll($search);
       <select id="customerComboBox" class="customer-combobox" onchange="handleCustomerSelect(this)">
         <option value="">-- Pilih Customer --</option>
         <?php foreach ($customers as $c): ?>
-        <option value="<?= $c['id'] ?>" data-code="<?= htmlspecialchars($c['kode_customer']) ?>" data-name="<?= htmlspecialchars($c['nama']) ?>" data-company="<?= htmlspecialchars($c['perusahaan']) ?>" data-email="<?= htmlspecialchars($c['email']) ?>" data-phone="<?= htmlspecialchars($c['no_hp']) ?>" data-city="<?= htmlspecialchars($c['kota']) ?>" data-status="<?= $c['status'] ?>">
+        <option value="<?= $c['id'] ?>" data-code="<?= htmlspecialchars($c['kode_customer']) ?>" data-name="<?= htmlspecialchars($c['nama']) ?>" data-company="<?= htmlspecialchars($c['perusahaan']) ?>" data-email="<?= htmlspecialchars($c['email']) ?>" data-phone="<?= htmlspecialchars($c['no_hp']) ?>" data-city="<?= htmlspecialchars($c['kota']) ?>" data-address="<?= htmlspecialchars($c['alamat']) ?>" data-status="<?= $c['status'] ?>">
           <?= htmlspecialchars($c['nama']) ?> - <?= htmlspecialchars($c['perusahaan']) ?>
         </option>
         <?php endforeach; ?>
@@ -99,6 +99,10 @@ $customers = Customer::getAll($search);
           <div>
             <span style="font-size: 0.72rem; color: var(--text3); text-transform: uppercase; font-weight: 700;">Kota</span>
             <p id="detailCity" style="margin: 4px 0 0; color: var(--text2);">-</p>
+          </div>
+          <div style="grid-column: span 2;">
+            <span style="font-size: 0.72rem; color: var(--text3); text-transform: uppercase; font-weight: 700;">Alamat</span>
+            <p id="detailAddress" style="margin: 4px 0 0; color: var(--text2);">-</p>
           </div>
           <div style="grid-column: span 2;">
             <span style="font-size: 0.72rem; color: var(--text3); text-transform: uppercase; font-weight: 700;">Perusahaan</span>
@@ -153,6 +157,7 @@ $customers = Customer::getAll($search);
               <th>Email</th>
               <th>No HP</th>
               <th>Kota</th>
+              <th>Alamat</th>
               <th>Status</th>
               <th>Aksi</th>
             </tr>
@@ -178,6 +183,7 @@ $customers = Customer::getAll($search);
               <td class="text-muted"><?= htmlspecialchars($c['email']) ?></td>
               <td class="text-muted"><?= htmlspecialchars($c['no_hp']) ?></td>
               <td class="text-muted"><?= htmlspecialchars($c['kota']) ?></td>
+              <td class="text-muted"><?= htmlspecialchars($c['alamat'] ?? '-') ?></td>
               <td><span class="badge <?= $sCls ?>"><?= $sLabel ?></span></td>
               <td>
                 <div class="action-btns">
@@ -278,6 +284,7 @@ $customers = Customer::getAll($search);
     const email = selectedOption.dataset.email;
     const phone = selectedOption.dataset.phone;
     const city = selectedOption.dataset.city;
+    const address = selectedOption.dataset.address;
     const status = selectedOption.dataset.status;
     
     // Update detail box
@@ -285,6 +292,7 @@ $customers = Customer::getAll($search);
     document.getElementById('detailEmail').textContent = email || '-';
     document.getElementById('detailPhone').textContent = phone || '-';
     document.getElementById('detailCity').textContent = city || '-';
+    document.getElementById('detailAddress').textContent = address || '-';
     document.getElementById('detailCompany').textContent = company;
     
     const statusBadge = document.getElementById('detailStatus');

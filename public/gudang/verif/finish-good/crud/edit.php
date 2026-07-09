@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-title-lg">Edit Verifikasi Finish Good</h1>
-        <p class="page-subtitle">Edit data verifikasi produk jadi</p>
+        <p class="page-subtitle">Edit data verifikasi barang jadi</p>
       </div>
       <a href="detail.php?id=<?= $id ?>" class="btn-ghost-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
     </div>
@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <div class="form-card-header">
             <h4><i class="bi bi-pencil"></i> Data Verifikasi</h4>
           </div>
-          <div class="po-form">
+          <div class="pesanan-form">
             <div class="form-group">
               <label class="form-label">Tanggal</label>
               <input type="date" name="tanggal" class="form-control" value="<?= htmlspecialchars($data['tanggal'] ?? '') ?>" required>
@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-card">
           <div class="form-card-header">
             <h4><i class="bi bi-list-check"></i> Item Produk</h4>
-            <span class="count-badge"><?= count($items) ?> produk</span>
+            <span class="count-badge"><?= count($items) ?> barang</span>
           </div>
           <div class="table-wrap">
             <table class="item-table">

@@ -266,11 +266,66 @@ h1,h2,h3,h4,h5,h6 { font-family: 'Inter', sans-serif; line-height: 1.3; letter-s
 .btn-ghost:hover { color: var(--text); background: var(--surface); border-color: var(--text3); }
 
 /* --- Hero --- */
-.hero { padding: 120px 0 88px; border-bottom: 1px solid var(--border); }
-.hero-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+.hero { padding: 90px 20px 60px; border-bottom: 1px solid var(--border); }
+.hero-card {
+  position: relative;
+  max-width: 1280px;
+  margin: 0 auto;
+  border-radius: 36px;
+  overflow: hidden;
+  background-image: url('../img/gudang.jpeg');
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.4);
+}
+.hero-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(15,23,42,0.92) 0%, rgba(15,23,42,0.65) 100%);
+  z-index: 0;
+}
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+  padding: 80px 20px;
+}
+
+/* Premium Dark Mode overrides for Hero Card */
+.hero-card .hero-title { color: #ffffff; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+.hero-card .hero-desc { color: #d1d5db; }
+.hero-card .stat-num { color: #ffffff; }
+.hero-card .stat-label { color: #9ca3af; }
+.hero-card .hero-badge {
+  background: rgba(232, 98, 26, 0.15);
+  border-color: rgba(232, 98, 26, 0.4);
+  color: #fb923c;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.hero-card .btn-ghost { color: #ffffff; border-color: rgba(255,255,255,0.3); }
+.hero-card .btn-ghost:hover { background: rgba(255,255,255,0.1); border-color: #ffffff; }
+.hero-card .stat-div { background: rgba(255,255,255,0.15); }
+
+/* 3D Isometric Float Effect */
+.hero-card .mockup {
+  transform: perspective(1000px) rotateY(-8deg) rotateX(4deg) scale(0.95);
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.6s ease;
+  box-shadow: -20px 30px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+}
+.hero-card .mockup:hover {
+  transform: perspective(1000px) rotateY(0deg) rotateX(0deg) scale(1);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1) inset;
+}
+
+/* Original base items */
 .hero-badge { display: inline-flex; align-items: center; gap: 7px; background: var(--accent-bg); border: 1px solid var(--accent-bd); color: var(--accent); padding: 4px 13px; border-radius: 100px; font-size: 0.8rem; font-weight: 500; margin-bottom: 20px; }
 .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
-.hero-title { font-size: clamp(2rem, 3.8vw, 3.2rem); font-weight: 800; color: var(--text); margin-bottom: 16px; }
+.hero-title { font-size: clamp(2.2rem, 3.8vw, 3.4rem); font-weight: 800; color: var(--text); margin-bottom: 16px; line-height: 1.15; }
 .hero-title em { font-style: italic; color: var(--accent); }
 .hero-desc { font-size: 1rem; color: var(--text2); max-width: 440px; margin-bottom: 30px; line-height: 1.7; }
 .hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 40px; }

@@ -27,7 +27,7 @@ try {
         foreach (array_slice($spks, 0, 3) as $spk) {
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
             echo "SPK ID: " . $spk['id'] . " | Nomor: " . $spk['nomor_spk'] . "\n";
-            echo "PO ID: " . ($spk['po_id'] ?? 'NULL') . " | Nomor PO: " . ($spk['nomor_po'] ?? 'NULL') . "\n";
+            echo "PO ID: " . ($spk['pesanan_id'] ?? 'NULL') . " | Nomor PO: " . ($spk['nomor_pesanan'] ?? 'NULL') . "\n";
             echo "Customer ID: " . ($spk['customer_id'] ?? 'NULL') . "\n";
             echo "Customer Nama: " . ($spk['customer_nama'] ?? '❌ NULL') . "\n";
             echo "Perusahaan: " . ($spk['perusahaan'] ?? '❌ NULL') . "\n";
@@ -55,19 +55,19 @@ try {
     echo "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
     echo "📋 PO-CUSTOMER RELATIONSHIP CHECK:\n";
     
-    $pos = $pdo->query("
-        SELECT po.id, po.nomor_po, po.customer_id, c.nama, c.perusahaan
-        FROM po
-        LEFT JOIN customers c ON po.customer_id = c.id
+    $pesanans = $pdo->query("
+        SELECT pesanan.id, pesanan.nomor_pesanan, pesanan.customer_id, c.nama, c.perusahaan
+        FROM pesanan
+        LEFT JOIN customers c ON pesanan.customer_id = c.id
         LIMIT 5
     ")->fetchAll(PDO::FETCH_ASSOC);
     
-    if (empty($pos)) {
+    if (empty($pesanans)) {
         echo "❌ Tidak ada PO di database\n";
     } else {
-        echo "✅ Ditemukan " . count($pos) . " PO\n";
-        foreach ($pos as $po) {
-            echo "  PO ID: {$po['id']}, Nomor: {$po['nomor_po']}, Customer ID: {$po['customer_id']}, Nama: " . ($po['nama'] ?? 'NULL') . ", Perusahaan: " . ($po['perusahaan'] ?? 'NULL') . "\n";
+        echo "✅ Ditemukan " . count($pesanans) . " PO\n";
+        foreach ($pesanans as $pesanan) {
+            echo "  PO ID: {$pesanan['id']}, Nomor: {$pesanan['nomor_pesanan']}, Customer ID: {$pesanan['customer_id']}, Nama: " . ($pesanan['nama'] ?? 'NULL') . ", Perusahaan: " . ($pesanan['perusahaan'] ?? 'NULL') . "\n";
         }
     }
     

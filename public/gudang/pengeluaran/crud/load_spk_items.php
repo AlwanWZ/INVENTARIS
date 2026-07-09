@@ -27,21 +27,21 @@ try {
     // Kita kurangi qty_order dengan total barang yang sudah masuk di pengeluaran untuk SPK ini
     $sql = "
         SELECT 
-            pr.id as produk_id,
-            pr.kode_produk,
+            pr.id as barang_id,
+            pr.kode_barang,
             pr.nama,
             poi.qty as qty_order,
             (SELECT IFNULL(SUM(pi.qty), 0) 
              FROM pengeluaran_items pi 
              JOIN pengeluaran p ON pi.pengeluaran_id = p.id 
-             WHERE p.spk_id = spk.id AND pi.produk_id = poi.produk_id) as qty_sudah_keluar,
+             WHERE p.spk_id = spk.id AND pi.barang_id = poi.barang_id) as qty_sudah_keluar,
             pr.stok_available,
             pr.stok
         FROM spk
-        INNER JOIN po ON spk.po_id = po.id
-        LEFT JOIN po_items poi ON po.id = poi.po_id
-        LEFT JOIN produk pr ON poi.produk_id = pr.id
-        WHERE spk.id = ? AND poi.produk_id IS NOT NULL
+        INNER JOIN pesanan ON spk.pesanan_id = pesanan.id
+        LEFT JOIN pesanan_items poi ON pesanan.id = poi.pesanan_id
+        LEFT JOIN barang pr ON poi.barang_id = pr.id
+        WHERE spk.id = ? AND poi.barang_id IS NOT NULL
         ORDER BY poi.id ASC
     ";
     

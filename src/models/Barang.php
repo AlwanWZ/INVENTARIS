@@ -1,0 +1,235 @@
+<?php
+/**
+ * =============================================
+ * MODEL PRODUK / BARANG - Advanced Inventory System
+ * =============================================
+ * Pilar Inventory:
+ * - stok: Stok fisik di gudang
+ * - stok_reserved: Stok yang di-booking via PO/Pesanan (belum dikirim)
+ * - stok_available: Stok yang bisa dijual (stok - stok_reserved)
+ * * Rule 1: Saat create barang baru:
+ * stok_available = stok, stok_reserved = 0
+ * * Rule 1b: Saat edit barang (ubah stok fisik):
+ * stok_available = stok - stok_reserved
+ */
+
+require_once __DIR__ . '/../config.php';
+
+class Barang {
+    
+    /**
+     * Get all products (Hanya mengambil yang aktif)
+     */
+    public static function all() {
+        global $pdo;
+        // PERBAIKAN: Tabel diganti jadi 'barang'
+        $stmt = $pdo->query("
+            SELECT * FROM barang 
+            WHERE status = 'aktif'
+            ORDER BY id DESC
+        ");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Find product by ID
+     */
+    public static function find($id) {
+        global $pdo;
+        // PERBAIKAN: Tabel diganti jadi 'barang'
+        $stmt = $pdo->prepare('
+            SELECT * FROM barang 
+            WHERE id = ? 
+            LIMIT 1
+        ');
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Create new product
+     * * Rule 1: stok_available = stok (awal), stok_reserved = 0
+     */
+    public static function create($data) {
+        global $pdo;
+        
+        // Ambil stok fisik input
+        $stok = (int)($data['stok'] ?? 0);
+        
+        // Rule 1: Awal buat barang, stok_available = stok, stok_reserved = 0
+        $stok_available = $stok;
+        $stok_reserved = 0;
+        
+        // Support both kategori_id (FK) dan kategori (string) untuk backward compatibility
+        $kategori_id = (int)($data['kategori_id'] ?? 0);
+        $kategori_str = $data['kategori'] ?? ($data['kategori_id'] ? null : 'PCB');
+        
+        // PERBAIKAN: Tabel diganti jadi 'barang' & kolom jadi 'kode_barang'
+        $sql = 'INSERT INTO barang 
+(
+    kode_barang,
+    nama,
+    kategori_id,
+    kategori,
+    stok,
+    stok_reserved,
+    stok_available,
+    stok_min,
+    satuan,
+    harga,
+    harga_jual,
+    status,
+    created_at
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            $data['kode_barang'] ?? $data['kode_produk'] ?? $data['kode'] ?? '', // Support semua versi input form
+            $data['nama'] ?? '',
+            $kategori_id > 0 ? $kategori_id : null,
+            $kategori_str,
+            $stok,
+            $stok_reserved,
+            $stok_available,
+            (int)($data['stok_min'] ?? 10),
+            $data['satuan'] ?? 'pcs',
+            (int)($data['harga'] ?? 0),        // HPP
+            (float)($data['harga_jual'] ?? 0), // Harga Jual
+            $data['status'] ?? 'aktif'
+        ]);
+        
+        return $pdo->lastInsertId();
+    }
+
+    /**
+     * Update product
+     * * Rule 1b: Saat edit stok fisik, harus recalculate:
+     * stok_available = stok - stok_reserved (jangan sampai negatif)
+     * * FORMULA UTAMA (WAJIB DIPATUHI):
+     * stok_available = stok_fisik - stok_reserved
+     */
+    public static function update($id, $data) {
+        global $pdo;
+        
+        // Ambil current product untuk recalculate
+        $barang = self::find($id);
+        if (!$barang) {
+            throw new Exception("Barang tidak ditemukan");
+        }
+        
+        // Ambil nilai baru stok fisik dari input
+        $stok_baru = (int)($data['stok'] ?? $barang['stok']);
+        
+        // Ambil stok_reserved DARI DATABASE (jangan dari input, ini auto-managed)
+        $stok_reserved = (int)($barang['stok_reserved'] ?? 0);
+        
+        // RULE 1b: Hitung ulang stok_available menggunakan formula
+        // stok_available = stok_fisik - stok_reserved
+        $stok_available = $stok_baru - $stok_reserved;
+        if ($stok_available < 0) {
+            $stok_available = 0; // Safety: jangan sampai negatif
+        }
+        
+        // PERBAIKAN: Tabel diganti jadi 'barang' & support update kode_barang kalau ada
+        $sql = 'UPDATE barang SET
+                kode_barang = ?,
+                nama = ?,
+                stok = ?,
+                stok_available = ?,
+                stok_min = ?,
+                satuan = ?,
+                harga = ?,
+                harga_jual = ?,
+                status = ?,
+                updated_at = NOW()
+                WHERE id = ?';
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            $data['kode_barang'] ?? $data['kode_produk'] ?? $data['kode'] ?? $barang['kode_barang'] ?? '',
+            $data['nama'] ?? $barang['nama'],
+            $stok_baru,
+            $stok_available,
+            (int)($data['stok_min'] ?? $barang['stok_min'] ?? 10),
+            $data['satuan'] ?? $barang['satuan'] ?? 'pcs',
+            (int)($data['harga'] ?? $barang['harga'] ?? 0),
+            (float)($data['harga_jual'] ?? $barang['harga_jual'] ?? 0),
+            $data['status'] ?? $barang['status'] ?? 'aktif',
+            $id
+        ]);
+    }
+
+    /**
+     * Delete product (SOFT DELETE)
+     * Mengubah status menjadi nonaktif agar riwayat log_stok tidak rusak
+     */
+    public static function delete($id) {
+        global $pdo;
+        // PERBAIKAN: Tabel diganti jadi 'barang'
+        $stmt = $pdo->prepare("UPDATE barang SET status = 'nonaktif', updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$id]);
+    }
+
+    /**
+     * Get barang with stok availability info
+     */
+    public static function getWithStokInfo($id) {
+        global $pdo;
+        // PERBAIKAN: Tabel diganti jadi 'barang' & kolom jadi 'kode_barang'
+        $sql = 'SELECT 
+                    id,
+                    kode_barang,
+                    nama,
+                    kategori,
+                    stok,
+                    stok_reserved,
+                    stok_available,
+                    stok_min,
+                    satuan,
+                    harga,
+                    status
+                FROM barang 
+                WHERE id = ? 
+                LIMIT 1';
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Check stok availability for PO validation
+     * Rule 2: Validate against stok_available (bukan stok fisik)
+     */
+    public static function checkStokAvailable($barangId, $qty) {
+        global $pdo;
+        
+        // PERBAIKAN: Tabel diganti jadi 'barang'
+        $stmt = $pdo->prepare('
+            SELECT stok_available 
+            FROM barang 
+            WHERE id = ? 
+            LIMIT 1
+        ');
+        $stmt->execute([$barangId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$result) {
+            return ['available' => false, 'message' => 'Barang tidak ditemukan'];
+        }
+        
+        $stok_available = (int)($result['stok_available'] ?? 0);
+        
+        if ($qty > $stok_available) {
+            return [
+                'available' => false,
+                'stok_available' => $stok_available,
+                'message' => "Qty ($qty) melebihi stok tersedia ($stok_available pcs)"
+            ];
+        }
+        
+        return ['available' => true, 'stok_available' => $stok_available];
+    }
+}
+?>

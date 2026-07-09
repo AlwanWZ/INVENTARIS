@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'status'     => $_POST['status'] ?? 'aktif',
     ];
     if (!$data['nama']) $errors[] = 'Nama wajib diisi.';
+    if (!$data['alamat']) $errors[] = 'Alamat wajib diisi.';
     if ($data['email'] && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) $errors[] = 'Format email tidak valid.';
     try {
         if (!$errors) {

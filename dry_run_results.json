@@ -1,0 +1,780 @@
+{
+    "total_files_to_modify": 87,
+    "files": [
+        {
+            "file": "\\CHECKLIST_STOK.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bProduk::\/",
+                "\/(require_once|include_once|require|include)[^;]+Produk\\.php\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\debug_spk.php",
+            "changes": [
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\$pos\\b\/"
+            ]
+        },
+        {
+            "file": "\\DOKUMENTASI_LAPORAN.md",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\DOKUMENTASI_STOK_INVENTORY.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bProduk::\/",
+                "\/\\bPO::\/"
+            ]
+        },
+        {
+            "file": "\\dry_run_rename.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\$produks\\b\/",
+                "\/\\$pos\\b\/"
+            ]
+        },
+        {
+            "file": "\\fix_po_status.php",
+            "changes": [
+                "\/\\bpo\\b\/"
+            ]
+        },
+        {
+            "file": "\\fix_product_data.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/"
+            ]
+        },
+        {
+            "file": "\\IMPLEMENTASI_CHECKLIST.md",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bPO::\/"
+            ]
+        },
+        {
+            "file": "\\INDEX_DOKUMENTASI.md",
+            "changes": [
+                "\/\\bproduk\\b\/"
+            ]
+        },
+        {
+            "file": "\\PENJELASAN_LENGKAP_ALUR_STOK.md",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\assets\\css\\gudang-css\\penerimaan.css",
+            "changes": [
+                "\/\\bpo\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\assets\\css\\gudang-css\\pengeluaran.css",
+            "changes": [
+                "\/\\bpo\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\assets\\css\\gudang-css\\surat_jln.css",
+            "changes": [
+                "\/\\bpo\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\assets\\css\\gudang-css\\verifikasi.css",
+            "changes": [
+                "\/\\bpo\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\assets\\css\\marketing-css\\customer.css",
+            "changes": [
+                "\/\\bpo\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\assets\\css\\marketing-css\\po.css",
+            "changes": [
+                "\/\\bpo\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\assets\\css\\marketing-css\\produk.css",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\assets\\css\\marketing-css\\spk.css",
+            "changes": [
+                "\/\\bpo\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\dashboard.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bProduk::\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+Produk\\.php\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\api\\get_stok_history.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\api\\get_stok_realtime.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\Laporan_Persediaan\\index.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\Laporan_Persediaan\\kartu_stok.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\penerimaan\\crud\\add.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\penerimaan\\crud\\detail.php",
+            "changes": [
+                "\/\\bnomor_po\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\penerimaan\\crud\\edit.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\penerimaan\\index.php",
+            "changes": [
+                "\/\\bnomor_po\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\pengeluaran\\crud\\add.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\pengeluaran\\crud\\delete.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\pengeluaran\\crud\\detail.php",
+            "changes": [
+                "\/\\bproduk\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\pengeluaran\\crud\\edit.php",
+            "changes": [
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\pengeluaran\\crud\\load_spk_items.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\pengeluaran\\index.php",
+            "changes": [
+                "\/\\bpo\\b\/",
+                "\/\\bpo_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\stok\\index.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\surat_jln\\crud\\add.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\surat_jln\\crud\\edit.php",
+            "changes": [
+                "\/\\bpo\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\surat_jln\\crud\\print_list.php",
+            "changes": [
+                "\/\\bnomor_po\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\verif\\finish-good\\crud\\add.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\verif\\finish-good\\crud\\detail.php",
+            "changes": [
+                "\/\\bproduk\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\gudang\\verif\\finish-good\\crud\\edit.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\barang\\crud\\add.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bProduk::\/",
+                "\/(require_once|include_once|require|include)[^;]+Produk\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\barang\\crud\\delete.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/(require_once|include_once|require|include)[^;]+Produk\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\barang\\crud\\detail.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bProduk::\/",
+                "\/(require_once|include_once|require|include)[^;]+Produk\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\barang\\crud\\edit.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bProduk::\/",
+                "\/(require_once|include_once|require|include)[^;]+Produk\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\barang\\index.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bProduk::\/",
+                "\/(require_once|include_once|require|include)[^;]+Produk\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\barang\\pembersih_gaib.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\customer\\form.php",
+            "changes": [
+                "\/\\bpo\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\laporan_order\\export.php",
+            "changes": [
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\laporan_order\\index.php",
+            "changes": [
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\$pos\\b\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\pesanan\\crud\\add.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bProduk::\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+Produk\\.php\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\pesanan\\crud\\add_item.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bProduk::\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+Produk\\.php\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\pesanan\\crud\\delete.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\pesanan\\crud\\delete_item.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\pesanan\\crud\\detail.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\pesanan\\crud\\edit.php",
+            "changes": [
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\pesanan\\crud\\print.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\pesanan\\crud\\reserve_stok.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\pesanan\\history.php",
+            "changes": [
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\pesanan\\index.php",
+            "changes": [
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\spk\\crud\\add.php",
+            "changes": [
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\spk\\crud\\detail.php",
+            "changes": [
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\spk\\crud\\edit.php",
+            "changes": [
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\public\\marketing\\spk\\index.php",
+            "changes": [
+                "\/\\bnomor_po\\b\/"
+            ]
+        },
+        {
+            "file": "\\REALTIME_STOCK_DISPLAY.md",
+            "changes": [
+                "\/\\bproduk\\b\/"
+            ]
+        },
+        {
+            "file": "\\repair_stok.php",
+            "changes": [
+                "\/\\bproduk\\b\/"
+            ]
+        },
+        {
+            "file": "\\SETUP_TESTING_GUIDE.md",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/(require_once|include_once|require|include)[^;]+Produk\\.php\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\SISTEM_INVENTORY_REALTIME.md",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        },
+        {
+            "file": "\\src\\functions.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\src\\models\\Barang.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bclass Produk\\b\/"
+            ]
+        },
+        {
+            "file": "\\src\\models\\Penerimaan.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\src\\models\\Pengeluaran.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\src\\models\\Pesanan.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bclass PO\\b\/"
+            ]
+        },
+        {
+            "file": "\\src\\models\\SPK.php",
+            "changes": [
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\src\\models\\StokLog.php",
+            "changes": [
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\src\\models\\StokTracking.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\src\\models\\SuratJalan.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\src\\models\\Verifikasi.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\src\\models\\VerifikasiItem.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\STOCK_INTEGRATION_COMPLETE.md",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\STOCK_INTEGRATION_GUIDE.md",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bProduk::\/",
+                "\/\\bPO::\/"
+            ]
+        },
+        {
+            "file": "\\STOCK_QUICK_REFERENCE.md",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bProduk::\/",
+                "\/\\bPO::\/"
+            ]
+        },
+        {
+            "file": "\\STRICT_VALIDATION_GUIDE.md",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bpo_items\\b\/"
+            ]
+        },
+        {
+            "file": "\\templates\\nav.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/"
+            ]
+        },
+        {
+            "file": "\\validate_stock_integration.php",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\VISUAL_REFERENCE.md",
+            "changes": [
+                "\/\\bkode_produk\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\WORKFLOW_INTEGRASI_STOK.md",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/"
+            ]
+        },
+        {
+            "file": "\\WORKSPACE_EXPLORATION_REPORT.md",
+            "changes": [
+                "\/\\bproduk\\b\/",
+                "\/\\bkode_produk\\b\/",
+                "\/\\bpo\\b\/",
+                "\/\\bnomor_po\\b\/",
+                "\/\\bpo_items\\b\/",
+                "\/\\bpo_id\\b\/",
+                "\/\\bproduk_id\\b\/",
+                "\/\\bProduk::\/",
+                "\/\\bPO::\/",
+                "\/(require_once|include_once|require|include)[^;]+Produk\\.php\/",
+                "\/(require_once|include_once|require|include)[^;]+PO\\.php\/"
+            ]
+        }
+    ]
+}

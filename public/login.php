@@ -1,5 +1,13 @@
 <?php
 require_once __DIR__ . '/../src/auth.php';
+preventCache(); // Mencegah browser nge-cache halaman login
+
+// Jika user sudah login, tendang balik ke dashboard (cegah back ke halaman login)
+if (isset($_SESSION['user']) && !isset($_POST['action'])) {
+    header('Location: /Inventaris/public/dashboard.php');
+    exit;
+}
+
 $error = '';
 $show_reset_form = false;
 $reset_user_id = null;

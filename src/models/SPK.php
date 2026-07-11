@@ -106,16 +106,8 @@ class SPK {
 
             $spkId = $pdo->lastInsertId();
 
-            // 2. Salin barang dari PO ke SPK_ITEMS
-            if (!empty($data['pesanan_id'])) {
-                $poItems = $pdo->prepare("SELECT * FROM pesanan_items WHERE pesanan_id = ?");
-                $poItems->execute([$data['pesanan_id']]);
-                $items = $poItems->fetchAll(\PDO::FETCH_ASSOC);
-
-                if (empty($items)) {
-                    throw new Exception("Data barang pada Pesanan (PO) tersebut kosong di tabel pesanan_items!");
-                }
-
+            // 2. Insert items dari input
+            if (!empty($data['items']) && is_array($data['items'])) {
                 $insertStmt = $pdo->prepare("
                     INSERT INTO spk_items (
                         spk_id, pic_id, barang_id, nama_barang,
@@ -123,43 +115,52 @@ class SPK {
                         qty_preparation, qty_outstanding, status_produksi, note
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
-
+                
                 $itemCount = 0;
-                foreach ($items as $item) {
-                    $namaBarang = $item['nama_material'] ?? $item['nama_barang'] ?? 'Tanpa Nama';
-                    $qty = (int)($item['qty'] ?? 0);
-                    $stok = (int)($item['qty_available'] ?? 0);
-                    $note = $item['keterangan'] ?? '';
-
-                    if ($qty <= 0) {
-                        throw new Exception("Ada barang di PO yang jumlah (qty)-nya bernilai 0!");
-                    }
+                foreach ($data['items'] as $item) {
+                    $barang_id = (int)($item['barang_id'] ?? 0);
+                    $qty_schedule = (int)($item['qty_schedule'] ?? 0);
+                    $note = $item['note'] ?? '';
+                    $namaBarang = $item['nama_barang'] ?? 'Tanpa Nama';
+                    
+                    if ($barang_id <= 0 || $qty_schedule <= 0) continue;
+                    
+                    // Ambil detail PO qty dan stok
+                    $stmtInfo = $pdo->prepare("
+                        SELECT pi.qty as qty_po, b.stok, b.stok_available 
+                        FROM pesanan_items pi 
+                        JOIN barang b ON pi.barang_id = b.id
+                        WHERE pi.pesanan_id = ? AND pi.barang_id = ?
+                    ");
+                    $stmtInfo->execute([$data['pesanan_id'], $barang_id]);
+                    $info = $stmtInfo->fetch(PDO::FETCH_ASSOC);
+                    
+                    $qty_po = (int)($info['qty_po'] ?? 0);
+                    $stok_gudang = (int)($info['stok'] ?? 0);
+                    $stok_available = (int)($info['stok_available'] ?? 0);
 
                     $insertStmt->execute([
                         $spkId,
                         $data['pic_id'] ?? null,
-                        $item['barang_id'] ?? null,
+                        $barang_id,
                         $namaBarang,
-                        $stok,
-                        $stok,
-                        $qty,
-                        $qty,
+                        $stok_gudang,
+                        $stok_available,
+                        $qty_po,
+                        $qty_schedule,
                         0,
-                        $qty,
-                        'pending', // PASTIKAN nilai ENUM 'pending' benar-benar ada di tabel spk_items
+                        $qty_schedule, // Awalnya outstanding = schedule
+                        'pending',
                         $note
                     ]);
                     $itemCount++;
                 }
 
-                // 3. Jebakan Pengaman Terakhir
-                $cekMasuk = $pdo->prepare("SELECT COUNT(*) FROM spk_items WHERE spk_id = ?");
-                $cekMasuk->execute([$spkId]);
-                if ($cekMasuk->fetchColumn() < $itemCount) {
-                    throw new Exception("Gagal menyalin barang ke tabel spk_items karena penolakan dari database!");
+                if ($itemCount === 0) {
+                    throw new Exception("Tidak ada item yang valid untuk diproduksi dalam SPK ini.");
                 }
             } else {
-                throw new Exception("PO ID tidak boleh kosong!");
+                throw new Exception("Barang SPK tidak boleh kosong!");
             }
 
             $pdo->commit();
@@ -196,6 +197,16 @@ class SPK {
             $data['progress'] ?? 0,
             $id
         ]);
+        
+        // Update items
+        if (!empty($data['items']) && is_array($data['items'])) {
+            $stmtUpdateItem = $pdo->prepare("UPDATE spk_items SET qty_schedule=?, pic_id=? WHERE id=? AND spk_id=?");
+            foreach ($data['items'] as $itemId => $itemData) {
+                $qty = (int)($itemData['qty_schedule'] ?? 0);
+                $picId = !empty($itemData['pic_id']) ? (int)$itemData['pic_id'] : null;
+                $stmtUpdateItem->execute([$qty, $picId, $itemId, $id]);
+            }
+        }
     }
 
     // =========================================================================

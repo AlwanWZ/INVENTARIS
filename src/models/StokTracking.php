@@ -235,6 +235,132 @@ class StokTracking {
     }
     
     /**
+     * MEMENUHI stok yang sudah di-reserve (saat barang dikirim dari PO)
+     * Ini hanya memotong stok fisik dan stok_reserved.
+     * Stok_available TIDAK dipotong lagi karena sudah dipotong saat reserve.
+     */
+    public function fulfillStok($barang_id, $qty, $reference_type = 'pengeluaran', $reference_id = null, $created_by = null, $keterangan = '') {
+        $isRootTransaction = false;
+        try {
+            if (!$this->pdo->inTransaction()) {
+                $this->pdo->beginTransaction();
+                $isRootTransaction = true;
+            }
+            
+            // Get current stok
+            $stmt = $this->pdo->prepare("
+                SELECT stok, stok_reserved, stok_available 
+                FROM barang 
+                WHERE id = ? 
+                FOR UPDATE
+            ");
+            $stmt->execute([$barang_id]);
+            $barang = $stmt->fetch();
+            
+            if (!$barang) {
+                throw new Exception("Produk tidak ditemukan");
+            }
+            
+            // Validate
+            if ($barang['stok'] < $qty) {
+                throw new Exception(
+                    "Stok tidak cukup untuk pengeluaran. " .
+                    "Dibutuhkan: {$qty} pcs, Tersedia: {$barang['stok']} pcs"
+                );
+            }
+            
+            // Update
+            $stok_before = $barang['stok'];
+            $stok_after = $barang['stok'] - $qty;
+            // stok_available TETAP SAMA karena sudah dipotong saat PO dibuat
+            $stok_available_after = $barang['stok_available'];
+            // stok_reserved dikurangi karena sudah terpenuhi
+            $stok_reserved_new = max(0, $barang['stok_reserved'] - $qty);
+            
+            $updateStmt = $this->pdo->prepare("
+                UPDATE barang 
+                SET stok = ?,
+                    stok_reserved = ?,
+                    updated_at = NOW()
+                WHERE id = ?
+            ");
+            $updateStmt->execute([$stok_after, $stok_reserved_new, $barang_id]);
+            
+            // Log
+            $this->logStok(
+                $barang_id,
+                'pengeluaran_fulfill',
+                -$qty,
+                $stok_before,
+                $stok_after,
+                $barang['stok_reserved'],
+                $stok_reserved_new,
+                $reference_type,
+                $reference_id,
+                $keterangan,
+                $created_by
+            );
+            
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
+            return ['success' => true, 'message' => "Pengeluaran (Fulfill PO) berhasil: {$qty} pcs"];
+            
+        } catch (Exception $e) {
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * MEMBATALKAN pemenuhan stok (Rollback Pengeluaran dari PO)
+     * Ini menambah kembali stok fisik dan stok_reserved.
+     * Stok_available TIDAK ditambah karena masih berstatus di-booking oleh PO.
+     */
+    public function unfulfillStok($barang_id, $qty, $reference_type = 'pengeluaran_rollback', $reference_id = null, $created_by = null, $keterangan = '') {
+        $isRootTransaction = false;
+        try {
+            if (!$this->pdo->inTransaction()) {
+                $this->pdo->beginTransaction();
+                $isRootTransaction = true;
+            }
+            
+            $stmt = $this->pdo->prepare("SELECT stok, stok_reserved, stok_available FROM barang WHERE id = ? FOR UPDATE");
+            $stmt->execute([$barang_id]);
+            $barang = $stmt->fetch();
+            
+            if (!$barang) {
+                throw new Exception("Produk tidak ditemukan");
+            }
+            
+            $stok_before = $barang['stok'];
+            $stok_after = $barang['stok'] + $qty;
+            // stok_available tetap
+            $stok_available_after = $barang['stok_available'];
+            // stok_reserved dikembalikan
+            $stok_reserved_new = $barang['stok_reserved'] + $qty;
+            
+            $updateStmt = $this->pdo->prepare("UPDATE barang SET stok = ?, stok_reserved = ?, updated_at = NOW() WHERE id = ?");
+            $updateStmt->execute([$stok_after, $stok_reserved_new, $barang_id]);
+            
+            $this->logStok($barang_id, 'pengeluaran_unfulfill', $qty, $stok_before, $stok_after, $barang['stok_reserved'], $stok_reserved_new, $reference_type, $reference_id, $keterangan, $created_by);
+            
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
+            return ['success' => true, 'message' => "Rollback Pengeluaran PO berhasil: {$qty} pcs"];
+            
+        } catch (Exception $e) {
+            if ($isRootTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+    
+    /**
      * KURANG stok saat pengeluaran (shipment ke customer)
      */
     public function reduceStok($barang_id, $qty, $reference_type = 'pengeluaran', $reference_id = null, $created_by = null, $keterangan = '') {

@@ -68,13 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // Handle item PIC updates
-    if (!empty($_POST['item_pic'])) {
-        foreach ($_POST['item_pic'] as $itemId => $picId) {
-            $picId = !empty($picId) ? (int)$picId : null;
-            SPK::updateItemPic($itemId, $picId);
-        }
-    }
+    $data['items'] = $_POST['items'] ?? [];
     
     if (!$errors) {
         // Jika PO berubah, sync items dari PO baru
@@ -263,14 +257,16 @@ $statusLabel = match($spk['status']) { 'on_progress' => 'On Progress', 'complete
                       <?php foreach ($items as $item): ?>
                       <tr style="border-bottom: 1px solid #eee;">
                         <td style="padding: 10px;">
+                          <input type="hidden" name="items[<?= $item['id'] ?>][barang_id]" value="<?= $item['barang_id'] ?>">
+                          <input type="hidden" name="items[<?= $item['id'] ?>][nama_barang]" value="<?= htmlspecialchars($item['nama_barang']) ?>">
                           <strong><?= htmlspecialchars($item['nama_barang']) ?></strong><br>
                           <small style="color: #999;">ID: <?= $item['barang_id'] ?></small>
                         </td>
                         <td style="padding: 10px; text-align: center;">
-                          <?= (int)$item['qty_po'] ?>
+                          <input type="number" name="items[<?= $item['id'] ?>][qty_schedule]" class="form-control" style="width: 100px; margin: 0 auto;" value="<?= (int)($item['qty_schedule'] ?? $item['qty_po']) ?>" min="1" required>
                         </td>
                         <td style="padding: 10px; text-align: center;">
-                          <select name="item_pic[<?= $item['id'] ?>]" class="form-control" style="width: 100%; max-width: 150px;">
+                          <select name="items[<?= $item['id'] ?>][pic_id]" class="form-control" style="width: 100%; max-width: 150px;">
                             <option value="">-- Pilih --</option>
                             <?php foreach ($users as $u): ?>
                               <option value="<?= $u['id'] ?>" <?= ($item['pic_id'] ?? null) == $u['id'] ? 'selected' : '' ?>>

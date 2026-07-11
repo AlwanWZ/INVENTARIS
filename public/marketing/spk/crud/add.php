@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $data = [
         'nomor_spk'   => trim($_POST['nomor_spk'] ?? ''),
-        'pesanan_id'       => $pesanan_id,
+        'pesanan_id'  => $pesanan_id,
         'customer_id' => $customer_id,
         'tanggal'     => $_POST['tanggal']   ?? '',
         'deadline'    => $_POST['deadline']  ?? '',
@@ -86,6 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'status'      => $_POST['status']    ?? 'draft', // Mengambil nilai dari value option select
         'notes'       => trim($_POST['notes'] ?? ''),
         'progress'    => (int)($_POST['progress'] ?? 0),
+        'items'       => $_POST['items'] ?? [],
     ];
     
     if (!$data['nomor_spk']) $errors[] = 'Nomor SPK wajib diisi.';
@@ -124,6 +125,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link href="/Inventaris/public/assets/css/nav.css" rel="stylesheet">
   <link href="/Inventaris/public/assets/css/marketing-css/dashboard.css" rel="stylesheet">
   <link href="/Inventaris/public/assets/css/marketing-css/spk.css" rel="stylesheet">
+  <style>
+    .items-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .items-table th, .items-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    .items-table th { background: #f8f9fa; font-size: 0.85rem; }
+    .items-table td { font-size: 0.9rem; }
+    .items-table input.form-control { padding: 6px; font-size: 0.9rem; }
+  </style>
 </head>
 <body>
 <?php include '../../../../templates/nav.php'; ?>
@@ -266,6 +274,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         placeholder="Catatan tambahan (opsional)"><?= htmlspecialchars($_POST['notes'] ?? '') ?></textarea>
             </div>
 
+            <!-- TABEL BARANG DINAMIS -->
+            <div id="spkItemsContainer" style="display: none; margin-bottom: 25px;">
+              <h5 style="margin-bottom: 12px; font-weight: 700; color: #333; border-bottom: 2px solid #e8621a; display: inline-block; padding-bottom: 5px;">Daftar Barang untuk Diproduksi</h5>
+              <p style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Anda dapat mengubah kolom <strong>Qty Produksi (SPK)</strong> sesuai kebutuhan produksi, tidak harus sama dengan sisa pesanan.</p>
+              <div style="overflow-x: auto;">
+                <table class="items-table">
+                  <thead>
+                    <tr>
+                      <th>Nama Barang</th>
+                      <th>Pesanan (PO)</th>
+                      <th>Sudah Dikirim</th>
+                      <th>Sisa PO</th>
+                      <th>Stok Gudang</th>
+                      <th>Qty Produksi (SPK) <span class="required">*</span></th>
+                      <th>Keterangan</th>
+                    </tr>
+                  </thead>
+                  <tbody id="spkItemsBody">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <!-- END TABEL -->
+
             <div class="form-actions">
               <button type="submit" class="btn-primary"><i class="bi bi-check-lg"></i> Simpan SPK</button>
               <a href="../index.php" class="btn-outline">Batal</a>
@@ -291,7 +323,63 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    poSelect.addEventListener('change', syncCustomer);
+    poSelect.addEventListener('change', function() {
+        syncCustomer();
+        
+        const poId = this.value;
+        const container = document.getElementById('spkItemsContainer');
+        const tbody = document.getElementById('spkItemsBody');
+        
+        if (!poId) {
+            container.style.display = 'none';
+            tbody.innerHTML = '';
+            return;
+        }
+
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Memuat data barang...</td></tr>';
+        container.style.display = 'block';
+
+        fetch(`get_po_items_for_spk.php?po_id=${poId}`)
+            .then(res => res.json())
+            .then(data => {
+                tbody.innerHTML = '';
+                if (!data.success) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">${data.message}</td></tr>`;
+                    return;
+                }
+                
+                if (data.items.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">PO ini tidak memiliki barang.</td></tr>`;
+                    return;
+                }
+
+                data.items.forEach((item, index) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>
+                            <input type="hidden" name="items[${index}][barang_id]" value="${item.barang_id}">
+                            <input type="hidden" name="items[${index}][nama_barang]" value="${item.nama_material}">
+                            ${item.nama_material}
+                        </td>
+                        <td>${item.qty_po}</td>
+                        <td>${item.qty_dikirim}</td>
+                        <td style="font-weight:bold; color:#d97706;">${item.sisa_pesanan}</td>
+                        <td>${item.stok_gudang}</td>
+                        <td>
+                            <input type="number" class="form-control" name="items[${index}][qty_schedule]" value="${item.sisa_pesanan}" min="1" required style="width: 100px;">
+                        </td>
+                        <td>
+                            <input type="text" class="form-control" name="items[${index}][note]" value="${item.note || ''}" placeholder="Catatan">
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">Gagal memuat barang.</td></tr>`;
+            });
+    });
+
     syncCustomer();
 });
 </script>

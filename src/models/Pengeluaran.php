@@ -167,16 +167,28 @@ class Pengeluaran {
                     if ($syncPesananId) {
                         $stmtUpdatePO = $this->pdo->prepare("UPDATE pesanan_items SET qty_dikirim = qty_dikirim + ? WHERE pesanan_id = ? AND barang_id = ?");
                         $stmtUpdatePO->execute([$item['qty'], $syncPesananId, $item['barang_id']]);
+                        
+                        // FULFILL STOK (karena pesanan_id ada, stok_available sudah dipotong di awal, jadi jangan dipotong lagi)
+                        $result = $stokTracking->fulfillStok(
+                            $item['barang_id'],
+                            $item['qty'],
+                            'pengeluaran',
+                            $pengeluaran_id,
+                            $data['pic'] ?? null,
+                            "Pengeluaran ke customer (PO) - " . ($data['nomor_pengeluaran'] ?? 'No Ref')
+                        );
+                    } else {
+                        // REDUCE STOK BIASA (karena tidak terikat PO langsung, potong stok & stok_available)
+                        $result = $stokTracking->reduceStok(
+                            $item['barang_id'],
+                            $item['qty'],
+                            'pengeluaran',
+                            $pengeluaran_id,
+                            $data['pic'] ?? null,
+                            "Pengeluaran ke customer - " . ($data['nomor_pengeluaran'] ?? 'No Ref')
+                        );
                     }
-
-                    $result = $stokTracking->reduceStok(
-                        $item['barang_id'],
-                        $item['qty'],
-                        'pengeluaran',
-                        $pengeluaran_id,
-                        $data['pic'] ?? null,
-                        "Pengeluaran ke customer - " . ($data['nomor_pengeluaran'] ?? 'No Ref')
-                    );
+                    
                     if (!$result['success']) {
                         throw new Exception($result['message']);
                     }
@@ -269,14 +281,25 @@ class Pengeluaran {
                     }
                     
                     // Completed → Draft/pending: ADD BACK stok (rollback)
-                    $result = $stokTracking->addStok(
-                        $item['barang_id'],
-                        $item['qty'],
-                        'pengeluaran_rollback',
-                        $id,
-                        $data['pic'] ?? null,
-                        "Rollback pengeluaran"
-                    );
+                    if ($syncPesananId) {
+                        $result = $stokTracking->unfulfillStok(
+                            $item['barang_id'],
+                            $item['qty'],
+                            'pengeluaran_rollback',
+                            $id,
+                            $data['pic'] ?? null,
+                            "Rollback pengeluaran (PO)"
+                        );
+                    } else {
+                        $result = $stokTracking->addStok(
+                            $item['barang_id'],
+                            $item['qty'],
+                            'pengeluaran_rollback',
+                            $id,
+                            $data['pic'] ?? null,
+                            "Rollback pengeluaran"
+                        );
+                    }
                     if (!$result['success']) {
                         throw new Exception($result['message']);
                     }
@@ -314,16 +337,25 @@ class Pengeluaran {
                 if ($syncPesananId) {
                     $stmtUpdatePO = $this->pdo->prepare("UPDATE pesanan_items SET qty_dikirim = GREATEST(0, qty_dikirim - ?) WHERE pesanan_id = ? AND barang_id = ?");
                     $stmtUpdatePO->execute([$item['qty'], $syncPesananId, $item['barang_id']]);
+                    
+                    $result = $stokTracking->unfulfillStok(
+                        $item['barang_id'],
+                        $item['qty'],
+                        'pengeluaran_cancel',
+                        $id,
+                        null,
+                        'Pembatalan Pengeluaran (PO) - ' . ($pengeluaran['nomor_pengeluaran'] ?? '-')
+                    );
+                } else {
+                    $result = $stokTracking->addStok(
+                        $item['barang_id'],
+                        $item['qty'],
+                        'pengeluaran_cancel',
+                        $id,
+                        null,
+                        'Pembatalan Pengeluaran - ' . ($pengeluaran['nomor_pengeluaran'] ?? '-')
+                    );
                 }
-
-                $result = $stokTracking->addStok(
-                    $item['barang_id'],
-                    $item['qty'],
-                    'pengeluaran_cancel',
-                    $id,
-                    null,
-                    'Pembatalan Pengeluaran - ' . ($pengeluaran['nomor_pengeluaran'] ?? '-')
-                );
 
                 if (!$result['success']) {
                     throw new Exception($result['message']);

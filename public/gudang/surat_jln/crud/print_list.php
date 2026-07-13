@@ -151,7 +151,7 @@ $totalQty       = 0;
       <tr>
         <th>No</th>
         <th>Deskripsi Barang / Part</th>
-        <th>PO No</th>
+        <th>Nomor Pesanan</th>
         <th>Qty</th>
       </tr>
     </thead>

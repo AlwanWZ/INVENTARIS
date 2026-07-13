@@ -11,14 +11,15 @@ require_once '../../../../src/config.php';
 $pesanan = Pesanan::find($_GET['id'] ?? null);
 if (!$pesanan) { header('Location: ../index.php'); exit; }
 
-// Get PO items dengan stok info dari barang
+// Get Pesanan items dengan stok info dari barang
 global $pdo;
 $stmt = $pdo->prepare("
     SELECT 
         poi.*,
         p.stok,
         p.stok_available,
-        p.stok_reserved
+        p.stok_reserved,
+        p.ukuran
     FROM pesanan_items poi
     LEFT JOIN barang p ON poi.barang_id = p.id
     WHERE poi.pesanan_id = ?
@@ -125,7 +126,7 @@ $statusCls = match($pesanan['status']) {
           </div>
         </div>
 
-        <!-- Tambahkan logika untuk mengambil data item PO -->
+        <!-- Tambahkan logika untuk mengambil data item Pesanan -->
         <div class="form-card">
           <div class="form-card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h4><i class="bi bi-list"></i> Item Pesanan</h4>
@@ -155,6 +156,7 @@ $statusCls = match($pesanan['status']) {
                   <th>No</th>
                   <th>Kode Material</th>
                   <th>Nama Material</th>
+                  <th>Ukuran</th>
                   <th>UOM</th>
                   <th>Qty Pesanan</th>
                   <th>Stok Tersedia</th>
@@ -179,6 +181,7 @@ $statusCls = match($pesanan['status']) {
                       <td><?= $i + 1 ?></td>
                       <td><?= htmlspecialchars($item['kode_material']) ?></td>
                       <td><?= htmlspecialchars($item['nama_material']) ?></td>
+                      <td><?= htmlspecialchars($item['ukuran'] ?? '-') ?></td>
                       <td><?= htmlspecialchars($item['uom']) ?></td>
                       <td><strong style="font-size: 1rem;"><?= number_format($item['qty'], 0, ',', '.') ?></strong></td>
                       <td><?= number_format($item['stok_available'] ?? $item['stok'] ?? 0, 0, ',', '.') ?> pcs</td>

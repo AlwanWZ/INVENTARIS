@@ -48,13 +48,16 @@ $sumberKirim = $pdo->query("
     )
     UNION
     (
-        SELECT 'PO' as tipe, NULL as spk_id, p.id as pesanan_id, p.nomor_pesanan as nomor_ref, p.nomor_pesanan,
+        SELECT 'Pesanan' as tipe, NULL as spk_id, p.id as pesanan_id, p.nomor_pesanan as nomor_ref, p.nomor_pesanan,
                COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan,
                c.id as customer_id, c.alamat as alamat_kirim
         FROM pesanan p
         LEFT JOIN customers c ON p.customer_id = c.id
         WHERE p.status != 'cancelled' 
-          AND NOT EXISTS (SELECT 1 FROM spk s WHERE s.pesanan_id = p.id)
+          AND EXISTS (
+              SELECT 1 FROM pesanan_items pi 
+              WHERE pi.pesanan_id = p.id AND pi.qty > COALESCE(pi.qty_dikirim, 0)
+          )
     )
     ORDER BY nomor_ref DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
@@ -82,7 +85,7 @@ if ($selectedSumber) {
 
     if ($selectedPesananId) {
         $stmt = $pdo->prepare("
-            SELECT pi.barang_id, pi.qty, pi.qty_dikirim, pr.nama AS produk_nama, pr.satuan 
+            SELECT pi.barang_id, pi.qty, pi.qty_dikirim, pr.nama AS produk_nama, pr.satuan, pr.stok as stok_gudang
             FROM pesanan_items pi
             JOIN barang pr ON pi.barang_id = pr.id 
             WHERE pi.pesanan_id = ? AND pi.qty > COALESCE(pi.qty_dikirim, 0)
@@ -288,7 +291,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
                 <?php foreach ($sumberKirim as $s): ?>
                   <?php $val = $s['tipe'] . '-' . ($s['tipe'] === 'SPK' ? $s['spk_id'] : $s['pesanan_id']); ?>
                   <option value="<?= $val ?>" <?= ($selectedSumber == $val) ? 'selected' : '' ?>>
-                    [<?= $s['tipe'] ?>] <?= htmlspecialchars($s['nomor_ref']) ?> | PO: <?= htmlspecialchars($s['nomor_pesanan']) ?> | (<?= htmlspecialchars($s['perusahaan']) ?>)
+                    [<?= $s['tipe'] ?>] <?= htmlspecialchars($s['nomor_ref']) ?> | Pesanan: <?= htmlspecialchars($s['nomor_pesanan']) ?> | (<?= htmlspecialchars($s['perusahaan']) ?>)
                   </option>
                 <?php endforeach; ?>
               </select>          
@@ -345,16 +348,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
               <?php if ($items): ?>
               <?php foreach ($items as $i => $item): 
                   $sisa = $item['qty'] - ($item['qty_dikirim'] ?? 0);
+                  $stok_gudang = (int)($item['stok_gudang'] ?? 0);
+                  $default_qty = min($sisa, max(0, $stok_gudang));
               ?>
               <tr class="item-row">
                 <td class="row-num" style="text-align:center;"><?= $i + 1 ?></td>
                 <td style="font-weight: 500; color: var(--text);">
                   <?= htmlspecialchars($item['produk_nama'] ?? '-') ?><br>
-                  <small style="color:var(--text3); font-weight:normal;">Total Pesanan: <?= $item['qty'] ?> | Sudah Terkirim: <?= (int)$item['qty_dikirim'] ?> | <b>Sisa: <?= $sisa ?></b></small>
+                  <small style="color:var(--text3); font-weight:normal;">Total Pesanan: <?= $item['qty'] ?> | Sudah Terkirim: <?= (int)$item['qty_dikirim'] ?> | <b>Sisa: <?= $sisa ?></b> | <b>Stok: <?= $stok_gudang ?></b></small>
                 </td>
                 <td style="text-align:center;">
                   <input type="number" name="items[<?= $i ?>][qty]" class="form-control" style="text-align:center; font-weight:bold; color:#059669;"
-                         min="1" max="<?= $sisa ?>" value="<?= $sisa ?>" required>
+                         min="1" max="<?= $sisa ?>" value="<?= $default_qty ?>" required>
                   <input type="hidden" name="items[<?= $i ?>][barang_id]" value="<?= $item['barang_id'] ?>">
                 </td>
                 <td style="text-align: center; color: var(--text3);"><?= htmlspecialchars($item['satuan'] ?? 'pcs') ?></td>

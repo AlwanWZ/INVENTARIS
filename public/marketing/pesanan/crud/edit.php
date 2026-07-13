@@ -38,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
         'nomor_pesanan'    => trim($_POST['nomor_pesanan'] ?? ''),
         'tanggal'     => $_POST['tanggal'] ?? '',
+        'tanggal_pengiriman' => !empty($_POST['tanggal_pengiriman']) ? $_POST['tanggal_pengiriman'] : null,
         'customer_id' => intval($_POST['customer_id'] ?? 0),
         'status'      => $_POST['status'] ?? 'draft',
         'notes'       => trim($_POST['notes'] ?? ''),
@@ -168,6 +169,12 @@ $statusCls = match($pesanan['status']) { 'Disetujui' => 'ok', 'Proses' => 'warn'
             </div>
 
             <div class="form-group">
+              <label class="form-label">Tanggal Rencana Pengiriman</label>
+              <input type="date" name="tanggal_pengiriman" class="form-control"
+                     value="<?= htmlspecialchars($pesanan['tanggal_pengiriman'] ?? '') ?>">
+            </div>
+
+            <div class="form-group">
               <label class="form-label">Catatan (Opsional)</label>
               <textarea name="notes" class="form-control" rows="3" placeholder="Tambahkan catatan atau informasi khusus tentang pesanan ini..."><?= htmlspecialchars($_POST['notes'] ?? $pesanan['notes'] ?? '') ?></textarea>
             </div>
@@ -198,14 +205,14 @@ $statusCls = match($pesanan['status']) { 'Disetujui' => 'ok', 'Proses' => 'warn'
       <!-- SIDE PANEL -->
       <div class="form-side">
 
-        <!-- Info PO sebelum diedit -->
+        <!-- Info Pesanan sebelum diedit -->
         <div class="form-card">
           <div class="form-card-header">
             <h4><i class="bi bi-clock-history"></i> Data Sebelumnya</h4>
           </div>
           <div class="side-info-list">
             <div class="side-info-item">
-              <span class="side-info-label">Nomor PO</span>
+              <span class="side-info-label">Nomor Pesanan</span>
               <span class="side-info-val"><?= htmlspecialchars($pesanan['nomor_pesanan']) ?></span>
             </div>
             <div class="side-info-item">
@@ -229,9 +236,9 @@ $statusCls = match($pesanan['status']) { 'Disetujui' => 'ok', 'Proses' => 'warn'
             <h4><i class="bi bi-shield-exclamation"></i> Zona Berbahaya</h4>
           </div>
           <div class="danger-body">
-            <p>Hapus PO ini secara permanen. Tindakan ini tidak dapat dibatalkan.</p>
+            <p>Hapus Pesanan ini secara permanen. Tindakan ini tidak dapat dibatalkan.</p>
             <button type="button" class="btn-danger" id="deleteBtn">
-              <i class="bi bi-trash"></i> Hapus PO
+              <i class="bi bi-trash"></i> Hapus Pesanan
             </button>
           </div>
         </div>
@@ -245,8 +252,8 @@ $statusCls = match($pesanan['status']) { 'Disetujui' => 'ok', 'Proses' => 'warn'
         <div class="modal-icon">
           <i class="bi bi-exclamation-triangle"></i>
         </div>
-        <h3>Hapus Purchase Order?</h3>
-        <p>PO <strong><?= htmlspecialchars($pesanan['nomor_pesanan']) ?></strong> akan dihapus permanen dan tidak bisa dikembalikan.</p>
+        <h3>Hapus Pesanan?</h3>
+        <p>Pesanan <strong><?= htmlspecialchars($pesanan['nomor_pesanan']) ?></strong> akan dihapus permanen dan tidak bisa dikembalikan.</p>
         <div class="modal-actions">
           <form method="post" action="delete.php">
             <input type="hidden" name="id" value="<?= $pesanan['id'] ?>">

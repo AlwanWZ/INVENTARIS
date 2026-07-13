@@ -18,12 +18,17 @@ if (!$po_id) {
 }
 
 try {
-    // Ambil info perusahaan dari PO
-    $stmtPO = $pdo->prepare("SELECT perusahaan FROM pesanan WHERE id = ?");
+    // Ambil info perusahaan dari Pesanan
+    $stmtPO = $pdo->prepare("
+        SELECT c.perusahaan 
+        FROM pesanan p 
+        LEFT JOIN customers c ON p.customer_id = c.id 
+        WHERE p.id = ?
+    ");
     $stmtPO->execute([$po_id]);
     $poInfo = $stmtPO->fetch(PDO::FETCH_ASSOC);
 
-    // Ambil items PO beserta perhitungan sisa yang belum dikirim
+    // Ambil items Pesanan beserta perhitungan sisa yang belum dikirim
     $sql = "
         SELECT 
             pi.id as po_item_id,
@@ -33,6 +38,7 @@ try {
             IFNULL(pi.qty_dikirim, 0) as qty_dikirim,
             b.stok as stok_gudang,
             b.stok_available,
+            b.ukuran,
             pi.keterangan as note
         FROM pesanan_items pi
         LEFT JOIN barang b ON pi.barang_id = b.id

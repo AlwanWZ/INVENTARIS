@@ -3,7 +3,7 @@
  * Real-time Stock Information API
  * 
  * Endpoint untuk menampilkan stok real-time barang
- * Used by: Marketing module, Dashboard, PO form
+ * Used by: Marketing module, Dashboard, Pesanan form
  * 
  * Query Parameters:
  * - barang_id: ID barang (single)

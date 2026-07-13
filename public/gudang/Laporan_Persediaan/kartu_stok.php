@@ -45,8 +45,8 @@ $listMutasi = $mutasi->fetchAll(PDO::FETCH_ASSOC);
 
 function tipeMutasi($tipe) {
     $mapping = [
-        'po_reserve' => 'PO Reserve',
-        'po_unreserve' => 'PO Unreserve',
+        'po_reserve' => 'Pesanan Reserve',
+        'po_unreserve' => 'Pesanan Unreserve',
         'verifikasi_add' => 'Penerimaan (Masuk)',
         'pengeluaran_sub' => 'Pengeluaran (Keluar)',
         'adjustment' => 'Adjustment',
@@ -122,7 +122,7 @@ function tipeMutasi($tipe) {
                 <span class="stat-pill-val" style="color: #4b5563;"><?= number_format((int)$row['stok']) ?></span>
             </div>
             <div class="stat-pill">
-                <span class="stat-pill-label">Dibooking (PO)</span>
+                <span class="stat-pill-label">Dibooking (Pesanan)</span>
                 <span class="stat-pill-val" style="color: #dc3545;"><?= number_format((int)$row['stok_reserved']) ?></span>
             </div>
             <div class="stat-pill" style="border: 1px solid #10b981; background: #f0fdf4;">

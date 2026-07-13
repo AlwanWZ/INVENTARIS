@@ -213,7 +213,7 @@
             <li><i class="bi bi-dot"></i> Nama dan alamat wajib diisi, kolom lain opsional.</li>
             <li><i class="bi bi-dot"></i> Email harus valid jika diisi.</li>
             <li><i class="bi bi-dot"></i> Kode customer dibuat otomatis oleh sistem.</li>
-            <li><i class="bi bi-dot"></i> Customer <em>Nonaktif</em> tidak muncul di pilihan PO baru.</li>
+            <li><i class="bi bi-dot"></i> Customer <em>Nonaktif</em> tidak muncul di pilihan Pesanan baru.</li>
           </ul>
         </div>
         <?php endif; ?>

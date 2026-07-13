@@ -6,7 +6,7 @@ require_once '../../../../src/models/SPK.php';
 $spk = SPK::find($_GET['id'] ?? null);
 if (!$spk) { header('Location: ../index.php'); exit; }
 
-// Auto-sync items jika kosong atau berbeda dengan PO
+// Auto-sync items jika kosong atau berbeda dengan Pesanan
 $items = SPK::getItems($spk['id']);
 if (empty($items) && !empty($spk['pesanan_id'])) {
     SPK::syncItemsFromPO($spk['id']);

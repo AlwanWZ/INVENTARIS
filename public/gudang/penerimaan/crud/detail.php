@@ -107,7 +107,7 @@ $totalSelisih  = $totalOrder - $totalDiterima;
               <span class="detail-val"><?= htmlspecialchars($data['tanggal']) ?></span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">Nomor PO</span>
+              <span class="detail-label">Nomor Pesanan</span>
               <span class="detail-val"><?= htmlspecialchars($data['nomor_pesanan'] ?: '—') ?></span>
             </div>
             <div class="detail-item">

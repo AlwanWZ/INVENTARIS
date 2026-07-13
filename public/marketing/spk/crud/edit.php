@@ -71,13 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data['items'] = $_POST['items'] ?? [];
     
     if (!$errors) {
-        // Jika PO berubah, sync items dari PO baru
+        // Jika Pesanan berubah, sync items dari Pesanan baru
         $oldPoId = $spk['pesanan_id'];
         $newPoId = $data['pesanan_id'];
         
         SPK::update($spk['id'], $data);
         
-        // Auto-sync items jika PO berubah
+        // Auto-sync items jika Pesanan berubah
         if ($oldPoId != $newPoId && !empty($newPoId)) {
             SPK::syncItemsFromPO($spk['id']);
             $items = SPK::getItems($spk['id']);
@@ -364,7 +364,7 @@ $statusLabel = match($spk['status']) { 'on_progress' => 'On Progress', 'complete
 </main>
 
 <script>
-  // PO → Customer auto-fill
+  // Pesanan → Customer auto-fill
   document.getElementById('poSelect')?.addEventListener('change', function () {
     document.getElementById('customerField').value =
       this.options[this.selectedIndex].getAttribute('data-customer') || '';

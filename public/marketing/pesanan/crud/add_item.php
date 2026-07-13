@@ -240,7 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <li><i class="bi bi-dot"></i> Harga satuan bisa diedit sesuai deal</li>
               <li><i class="bi bi-dot"></i> Diskon dihitung per item</li>
               <li><i class="bi bi-dot"></i> Total pesanan = sum semua items</li>
-              <li><i class="bi bi-dot"></i> Bisa tambah multiple items ke 1 PO</li>
+              <li><i class="bi bi-dot"></i> Bisa tambah multiple items ke 1 Pesanan</li>
             </ul>
           </div>
         </div>

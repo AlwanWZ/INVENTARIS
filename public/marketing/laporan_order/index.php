@@ -358,7 +358,7 @@ $hasFilter = array_filter($filter);
         </div>
         <div class="filter-group filter-search">
           <label class="form-label">Cari</label>
-          <input type="text" name="search" class="form-control" placeholder="No. PO / perusahaan..." value="<?= htmlspecialchars($filter['search']) ?>">
+          <input type="text" name="search" class="form-control" placeholder="No. Pesanan / perusahaan..." value="<?= htmlspecialchars($filter['search']) ?>">
         </div>
         <div class="filter-actions">
           <button type="submit" class="btn-primary"><i class="bi bi-funnel"></i> Terapkan</button>

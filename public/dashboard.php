@@ -44,11 +44,11 @@ foreach ($poList as $pesanan) {
 
 // Tabel aktivitas: 5 aktivitas terakhir
 $aktivitas = [];
-// PO
+// Pesanan
 foreach (array_slice($poList,0,5) as $pesanan) {
   $aktivitas[] = [
     'tanggal' => $pesanan['tanggal'],
-    'desc' => 'Marketing membuat PO <b>' . htmlspecialchars($pesanan['nomor_pesanan']) . '</b>'
+    'desc' => 'Marketing membuat Pesanan <b>' . htmlspecialchars($pesanan['nomor_pesanan']) . '</b>'
   ];
 }
 // Penerimaan

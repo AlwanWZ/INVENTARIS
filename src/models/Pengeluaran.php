@@ -30,7 +30,7 @@ class Pengeluaran {
             ON p.spk_id = spk.id
             
         LEFT JOIN pesanan
-            ON p.pesanan_id = pesanan.id
+            ON pesanan.id = COALESCE(spk.pesanan_id, p.pesanan_id)
 
         LEFT JOIN surat_jalan sj
             ON sj.pengeluaran_id = p.id
@@ -94,7 +94,7 @@ class Pengeluaran {
             ON p.spk_id = spk.id
             
         LEFT JOIN pesanan
-            ON p.pesanan_id = pesanan.id
+            ON pesanan.id = COALESCE(spk.pesanan_id, p.pesanan_id)
 
         LEFT JOIN surat_jalan sj
             ON sj.pengeluaran_id = p.id

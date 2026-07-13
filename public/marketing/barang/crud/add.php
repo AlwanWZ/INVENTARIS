@@ -73,6 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'kategori'    => 'PCB', // String default untuk keamanan jika tabel kategori dihapus
         'stok'        => $stok_input,
         'stok_min'    => (int)($_POST['stok_min'] ?? 10),
+        'ukuran'      => trim($_POST['ukuran'] ?? ''),
         'satuan'      => trim($_POST['satuan'] ?? 'pcs'),
         'harga'       => (int)($_POST['harga'] ?? 0),
         'harga_jual'  => (float)($_POST['harga_jual'] ?? 0),
@@ -212,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">HPP (Rp)</label>
-                <input type="text" name="harga" id="hargaInput" class="form-control" placeholder="0" value="<?= (int)($_POST['harga'] ?? 0) ?>" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                <input type="text" name="harga" id="hargaInput" class="form-control" placeholder="0" value="<?= isset($_POST['harga']) ? (int)$_POST['harga'] : '' ?>" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                 <small id="hargaPreview" class="text-muted" style="display:block;margin-top:.25rem;font-weight:600;color:#059669!important;">
                     Preview HPP : Rp <?= number_format((int)($_POST['harga'] ?? 0),0,',','.') ?>
                 </small>
@@ -220,7 +221,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
               <div class="form-group">
                 <label class="form-label">Harga Jual (Rp)</label>
-                <input type="text" name="harga_jual" id="hargaJualInput" class="form-control" placeholder="0" value="<?= (int)($_POST['harga_jual'] ?? 0) ?>" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                <input type="text" name="harga_jual" id="hargaJualInput" class="form-control" placeholder="0" value="<?= isset($_POST['harga_jual']) ? (int)$_POST['harga_jual'] : '' ?>" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                 <small id="hargaJualPreview" class="text-muted" style="display:block;margin-top:.25rem;font-weight:600;color:#2563eb!important;">
                     Preview Harga Jual : Rp <?= number_format((int)($_POST['harga_jual'] ?? 0),0,',','.') ?>
                 </small>
@@ -230,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Stok Fisik Awal</label>
-                <input type="number" name="stok" class="form-control" placeholder="0" min="0" value="<?= (int)($_POST['stok'] ?? 0) ?>">
+                <input type="number" name="stok" class="form-control" placeholder="0" min="0" value="<?= isset($_POST['stok']) ? (int)$_POST['stok'] : '' ?>">
               </div>
               <div class="form-group">
                 <label class="form-label">Batas Stok Minimum</label>
@@ -241,9 +242,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="form-row">
               <div class="form-group">
+                <label class="form-label">Ukuran <span class="required">*</span></label>
+                <select name="ukuran" class="form-control" required>
+                    <option value="">-- Pilih Ukuran --</option>
+                    <?php 
+                    $ukrOptions = ['284 × 236 mm', '192.43 × 189.8 mm', '192.43 × 190 mm'];
+                    $selectedUkr = $_POST['ukuran'] ?? '';
+                    foreach ($ukrOptions as $u): ?>
+                        <option value="<?= htmlspecialchars($u) ?>" <?= $selectedUkr === $u ? 'selected' : '' ?>><?= htmlspecialchars($u) ?></option>
+                    <?php endforeach; ?>
+                </select>
+              </div>
+
+              <div class="form-group">
                 <label class="form-label">Satuan (UOM)</label>
                 <input type="text" name="satuan" class="form-control" placeholder="pcs, sheet, roll..." value="<?= htmlspecialchars($_POST['satuan'] ?? 'pcs') ?>" required>
               </div>
+            </div>
+            
+            <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Status</label>
                 <select name="status" class="form-control">
@@ -270,7 +287,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <ul class="info-list">
             <li><i class="bi bi-dot"></i> <strong>Kategori & Kode:</strong> Sistem telah otomatis menetapkan kategori PCB dan nomor urut berdasarkan tabel Barang terbaru.</li>
             <li><i class="bi bi-dot"></i> <strong>Stok Fisik Awal</strong> akan langsung menjadi Stok Tersedia (Available) karena belum ada pesanan.</li>
-            <li><i class="bi bi-dot"></i> Barang dengan status <strong>Tidak Aktif</strong> tidak akan muncul saat membuat pesanan (PO).</li>
+            <li><i class="bi bi-dot"></i> Barang dengan status <strong>Tidak Aktif</strong> tidak akan muncul saat membuat pesanan (Pesanan).</li>
           </ul>
         </div>
       </div>

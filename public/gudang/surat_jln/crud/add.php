@@ -25,12 +25,12 @@ if ($lastSJ) {
 $suratJalanModel = new SuratJalan($pdo);
 
 // --- PERBAIKAN KUERI CUSTOMER TINGKAT DEWA ---
-// Masalah kemarin: customer_id ternyata nempel di PO, bukan di SPK.
+// Masalah kemarin: customer_id ternyata nempel di Pesanan, bukan di SPK.
 // Solusi: Kita pakai COALESCE(pesanan.customer_id, s.customer_id) biar nyari di dua-duanya.
 $pengeluaranList = $pdo->query("
     SELECT p.id, p.nomor_pengeluaran, 
            COALESCE(s.nomor_spk, 'Tanpa SPK') as nomor_spk, 
-           COALESCE(pesanan.nomor_pesanan, 'Tanpa PO') as nomor_pesanan, 
+           COALESCE(pesanan.nomor_pesanan, 'Tanpa Pesanan') as nomor_pesanan, 
            COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan 
     FROM pengeluaran p
     LEFT JOIN spk s ON p.spk_id = s.id
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
     if (!$data['pengeluaran_id']) $errors[] = 'Pengeluaran wajib dipilih.';
     if (!$data['driver'])         $errors[] = 'Driver wajib diisi.';
     if (!$data['kendaraan'])      $errors[] = 'Kendaraan wajib diisi.';
-    if (!$data['customer_id'])    $errors[] = 'Data Customer tidak ditemukan dari PO/SPK. Pastikan pesanan ini memiliki Customer.';
+    if (!$data['customer_id'])    $errors[] = 'Data Customer tidak ditemukan dari Pesanan/SPK. Pastikan pesanan ini memiliki Customer.';
     
     if (!$errors) {
       try {
@@ -349,7 +349,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
                   <option value="<?= $p['id'] ?>" <?= ($_POST['pengeluaran_id'] ?? '') == $p['id'] ? 'selected' : '' ?>>
                     <?= htmlspecialchars($p['nomor_pengeluaran']) ?> | 
                     SPK: <?= htmlspecialchars($p['nomor_spk'] ?? '-') ?> | 
-                    PO: <?= htmlspecialchars($p['nomor_pesanan'] ?? '-') ?> | 
+                    Pesanan: <?= htmlspecialchars($p['nomor_pesanan'] ?? '-') ?> | 
                     (<?= htmlspecialchars($p['perusahaan'] ?? 'Customer Tidak Ditemukan') ?>)
                   </option>
                 <?php endforeach; ?>

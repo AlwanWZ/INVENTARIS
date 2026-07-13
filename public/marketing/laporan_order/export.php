@@ -65,7 +65,7 @@ $topName = array_key_first($topCustomer);
 </head>
 <body>
 
-<h2>Laporan Purchase Order</h2>
+<h2>Laporan Pesanan</h2>
 
 <!-- FILTER -->
 <form method="GET" class="filter">
@@ -84,7 +84,7 @@ $topName = array_key_first($topCustomer);
 
 <!-- SUMMARY -->
 <div class="summary">
-  <div>Total PO: <?= $totalPO ?></div>
+  <div>Total Pesanan: <?= $totalPO ?></div>
   <div>Total Revenue: Rp <?= number_format($totalUang,0,',','.') ?></div>
   <div>Approved: <?= $approved ?></div>
   <div>Rejected: <?= $rejected ?></div>
@@ -101,7 +101,7 @@ $topName = array_key_first($topCustomer);
   <thead>
     <tr>
       <th>No</th>
-      <th>Nomor PO</th>
+      <th>Nomor Pesanan</th>
       <th>Customer</th>
       <th>Tanggal</th>
       <th>Status</th>

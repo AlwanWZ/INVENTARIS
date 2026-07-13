@@ -71,6 +71,7 @@ class Barang {
     nama,
     kategori_id,
     kategori,
+    ukuran,
     stok,
     stok_reserved,
     stok_available,
@@ -81,7 +82,7 @@ class Barang {
     status,
     created_at
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
@@ -89,6 +90,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
             $data['nama'] ?? '',
             $kategori_id > 0 ? $kategori_id : null,
             $kategori_str,
+            $data['ukuran'] ?? null,
             $stok,
             $stok_reserved,
             $stok_available,
@@ -135,6 +137,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
         $sql = 'UPDATE barang SET
                 kode_barang = ?,
                 nama = ?,
+                ukuran = ?,
                 stok = ?,
                 stok_available = ?,
                 stok_min = ?,
@@ -149,6 +152,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())';
         $stmt->execute([
             $data['kode_barang'] ?? $data['kode_produk'] ?? $data['kode'] ?? $barang['kode_barang'] ?? '',
             $data['nama'] ?? $barang['nama'],
+            $data['ukuran'] ?? $barang['ukuran'] ?? null,
             $stok_baru,
             $stok_available,
             (int)($data['stok_min'] ?? $barang['stok_min'] ?? 10),

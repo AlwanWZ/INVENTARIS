@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'nama'           => trim($_POST['nama'] ?? ''),
         'stok'           => $newStok,
         'stok_min'       => (int)($_POST['stok_min'] ?? 10),
+        'ukuran'         => trim($_POST['ukuran'] ?? ''),
         'satuan'         => trim($_POST['satuan'] ?? 'pcs'),
         'harga'          => (int)($_POST['harga'] ?? 0),
         'status'         => $_POST['status'] ?? 'aktif',
@@ -147,16 +148,16 @@ $statusCls = match(strtolower($barang['status'] ?? '')) {
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Harga (Rp)</label>
-                <input type="number" name="harga" class="form-control" min="0"
-                       value="<?= htmlspecialchars((string)($barang['harga'] ?? 0)) ?>" onchange="this.value = this.value.replace(/\D/g, '');">
+                <input type="text" name="harga" class="form-control"
+                       value="<?= $barang['harga'] > 0 ? (int)$barang['harga'] : '' ?>" placeholder="0" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                 <small class="text-muted" style="display: block; margin-top: 0.25rem;">
                   Preview: Rp <?= number_format((int)($barang['harga'] ?? 0), 0, ',', '.') ?>
                 </small>
               </div>
               <div class="form-group">
                 <label class="form-label">Stok Fisik</label>
-                <input type="number" name="stok" class="form-control" min="0"
-                       value="<?= htmlspecialchars((string)($barang['stok'] ?? 0)) ?>">
+                <input type="number" name="stok" class="form-control" min="0" placeholder="0"
+                       value="<?= $barang['stok'] > 0 ? (int)$barang['stok'] : '' ?>">
                 <small class="text-muted" style="display: block; margin-top: 0.25rem;">Perubahan stok fisik akan otomatis menyesuaikan stok yang bisa dijual.</small>
               </div>
             </div>
@@ -164,8 +165,21 @@ $statusCls = match(strtolower($barang['status'] ?? '')) {
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Batas Stok Minimum</label>
-                <input type="number" name="stok_min" class="form-control" min="0"
-                       value="<?= htmlspecialchars((string)($barang['stok_min'] ?? 10)) ?>">
+                <input type="number" name="stok_min" class="form-control" min="0" placeholder="10"
+                       value="<?= $barang['stok_min'] > 0 ? (int)$barang['stok_min'] : '' ?>">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Ukuran <span class="required">*</span></label>
+                <select name="ukuran" class="form-control" required>
+                    <option value="">-- Pilih Ukuran --</option>
+                    <?php 
+                    $ukrOptions = ['284 × 236 mm', '192.43 × 189.8 mm', '192.43 × 190 mm'];
+                    $selectedUkr = $_POST['ukuran'] ?? $barang['ukuran'] ?? '';
+                    foreach ($ukrOptions as $u): ?>
+                        <option value="<?= htmlspecialchars($u) ?>" <?= $selectedUkr === $u ? 'selected' : '' ?>><?= htmlspecialchars($u) ?></option>
+                    <?php endforeach; ?>
+                </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Satuan</label>

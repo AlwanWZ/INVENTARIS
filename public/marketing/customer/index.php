@@ -64,7 +64,7 @@ $customers = Customer::getAll($search);
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-title-lg">Customer</h1>
-        <p class="page-subtitle">Kelola data customer untuk kebutuhan PO dan transaksi.</p>
+        <p class="page-subtitle">Kelola data customer untuk kebutuhan Pesanan dan transaksi.</p>
       </div>
       <a href="add.php" class="btn-primary"><i class="bi bi-plus-lg"></i> Tambah Customer</a>
     </div>

@@ -23,13 +23,13 @@ if (!$pesanan_id || !$action) {
 try {
     global $pdo;
     
-    // Get PO data
+    // Get Pesanan data
     $pesanan = Pesanan::find($pesanan_id);
     if (!$pesanan) {
         throw new Exception('PO tidak ditemukan');
     }
     
-    // Get PO items
+    // Get Pesanan items
     $stmt = $pdo->prepare("SELECT * FROM pesanan_items WHERE pesanan_id = ?");
     $stmt->execute([$pesanan_id]);
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -39,7 +39,7 @@ try {
     }
     
     if ($action === 'reserve') {
-        // RESERVE STOK - Kurangi stok barang saat PO approved
+        // RESERVE STOK - Kurangi stok barang saat Pesanan approved
         $pdo->beginTransaction();
         
         $stokTracking = new StokTracking($pdo);
@@ -56,11 +56,11 @@ try {
                 'PO',
                 $pesanan_id,
                 $_SESSION['user']['id'],
-                "Reserve untuk PO #{$pesanan['nomor_pesanan']} - {$item['nama_material']}"
+                "Reserve untuk Pesanan #{$pesanan['nomor_pesanan']} - {$item['nama_material']}"
             );
         }
         
-        // Update PO status_stok ke 'reserved'
+        // Update Pesanan status_stok ke 'reserved'
         $updateStmt = $pdo->prepare("UPDATE pesanan SET status_stok = 'reserved' WHERE id = ?");
         $updateStmt->execute([$pesanan_id]);
         
@@ -72,12 +72,12 @@ try {
         
         echo json_encode([
             'success' => true,
-            'message' => 'Stok berhasil di-reserve untuk PO ini',
+            'message' => 'Stok berhasil di-reserve untuk Pesanan ini',
             'status' => 'reserved'
         ]);
         
     } else if ($action === 'unreserve') {
-        // UNRESERVE STOK - Kembalikan stok jika PO dibatalkan
+        // UNRESERVE STOK - Kembalikan stok jika Pesanan dibatalkan
         $pdo->beginTransaction();
         
         $stokTracking = new StokTracking($pdo);
@@ -94,11 +94,11 @@ try {
                 'PO',
                 $pesanan_id,
                 $_SESSION['user']['id'],
-                "Unreserve: PO #{$pesanan['nomor_pesanan']} dibatalkan"
+                "Unreserve: Pesanan #{$pesanan['nomor_pesanan']} dibatalkan"
             );
         }
         
-        // Update PO status_stok ke 'draft'
+        // Update Pesanan status_stok ke 'draft'
         $updateStmt = $pdo->prepare("UPDATE pesanan SET status_stok = 'draft' WHERE id = ?");
         $updateStmt->execute([$pesanan_id]);
         

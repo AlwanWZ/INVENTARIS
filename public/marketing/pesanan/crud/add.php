@@ -15,7 +15,7 @@ require_once '../../../../src/functions.php';
 $errors = [];
 $success = false;
 
-// 🚀 LOGIKA AUTO-GENERATE NOMOR PO (Format: PO-BulanTahun-Urutan -> PO-0626-001)
+// 🚀 LOGIKA AUTO-GENERATE NOMOR Pesanan (Format: PO-BulanTahun-Urutan -> PO-0626-001)
 $prefixOrder = 'PCB-' . date('my') . '-'; // my = bulan 2 digit, tahun 2 digit (0626)
 try {
     // Kita cari pesanan terakhir di bulan ini yang pakai awalan 'PCB-0626-'
@@ -39,13 +39,18 @@ try {
 
 // Get all customers & products
 $customerList = Customer::getAll();
-$produkList = Barang::all();
+$produkListAll = Barang::all();
+
+// Filter: Jangan tampilkan barang yang stoknya habis / belum ada stok (berdasarkan stok_available)
+$produkList = array_values(array_filter($produkListAll, function($p) {
+    return (int)$p['stok_available'] > 0;
+}));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dataPO = [
         'nomor_pesanan'    => trim($_POST['nomor_pesanan'] ?? ''),
         'tanggal'     => $_POST['tanggal'] ?? '',
-        'tanggal_pengiriman' => $_POST['tanggal_pengiriman'] ?? null,
+        'tanggal_pengiriman' => !empty($_POST['tanggal_pengiriman']) ? $_POST['tanggal_pengiriman'] : null,
         'customer_id' => intval($_POST['customer_id'] ?? 0),
         'status'      => $_POST['status'] ?? 'draft',
         'notes'       => trim($_POST['notes'] ?? ''),
@@ -119,7 +124,7 @@ if (!empty($dataPO['tanggal_pengiriman']) && $dataPO['tanggal_pengiriman'] < $da
         $errors[] = 'Minimal harus ada 1 item dalam pesanan yang valid stoknya.';
     }
 
-    // If no errors, create PO with items
+    // If no errors, create Pesanan with items
     if (!$errors) {
         try {
             // RULE 3: Pesanan::createWithItems() OTOMATIS HANDLE stock reduction dalam transaction
@@ -379,7 +384,7 @@ if (!empty($dataPO['tanggal_pengiriman']) && $dataPO['tanggal_pengiriman'] < $da
         <div class="breadcrumb">
           <a href="/Inventaris/public/dashboard.php">Dashboard</a>
           <i class="bi bi-chevron-right"></i>
-          <a href="../index.php">Purchase Order</a>
+          <a href="../index.php">Pesanan</a>
           <i class="bi bi-chevron-right"></i>
           <span>Tambah Order</span>
         </div>
@@ -399,7 +404,7 @@ if (!empty($dataPO['tanggal_pengiriman']) && $dataPO['tanggal_pengiriman'] < $da
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-title-lg"><i class="bi bi-file-earmark-arrow-down" style="margin-right: 10px; color: var(--accent);"></i>Buat Pesanan Baru</h1>
-        <p class="page-subtitle">Input data Purchase Order (PO) beserta rincian barangnya dengan mudah dan cepat.</p>
+        <p class="page-subtitle">Input data Pesanan beserta rincian barangnya dengan mudah dan cepat.</p>
       </div>
       <a href="../index.php" class="btn-ghost-sm"><i class="bi bi-arrow-left"></i> Kembali ke Daftar</a>
     </div>

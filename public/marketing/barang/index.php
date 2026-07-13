@@ -243,6 +243,7 @@ $stokHabis = array_filter($barangList, function($p) {
                 data-code="<?= htmlspecialchars($p['kode_barang'] ?? $p['kode'] ?? '-') ?>" 
                 data-name="<?= htmlspecialchars($p['nama']) ?>" 
                 data-category="<?= htmlspecialchars($p['nama_kategori'] ?? 'PCB') ?>" 
+                data-ukuran="<?= htmlspecialchars($p['ukuran'] ?? '-') ?>" 
                 data-price="<?= htmlspecialchars($p['harga'] ?? 0) ?>" 
                 data-stock="<?= htmlspecialchars($p['stok_available'] ?? $p['stok'] ?? 0) ?>" 
                 data-unit="<?= htmlspecialchars($p['satuan'] ?? 'pcs') ?>" 
@@ -265,6 +266,10 @@ $stokHabis = array_filter($barangList, function($p) {
           <div>
             <span style="font-size: 0.72rem; color: var(--text3, #64748b); text-transform: uppercase; font-weight: 700;">Kategori</span>
             <p id="detProdCategory" style="margin: 4px 0 0; color: var(--text2, #334155);">-</p>
+          </div>
+          <div>
+            <span style="font-size: 0.72rem; color: var(--text3, #64748b); text-transform: uppercase; font-weight: 700;">Ukuran</span>
+            <p id="detProdUkuran" style="margin: 4px 0 0; color: var(--text2, #334155);">-</p>
           </div>
           <div>
             <span style="font-size: 0.72rem; color: var(--text3, #64748b); text-transform: uppercase; font-weight: 700;">Sisa Stok Jual</span>
@@ -357,6 +362,7 @@ $stokHabis = array_filter($barangList, function($p) {
               <th>No</th>
               <th>Kode Barang</th>
               <th>Nama Barang</th>
+              <th>Ukuran</th>
               <th>Stok (Bisa Dijual)</th>
               <th>Harga</th>
               <th>Status</th>
@@ -404,6 +410,7 @@ $stokHabis = array_filter($barangList, function($p) {
                 <td class="text-muted row-number"><?= $i + 1 ?></td>
                 <td class="fw-mid"><?= htmlspecialchars($p['kode_barang'] ?? $p['kode'] ?? '-') ?></td>
                 <td style="font-weight: 500; color: #111827;"><?= htmlspecialchars($p['nama'] ?? '-') ?></td>
+                <td><?= htmlspecialchars($p['ukuran'] ?? '-') ?></td>
             
                 <td>
                   <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
@@ -483,17 +490,20 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
-      const code = selectedOption.dataset.code;
-      const category = selectedOption.dataset.category;
-      const price = parseInt(selectedOption.dataset.price) || 0;
-      const stock = selectedOption.dataset.stock;
-      const unit = selectedOption.dataset.unit;
-      const status = selectedOption.dataset.status;
-      
-      const formatRp = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
-      
+      const code     = selectedOption.getAttribute('data-code');
+      const name     = selectedOption.getAttribute('data-name');
+      const category = selectedOption.getAttribute('data-category');
+      const ukuran   = selectedOption.getAttribute('data-ukuran') || '-';
+      const price    = selectedOption.getAttribute('data-price');
+      const stock    = selectedOption.getAttribute('data-stock');
+      const unit     = selectedOption.getAttribute('data-unit');
+      const status   = selectedOption.getAttribute('data-status');
+
+      const formatRp = 'Rp ' + parseInt(price).toLocaleString('id-ID');
+
       document.getElementById('detProdCode').textContent = code;
       document.getElementById('detProdCategory').textContent = category;
+      document.getElementById('detProdUkuran').textContent = ukuran;
       document.getElementById('detProdPrice').textContent = formatRp;
       document.getElementById('detProdStock').textContent = `${stock} ${unit}`;
       

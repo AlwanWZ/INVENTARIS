@@ -7,14 +7,14 @@ if (!isset($_SESSION['user']) || !in_array($_SESSION['user']['role'], ['marketin
 require_once '../../../src/auth.php';
 require_once '../../../src/models/Pesanan.php';
 
-// Mengambil semua PO dan memfilter hanya untuk status riwayat/final
+// Mengambil semua Pesanan dan memfilter hanya untuk status riwayat/final
 $allPos = Pesanan::all();
 $historyList = array_filter($allPos, function($pesanan) {
     // Menampilkan pesanan yang sudah disetujui, selesai, atau ditolak
     return in_array($pesanan['status'], ['approved', 'completed', 'rejected']);
 });
 
-// Hitung total harga untuk masing-masing PO di dalam riwayat
+// Hitung total harga untuk masing-masing Pesanan di dalam riwayat
 $historyList = array_map(function($pesanan) {
     $pesanan['total'] = Pesanan::calculateTotal($pesanan['id']);
     return $pesanan;
@@ -124,7 +124,7 @@ $historyList = array_map(function($pesanan) {
               <th>Nomor Pesanan</th>
               <th>Customer</th>
               <th>Item Pesanan</th>
-              <th>Tanggal PO</th>
+              <th>Tanggal Pesanan</th>
               <th>Pengiriman</th>
               <th>Status Akhir</th>
               <th>Total Pendapatan</th>

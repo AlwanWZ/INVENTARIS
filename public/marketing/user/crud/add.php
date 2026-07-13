@@ -168,7 +168,7 @@ $conn->close();
           </div>
           <ul class="info-list">
             <li><i class="bi bi-dot"></i> Username harus unik dan belum digunakan.</li>
-            <li><i class="bi bi-dot"></i> <strong>Marketing</strong> — akses modul PO, SPK, Produk, Customer.</li>
+            <li><i class="bi bi-dot"></i> <strong>Marketing</strong> — akses modul Pesanan, SPK, Produk, Customer.</li>
             <li><i class="bi bi-dot"></i> <strong>Gudang</strong> — akses penerimaan, pengeluaran, surat jalan.</li>
             <li><i class="bi bi-dot"></i> <strong>Manager</strong> — akses laporan dan monitoring.</li>
             <li><i class="bi bi-dot"></i> Password minimal 6 karakter.</li>

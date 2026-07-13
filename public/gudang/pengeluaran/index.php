@@ -18,7 +18,7 @@ $sql = "SELECT p.id, p.nomor_pengeluaran, p.tanggal, p.status,
                COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), '—') AS customer_nama
         FROM pengeluaran p
         LEFT JOIN spk s ON p.spk_id = s.id
-        LEFT JOIN pesanan ON s.pesanan_id = pesanan.id
+        LEFT JOIN pesanan ON pesanan.id = COALESCE(s.pesanan_id, p.pesanan_id)
         LEFT JOIN customers c ON pesanan.customer_id = c.id
         LEFT JOIN surat_jalan sj ON sj.pengeluaran_id = p.id
         WHERE 1=1";

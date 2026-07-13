@@ -42,7 +42,7 @@ $poItemsData = [];
 $spkItemsData = [];
 
 try {
-    // Ambil Item dari PO
+    // Ambil Item dari Pesanan
     $stmtPO = $pdo->query("SELECT pesanan_id, barang_id, qty FROM pesanan_items");
     while ($row = $stmtPO->fetch(PDO::FETCH_ASSOC)) {
         $poItemsData[$row['pesanan_id']][] = [
@@ -410,9 +410,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="form-grid-3">
           <div>
-            <label class="form-label">Nomor PO</label>
+            <label class="form-label">Nomor Pesanan</label>
             <select name="pesanan_id" id="poSelect" class="form-control">
-              <option value="">— Pilih PO (opsional) —</option>
+              <option value="">— Pilih Pesanan (opsional) —</option>
               <?php foreach ($poList as $pesanan): ?>
                 <option value="<?= $pesanan['id'] ?>" <?= ($_POST['pesanan_id'] ?? '') == $pesanan['id'] ? 'selected' : '' ?>>
                   <?= htmlspecialchars($pesanan['nomor_pesanan']) ?>
@@ -501,7 +501,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const picDisplay = document.getElementById('picDisplay');
   let rowCount = 0;
 
-  // --- LOGIKA UPDATE ITEM OTOMATIS BERDASARKAN PO / SPK ---
+  // --- LOGIKA UPDATE ITEM OTOMATIS BERDASARKAN Pesanan / SPK ---
   function populateItems(items) {
       tbody.innerHTML = ''; // Hapus baris yang ada
       rowCount = 0;
@@ -527,7 +527,7 @@ document.addEventListener('DOMContentLoaded', function() {
           if (spkId && spkItemsData[spkId]) {
               populateItems(spkItemsData[spkId]);
           } else if (!spkId && poSelect.value && poItemsData[poSelect.value]) {
-              // Jika SPK dikosongkan, cek apakah ada PO yg dipilih
+              // Jika SPK dikosongkan, cek apakah ada Pesanan yg dipilih
               populateItems(poItemsData[poSelect.value]);
           } else {
               populateItems([]);
@@ -538,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (poSelect) {
       poSelect.addEventListener('change', function() {
           const poId = this.value;
-          // Jika SPK belum dipilih, isi otomatis dari PO
+          // Jika SPK belum dipilih, isi otomatis dari Pesanan
           if (!spkSelect.value) {
               if (poId && poItemsData[poId]) {
                   populateItems(poItemsData[poId]);

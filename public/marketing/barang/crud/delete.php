@@ -171,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h4><i class="bi bi-clipboard-check"></i> Sebelum Menghapus</h4>
           </div>
           <ul class="info-list" style="font-size: 0.9rem;">
-            <li style="margin-bottom: 0.75rem;"><i class="bi bi-check2-square"></i> <strong>Pastikan</strong> tidak ada PO/Pesanan yang menggunakan barang ini</li>
+            <li style="margin-bottom: 0.75rem;"><i class="bi bi-check2-square"></i> <strong>Pastikan</strong> tidak ada Pesanan yang menggunakan barang ini</li>
             <li style="margin-bottom: 0.75rem;"><i class="bi bi-check2-square"></i> <strong>Verifikasi</strong> stok barang sudah dikosongkan (0)</li>
             <li style="margin-bottom: 0.75rem;"><i class="bi bi-check2-square"></i> <strong>Confirm</strong> data barang di atas sudah benar</li>
           </ul>

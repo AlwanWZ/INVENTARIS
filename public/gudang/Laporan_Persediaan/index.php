@@ -364,6 +364,7 @@ function formatRp($n) {
                             <th>No</th>
                             <th>Kode Barang</th>
                             <th>Nama Barang</th>
+                            <th>Ukuran</th>
                             <th class="col-right">HPP (Rp)</th>
                             <th class="col-right">Stok Fisik</th>
                             <th class="col-right">Qty Tersedia</th>
@@ -393,6 +394,7 @@ function formatRp($n) {
                             <td class="text-muted"><?= $i + 1 ?></td>
                             <td class="fw-mid" style="font-size:0.8rem;"><?= htmlspecialchars($tampilKodeHtml) ?></td>
                             <td style="font-weight:600; color:var(--text);"><?= htmlspecialchars($row['nama'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($row['ukuran'] ?? '-') ?></td>
                             
                             <td class="col-right text-muted"><?= number_format($hpp) ?></td>
                         

@@ -90,7 +90,7 @@
     <div class="container">
       <div class="sec-hd"><span class="sec-tag">Fitur Unggulan</span><h2>Semua dalam Satu Platform</h2></div>
       <div class="feat-grid">
-        <div class="feat large"><div class="fi orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><h3>Manajemen Pesanan &amp; SPK</h3><p>Buat, ajukan, dan pantau Purchase Order serta SPK dengan alur persetujuan digital bertahap dan riwayat revisi lengkap.</p></div>
+        <div class="feat large"><div class="fi orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><h3>Manajemen Pesanan &amp; SPK</h3><p>Buat, ajukan, dan pantau Pesanan serta SPK dengan alur persetujuan digital bertahap dan riwayat revisi lengkap.</p></div>
         <div class="feat"><div class="fi blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div><h3>Kontrol Stok</h3><p>Pantau barang masuk dan keluar secara real-time dengan notifikasi otomatis saat stok mendekati batas minimum.</p></div>
         <div class="feat"><div class="fi green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><h3>Laporan Terintegrasi</h3><p>Ekspor laporan ke PDF dan Excel. Data lengkap untuk mendukung evaluasi dan pengambilan keputusan.</p></div>
         <div class="feat"><div class="fi purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><h3>Audit Trail</h3><p>Setiap perubahan tercatat otomatis. Lacak aktivitas pengguna secara transparan dan akuntabel.</p></div>
@@ -105,7 +105,7 @@
       <div class="steps">
         <div class="step"><div class="step-n">01</div><h3>Login &amp; Konfigurasi</h3><p>Atur peran pengguna, data master barang, dan alur persetujuan sesuai struktur perusahaan.</p></div>
         <div class="step-arr">→</div>
-        <div class="step"><div class="step-n">02</div><h3>Kelola Transaksi</h3><p>Buat PO, SPK, atau permintaan barang. Sistem otomatis mengarahkan ke pihak berwenang.</p></div>
+        <div class="step"><div class="step-n">02</div><h3>Kelola Transaksi</h3><p>Buat Pesanan, SPK, atau permintaan barang. Sistem otomatis mengarahkan ke pihak berwenang.</p></div>
         <div class="step-arr">→</div>
         <div class="step"><div class="step-n">03</div><h3>Monitor &amp; Analisis</h3><p>Pantau aktivitas gudang dari dashboard dan ekspor laporan untuk evaluasi.</p></div>
       </div>

@@ -33,7 +33,7 @@ $sumberList = $pdo->query("
     )
     UNION
     (
-        SELECT 'PO' as tipe, NULL as spk_id, p.id as pesanan_id, p.nomor_pesanan as nomor_ref, p.nomor_pesanan,
+        SELECT 'Pesanan' as tipe, NULL as spk_id, p.id as pesanan_id, p.nomor_pesanan as nomor_ref, p.nomor_pesanan,
                COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan
         FROM pesanan p
         LEFT JOIN customers c ON p.customer_id = c.id
@@ -165,8 +165,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                 <?php foreach ($sumberList as $s): ?>
                   <?php if ($data['spk_id'] && $s['tipe'] === 'SPK' && $s['spk_id'] == $data['spk_id']): ?>
                       <option selected>[SPK] <?= htmlspecialchars($s['nomor_ref']) ?> | (<?= htmlspecialchars($s['perusahaan']) ?>)</option>
-                  <?php elseif ($data['pesanan_id'] && !$data['spk_id'] && $s['tipe'] === 'PO' && $s['pesanan_id'] == $data['pesanan_id']): ?>
-                      <option selected>[PO] <?= htmlspecialchars($s['nomor_ref']) ?> | (<?= htmlspecialchars($s['perusahaan']) ?>)</option>
+                  <?php elseif ($data['pesanan_id'] && !$data['spk_id'] && $s['tipe'] === 'Pesanan' && $s['pesanan_id'] == $data['pesanan_id']): ?>
+                      <option selected>[Pesanan] <?= htmlspecialchars($s['nomor_ref']) ?> | (<?= htmlspecialchars($s['perusahaan']) ?>)</option>
                   <?php endif; ?>
                 <?php endforeach; ?>
             </select>

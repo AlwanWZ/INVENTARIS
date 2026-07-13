@@ -50,7 +50,7 @@ try {
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     if (empty($items)) {
-        echo json_encode(['success' => false, 'message' => 'SPK tidak memiliki item atau PO belum ada']);
+        echo json_encode(['success' => false, 'message' => 'SPK tidak memiliki item atau Pesanan belum ada']);
         exit;
     }
     

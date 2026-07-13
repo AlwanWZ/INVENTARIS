@@ -127,7 +127,7 @@ function badgeLabel($s) {
         <div class="filter-group filter-search">
           <label class="form-label">Cari</label>
           <input type="text" name="search" class="form-control"
-                 placeholder="No. penerimaan / PO / SPK..."
+                 placeholder="No. penerimaan / Pesanan / SPK..."
                  value="<?= htmlspecialchars($search) ?>">
         </div>
         <div class="filter-group">
@@ -172,7 +172,7 @@ function badgeLabel($s) {
             <tr>
               <th>No</th>
               <th>Nomor Penerimaan</th>
-              <th>PO / SPK</th>
+              <th>Pesanan / SPK</th>
               <th>Tanggal</th>
               <th>Status</th>
               <th>PIC</th>

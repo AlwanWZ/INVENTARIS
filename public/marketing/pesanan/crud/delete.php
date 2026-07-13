@@ -47,11 +47,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmtSpk = $pdo->prepare("DELETE FROM spk WHERE pesanan_id = ?");
         $stmtSpk->execute([$id]);
 
-        // Hapus item-item PO
+        // Hapus item-item Pesanan
         $stmtItems = $pdo->prepare("DELETE FROM pesanan_items WHERE pesanan_id = ?");
         $stmtItems->execute([$id]);
 
-        // Hapus PO-nya
+        // Hapus Pesanan-nya
         $stmtPo = $pdo->prepare("DELETE FROM pesanan WHERE id = ?");
         $stmtPo->execute([$id]);
 

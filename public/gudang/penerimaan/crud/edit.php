@@ -137,9 +137,9 @@ $statusLabel = match($data['status']) { 'completed' => 'Completed', 'checked' =>
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label">Nomor PO</label>
+                  <label class="form-label">Nomor Pesanan</label>
                   <select name="pesanan_id" class="form-control">
-                    <option value="">— Pilih PO —</option>
+                    <option value="">— Pilih Pesanan —</option>
                     <?php foreach ($poList as $pesanan): ?>
                       <option value="<?= $pesanan['id'] ?>" <?= $data['pesanan_id'] == $pesanan['id'] ? 'selected' : '' ?>>
                         <?= htmlspecialchars($pesanan['nomor_pesanan']) ?>

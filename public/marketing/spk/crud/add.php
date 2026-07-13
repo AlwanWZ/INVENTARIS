@@ -24,7 +24,7 @@ if ($lastSPK) {
 }
 // -----------------------------------------
 
-// --- KUERI PO + CUSTOMER ---
+// --- KUERI Pesanan + CUSTOMER ---
 $poList = $pdo->query("
     SELECT pesanan.id, pesanan.nomor_pesanan, 
            COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), 'Customer Belum Diset') as perusahaan
@@ -44,11 +44,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmtCust->execute([$pesanan_id]);
         $customer_id = $stmtCust->fetchColumn() ?: null;
         
-        // --- UPGRADE 1: CEK APAKAH PO SUDAH PUNYA BARANG ---
+        // --- UPGRADE 1: CEK APAKAH Pesanan SUDAH PUNYA BARANG ---
         $stmtCekItems = $pdo->prepare("SELECT COUNT(*) FROM pesanan_items WHERE pesanan_id = ?");
         $stmtCekItems->execute([$pesanan_id]);
         if ($stmtCekItems->fetchColumn() <= 0) {
-            $errors[] = 'PO yang dipilih belum memiliki daftar barang (PO Items kosong). Silakan lengkapi data barang pada PO tersebut terlebih dahulu!';
+            $errors[] = 'PO yang dipilih belum memiliki daftar barang (PO Items kosong). Silakan lengkapi data barang pada Pesanan tersebut terlebih dahulu!';
         } else {
             // --- UPGRADE 1.5: CEK APAKAH STOK CUKUP UNTUK SEMUA BARANG ---
             // Jika stok barang aman (>= qty pesanan) untuk semua item, tidak perlu SPK.
@@ -283,9 +283,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   <thead>
                     <tr>
                       <th>Nama Barang</th>
-                      <th>Pesanan (PO)</th>
+                      <th>Ukuran</th>
+                      <th>Pesanan (Pesanan)</th>
                       <th>Sudah Dikirim</th>
-                      <th>Sisa PO</th>
+                      <th>Sisa Pesanan</th>
                       <th>Stok Gudang</th>
                       <th>Qty Produksi (SPK) <span class="required">*</span></th>
                       <th>Keterangan</th>
@@ -349,11 +350,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 if (data.items.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">PO ini tidak memiliki barang.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Pesanan ini tidak memiliki barang.</td></tr>`;
                     return;
                 }
 
                 data.items.forEach((item, index) => {
+                    const sisaPO = parseInt(item.sisa_pesanan) || 0;
+                    const stokGudang = parseInt(item.stok_gudang) || 0;
+                    const defaultQty = Math.max(0, sisaPO - stokGudang);
+                    
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>
@@ -361,12 +366,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             <input type="hidden" name="items[${index}][nama_barang]" value="${item.nama_material}">
                             ${item.nama_material}
                         </td>
+                        <td>${item.ukuran || '-'}</td>
                         <td>${item.qty_po}</td>
                         <td>${item.qty_dikirim}</td>
                         <td style="font-weight:bold; color:#d97706;">${item.sisa_pesanan}</td>
                         <td>${item.stok_gudang}</td>
                         <td>
-                            <input type="number" class="form-control" name="items[${index}][qty_schedule]" value="${item.sisa_pesanan}" min="1" required style="width: 100px;">
+                            <input type="number" class="form-control" name="items[${index}][qty_schedule]" value="${defaultQty}" min="0" required style="width: 100px;">
                         </td>
                         <td>
                             <input type="text" class="form-control" name="items[${index}][note]" value="${item.note || ''}" placeholder="Catatan">

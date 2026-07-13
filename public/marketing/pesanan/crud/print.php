@@ -65,7 +65,7 @@ if (!$pesanan) {
     exit;
 }
 
-// Ambil PO items
+// Ambil Pesanan items
 $stmtItems = $pdo->prepare("
     SELECT poi.*, p.stok, p.stok_available, p.stok_reserved
     FROM pesanan_items poi

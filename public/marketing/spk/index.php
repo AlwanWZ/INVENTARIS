@@ -144,7 +144,7 @@ function badgeLabel($s) {
         <div class="filter-group filter-search">
           <label class="form-label">Cari Data</label>
           <input type="text" name="search" class="form-control"
-                 placeholder="No. SPK / PO / customer..."
+                 placeholder="No. SPK / Pesanan / customer..."
                  value="<?= htmlspecialchars($filter['search']) ?>">
         </div>
         <div class="filter-actions">

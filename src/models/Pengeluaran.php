@@ -261,16 +261,27 @@ class Pengeluaran {
                         $stmtUpdatePO = $this->pdo->prepare("UPDATE pesanan_items SET qty_dikirim = qty_dikirim + ? WHERE pesanan_id = ? AND barang_id = ?");
                         $stmtUpdatePO->execute([$item['qty'], $syncPesananId, $item['barang_id']]);
                     }
-                    
-                    // Draft/pending → Completed: REDUCE stok
-                    $result = $stokTracking->reduceStok(
-                        $item['barang_id'],
-                        $item['qty'],
-                        'pengeluaran',
-                        $id,
-                        $data['pic'] ?? null,
-                        "Pengeluaran ke customer - " . ($data['nomor_pengeluaran'] ?? 'No Ref')
-                    );
+                    if ($syncPesananId) {
+                        // Draft/pending → Completed untuk PO: FULFILL stok (stok available tidak terpotong lagi)
+                        $result = $stokTracking->fulfillStok(
+                            $item['barang_id'],
+                            $item['qty'],
+                            'pengeluaran',
+                            $id,
+                            $data['pic'] ?? null,
+                            "Pengeluaran ke customer (PO) - " . ($data['nomor_pengeluaran'] ?? 'No Ref')
+                        );
+                    } else {
+                        // Draft/pending → Completed non-PO: REDUCE stok
+                        $result = $stokTracking->reduceStok(
+                            $item['barang_id'],
+                            $item['qty'],
+                            'pengeluaran',
+                            $id,
+                            $data['pic'] ?? null,
+                            "Pengeluaran ke customer - " . ($data['nomor_pengeluaran'] ?? 'No Ref')
+                        );
+                    }
                     if (!$result['success']) {
                         throw new Exception($result['message']);
                     }
@@ -341,7 +352,7 @@ class Pengeluaran {
                     $result = $stokTracking->unfulfillStok(
                         $item['barang_id'],
                         $item['qty'],
-                        'pengeluaran_cancel',
+                        'adjustment',
                         $id,
                         null,
                         'Pembatalan Pengeluaran (PO) - ' . ($pengeluaran['nomor_pengeluaran'] ?? '-')
@@ -350,7 +361,7 @@ class Pengeluaran {
                     $result = $stokTracking->addStok(
                         $item['barang_id'],
                         $item['qty'],
-                        'pengeluaran_cancel',
+                        'adjustment',
                         $id,
                         null,
                         'Pembatalan Pengeluaran - ' . ($pengeluaran['nomor_pengeluaran'] ?? '-')

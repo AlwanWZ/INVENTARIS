@@ -238,7 +238,8 @@ $pesananList = array_map(function($pesanan) {
                       } else {
                         $itemNames = array_map(function($it) {
                             $nama = $it['nama_barang'] ?? $it['nama_material'] ?? 'Item';
-                            return htmlspecialchars($nama) . ' (' . intval($it['qty']) . ' pcs)';
+                            $ukuran = !empty($it['ukuran']) ? ' - ' . $it['ukuran'] : '';
+                            return htmlspecialchars($nama) . htmlspecialchars($ukuran) . ' (' . intval($it['qty']) . ' pcs)';
                         }, $items);
                         echo implode(', ', $itemNames);
                       }

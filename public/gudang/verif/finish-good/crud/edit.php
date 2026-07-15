@@ -35,9 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validasi QTY
     foreach ($updateItems as $i => $item) {
       $qty_ok = (int)($item['qty_ok'] ?? 0);
-      $qty_masuk = (int)($item['qty_masuk'] ?? 0);
-      if ($qty_ok > $qty_masuk) {
-          $errors[] = "Qty OK tidak boleh melebihi Qty Masuk untuk baris ke-".($i+1);
+      if ($qty_ok < 0) {
+          $errors[] = "Qty OK tidak boleh negatif untuk baris ke-".($i+1);
       }
     }
 
@@ -153,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   <td class="col-center text-muted"><?= htmlspecialchars($item['qty_masuk'] ?? '') ?></td>
                   
                   <td>
-                    <input type="number" name="items[<?= $i ?>][qty_ok]" min="0" max="<?= htmlspecialchars($item['qty_masuk'] ?? '') ?>" class="form-control qty-input" value="<?= htmlspecialchars($item['qty_ok'] ?? '') ?>" required>
+                    <input type="number" name="items[<?= $i ?>][qty_ok]" min="0" class="form-control qty-input" value="<?= htmlspecialchars($item['qty_ok'] ?? '') ?>" required>
                   </td>
                   
                   <td>

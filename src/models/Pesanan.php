@@ -152,7 +152,7 @@ class Pesanan {
 
     public static function getItems($poId) {
         global $pdo;
-        $stmt = $pdo->prepare("SELECT * FROM pesanan_items WHERE pesanan_id = ?");
+        $stmt = $pdo->prepare("SELECT pi.*, b.ukuran FROM pesanan_items pi LEFT JOIN barang b ON pi.barang_id = b.id WHERE pi.pesanan_id = ?");
         $stmt->execute([$poId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

@@ -18,7 +18,9 @@ if ($id) {
         exit;
 
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         die("
             <div style='background:#fff5f5; color:#dc3545; padding:25px; border-radius:10px; font-family:sans-serif; max-width: 600px; margin: 50px auto; border: 2px solid #ffcdd2;'>
                 <h2 style='margin-top:0;'><span style='font-size:1.5em;'>⚠️</span> GAGAL MENGHAPUS!</h2>

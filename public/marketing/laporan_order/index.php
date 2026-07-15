@@ -401,6 +401,7 @@ $hasFilter = array_filter($filter);
               <th>Nomor Pesanan</th>
               <th>Pelanggan</th>
               <th>Tanggal</th>
+              <th>Item Pesanan</th>
               <th>Status</th>
               <th class="col-right">Total</th>
               <th class="col-center" style="width: 150px;">Aksi</th>
@@ -416,6 +417,25 @@ $hasFilter = array_filter($filter);
               <td class="fw-mid"><?= htmlspecialchars($pesanan['nomor_pesanan']) ?></td>
               <td><?= htmlspecialchars($pesanan['perusahaan'] ?? '—') ?></td>
               <td class="text-muted"><?= htmlspecialchars($pesanan['tanggal']) ?></td>
+              
+              <td>
+                <span style="color: #475569; font-size: 0.85rem; line-height: 1.4; display: block;">
+                  <?php 
+                    require_once '../../../src/models/Pesanan.php';
+                    $items = Pesanan::getItems($pesanan['id']);
+                    if (empty($items)) {
+                      echo '<em style="color: #94a3b8;">Belum ada items</em>';
+                    } else {
+                      $itemNames = array_map(function($it) {
+                          $nama = $it['nama_barang'] ?? $it['nama_material'] ?? 'Item';
+                          $ukuran = !empty($it['ukuran']) ? ' - ' . $it['ukuran'] : '';
+                          return htmlspecialchars($nama) . htmlspecialchars($ukuran) . ' (' . intval($it['qty']) . ' pcs)';
+                      }, $items);
+                      echo implode('<br>', $itemNames);
+                    }
+                  ?>
+                </span>
+              </td>
               
               <td>
                 <span class="badge <?= badgeCls($pesanan['status']) ?>"><?= htmlspecialchars(ucfirst($pesanan['status'])) ?></span>

@@ -104,6 +104,7 @@ $topName = array_key_first($topCustomer);
       <th>Nomor Pesanan</th>
       <th>Customer</th>
       <th>Tanggal</th>
+      <th>Item Pesanan</th>
       <th>Status</th>
       <th>Total</th>
     </tr>
@@ -115,6 +116,22 @@ $topName = array_key_first($topCustomer);
       <td><?= $d['nomor_pesanan'] ?></td>
       <td><?= $d['nama_perusahaan'] ?></td>
       <td><?= $d['tanggal'] ?></td>
+      <td>
+        <?php 
+          require_once '../../../src/models/Pesanan.php';
+          $items = Pesanan::getItems($d['id']);
+          if (empty($items)) {
+            echo '-';
+          } else {
+            $itemNames = array_map(function($it) {
+                $nama = $it['nama_barang'] ?? $it['nama_material'] ?? 'Item';
+                $ukuran = !empty($it['ukuran']) ? ' - ' . $it['ukuran'] : '';
+                return htmlspecialchars($nama) . htmlspecialchars($ukuran) . ' (' . intval($it['qty']) . ' pcs)';
+            }, $items);
+            echo implode(', ', $itemNames);
+          }
+        ?>
+      </td>
       <td><?= $d['status'] ?></td>
       <td>Rp <?= number_format($d['total'],0,',','.') ?></td>
     </tr>

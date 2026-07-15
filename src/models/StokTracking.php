@@ -289,7 +289,7 @@ class StokTracking {
             // Log
             $this->logStok(
                 $barang_id,
-                'pengeluaran_fulfill',
+                'adjustment',
                 -$qty,
                 $stok_before,
                 $stok_after,
@@ -345,7 +345,7 @@ class StokTracking {
             $updateStmt = $this->pdo->prepare("UPDATE barang SET stok = ?, stok_reserved = ?, updated_at = NOW() WHERE id = ?");
             $updateStmt->execute([$stok_after, $stok_reserved_new, $barang_id]);
             
-            $this->logStok($barang_id, 'pengeluaran_unfulfill', $qty, $stok_before, $stok_after, $barang['stok_reserved'], $stok_reserved_new, $reference_type, $reference_id, $keterangan, $created_by);
+            $this->logStok($barang_id, 'adjustment', $qty, $stok_before, $stok_after, $barang['stok_reserved'], $stok_reserved_new, $reference_type, $reference_id, $keterangan, $created_by);
             
             if ($isRootTransaction && $this->pdo->inTransaction()) {
                 $this->pdo->commit();

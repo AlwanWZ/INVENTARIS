@@ -68,14 +68,10 @@ if ($isSubmit) {
         $qty_masuk = (int)($item['qty_masuk'] ?? 0);
         
         if ($qty_ok > 0) {
-            if ($qty_ok > $qty_masuk) {
-                $errors[] = 'Qty Masuk tidak boleh melebihi sisa target SPK pada baris ke-'.($i+1).'.';
-            } else {
-                $item['qty']    = $qty_ok;
-                $item['qty_ok'] = $qty_ok;
-                $item['jumlah'] = $qty_ok;
-                $filteredItems[] = $item;
-            }
+            $item['qty']    = $qty_ok;
+            $item['qty_ok'] = $qty_ok;
+            $item['jumlah'] = $qty_ok;
+            $filteredItems[] = $item;
         }
     }
     $data['items'] = $filteredItems;
@@ -95,11 +91,7 @@ if ($isSubmit) {
                     $qty_add     = (int)($item['qty_ok'] ?? $item['qty'] ?? 0);
                     $prod_id     = (int)($item['barang_id'] ?? 0);
                     $spk_item_id = (int)($item['spk_item_id'] ?? $item['id'] ?? 0);
-                    
-                    if ($prod_id > 0 && $qty_add > 0) {
-                        $pdo->exec("UPDATE barang SET stok = stok + $qty_add, stok_available = stok_available + $qty_add WHERE id = $prod_id");
-                    }
-                    
+                    // Stok fisik akan ditambah secara otomatis oleh model Verifikasi -> StokTracking
                     if ($qty_add > 0) {
                         if ($spk_item_id > 0) {
                             $pdo->exec("UPDATE spk_items SET qty_outstanding = GREATEST(0, COALESCE(qty_outstanding, qty_po, 0) - $qty_add) WHERE id = $spk_item_id");
@@ -263,7 +255,7 @@ if ($isSubmit) {
                     </td>
                     <td>
                       <input type="number" name="items[<?= $i ?>][qty_ok]"
-                             class="form-control qty-input col-center" min="0" max="<?= (int)$item['qty_diterima'] ?>"
+                             class="form-control qty-input col-center" min="0"
                              value="<?= $defaultQty ?>"
                              style="font-weight:700; border-color:#22c55e;"
                              required>

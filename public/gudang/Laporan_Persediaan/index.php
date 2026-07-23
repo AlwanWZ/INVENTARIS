@@ -166,6 +166,8 @@ function formatRp($n) {
     <link href="/Inventaris/public/assets/css/gudang-css/stok-barang.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
+        #stokTable th, #stokTable td:not(.fw-mid.total-label) { text-align: center; }
+        .total-label { text-align: right !important; padding-right: 20px !important; }
         @media print {
             .no-print, .topbar, .page-header, .filter-card, nav, .btn-ghost-sm, .section-label, .kpi-row, .charts-row { display:none !important; }
             .main { margin:0 !important; padding: 0 !important; }
@@ -407,7 +409,7 @@ function formatRp($n) {
                         </tr>
                         <?php endforeach; ?>
                         <tr class="total-row">
-                            <td colspan="7" class="fw-mid" style="text-align: right; padding-right: 20px;">Total Keseluruhan Valuasi Persediaan</td>
+                            <td colspan="7" class="fw-mid total-label">Total Keseluruhan Valuasi Persediaan</td>
                             <td class="col-right fw-mid" style="color: #2563eb; font-weight:700;"><?= number_format($totalValuasiHpp) ?></td>
                             <td></td>
                         </tr>

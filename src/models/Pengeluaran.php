@@ -67,6 +67,77 @@ class Pengeluaran {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+    // =========================================================================
+    // getAllItems: MENGAMBIL DAFTAR PENGELUARAN BESERTA ITEM
+    // =========================================================================
+    public function getAllItems($search = '', $status = '') {
+    $sql = "
+        SELECT
+            p.*,
+            spk.nomor_spk,
+            pesanan.nomor_pesanan,
+
+            sj.id AS sj_id,
+            sj.nomor_sj,
+            sj.driver,
+            sj.kendaraan,
+
+            COALESCE(
+                NULLIF(c.perusahaan,''),
+                NULLIF(c.nama,''),
+                '-'
+            ) AS customer_nama,
+            
+            pi.qty AS qty_keluar,
+            b.nama AS barang_nama,
+            b.ukuran AS barang_ukuran
+
+        FROM pengeluaran p
+        
+        JOIN pengeluaran_items pi ON p.id = pi.pengeluaran_id
+        LEFT JOIN barang b ON pi.barang_id = b.id
+
+        LEFT JOIN spk
+            ON p.spk_id = spk.id
+            
+        LEFT JOIN pesanan
+            ON pesanan.id = COALESCE(spk.pesanan_id, p.pesanan_id)
+
+        LEFT JOIN surat_jalan sj
+            ON sj.pengeluaran_id = p.id
+
+        LEFT JOIN customers c
+            ON sj.customer_id = c.id
+
+        WHERE 1
+    ";
+
+    $params = [];
+
+    if ($search) {
+        $sql .= " AND (
+            p.nomor_pengeluaran LIKE :search
+            OR spk.nomor_spk LIKE :search
+            OR sj.nomor_sj LIKE :search
+            OR sj.driver LIKE :search
+            OR b.nama LIKE :search
+        )";
+
+        $params['search'] = "%$search%";
+    }
+
+    if ($status) {
+        $sql .= " AND p.status = :status";
+        $params['status'] = $status;
+    }
+
+    $sql .= " ORDER BY p.id DESC, pi.id ASC";
+
+    $stmt = $this->pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
   public function getById($id) {
     $sql = "
         SELECT

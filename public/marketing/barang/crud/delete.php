@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span class="detail-val"><?= htmlspecialchars($barang['kategori'] ?? '-') ?></span>
               </div>
               <div class="detail-item">
-                <span class="detail-label">HPP (Harga Pokok)</span>
+                <span class="detail-label">Harga Pokok Produksi</span>
                 <span class="detail-val">Rp <?= number_format((int)($barang['harga'] ?? 0), 0, ',', '.') ?></span>
               </div>
               <div class="detail-item">

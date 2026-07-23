@@ -110,7 +110,7 @@ $statusCls = match($pesanan['status']) {
               <span class="detail-val fw-mid"><?= htmlspecialchars($pesanan['nomor_pesanan']) ?></span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">Tanggal</span>
+              <span class="detail-label">Tanggal Pesanan</span>
               <span class="detail-val"><?= htmlspecialchars($pesanan['tanggal']) ?></span>
             </div>
             <div class="detail-item">

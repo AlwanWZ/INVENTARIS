@@ -245,6 +245,7 @@ $stokHabis = array_filter($barangList, function($p) {
                 data-category="<?= htmlspecialchars($p['nama_kategori'] ?? 'PCB') ?>" 
                 data-ukuran="<?= htmlspecialchars($p['ukuran'] ?? '-') ?>" 
                 data-price="<?= htmlspecialchars($p['harga'] ?? 0) ?>" 
+                data-pricejual="<?= htmlspecialchars($p['harga_jual'] ?? 0) ?>" 
                 data-stock="<?= htmlspecialchars($p['stok_available'] ?? $p['stok'] ?? 0) ?>" 
                 data-unit="<?= htmlspecialchars($p['satuan'] ?? 'pcs') ?>" 
                 data-status="<?= $p['status'] ?? 'aktif' ?>">
@@ -260,8 +261,12 @@ $stokHabis = array_filter($barangList, function($p) {
             <p id="detProdCode" style="margin: 4px 0 0; color: var(--text2, #334155); font-weight: 800;">-</p>
           </div>
           <div>
+            <span style="font-size: 0.72rem; color: var(--text3, #64748b); text-transform: uppercase; font-weight: 700;">Harga Pokok Produksi</span>
+            <p id="detProdPrice" style="margin: 4px 0 0; color: var(--text2, #334155); font-weight: 800; font-family: monospace; font-size: 1rem;">-</p>
+          </div>
+          <div>
             <span style="font-size: 0.72rem; color: var(--text3, #64748b); text-transform: uppercase; font-weight: 700;">Harga Jual</span>
-            <p id="detProdPrice" style="margin: 4px 0 0; color: #0d9488; font-weight: 800; font-family: monospace; font-size: 1.1rem;">-</p>
+            <p id="detProdPriceJual" style="margin: 4px 0 0; color: #0d9488; font-weight: 800; font-family: monospace; font-size: 1.1rem;">-</p>
           </div>
           <div>
             <span style="font-size: 0.72rem; color: var(--text3, #64748b); text-transform: uppercase; font-weight: 700;">Kategori</span>
@@ -364,7 +369,8 @@ $stokHabis = array_filter($barangList, function($p) {
               <th>Nama Barang</th>
               <th>Ukuran</th>
               <th>Stok (Bisa Dijual)</th>
-              <th>Harga</th>
+              <th>Harga Pokok Produksi</th>
+              <th>Harga Jual</th>
               <th>Status</th>
               <th>Aksi</th>
             </tr>
@@ -373,7 +379,7 @@ $stokHabis = array_filter($barangList, function($p) {
           <tbody>
             <?php if (empty($barangList)): ?>
               <tr>
-                <td colspan="7" class="empty-state">
+                <td colspan="9" class="empty-state">
                   <i class="bi bi-box-seam"></i>
                   <span>Belum ada barang. <a href="crud/add.php">Tambah sekarang</a></span>
                 </td>
@@ -428,8 +434,11 @@ $stokHabis = array_filter($barangList, function($p) {
                   <?php endif; ?>
                 </td>
 
-                <td class="fw-mid" style="color: #059669;">
+                <td class="fw-mid text-muted">
                   Rp <?= number_format((int)($p['harga'] ?? 0), 0, ',', '.') ?>
+                </td>
+                <td class="fw-mid" style="color: #059669;">
+                  Rp <?= number_format((int)($p['harga_jual'] ?? 0), 0, ',', '.') ?>
                 </td>
                 
                 <td>
@@ -495,16 +504,19 @@ document.addEventListener('DOMContentLoaded', function() {
       const category = selectedOption.getAttribute('data-category');
       const ukuran   = selectedOption.getAttribute('data-ukuran') || '-';
       const price    = selectedOption.getAttribute('data-price');
+      const pricejual = selectedOption.getAttribute('data-pricejual');
       const stock    = selectedOption.getAttribute('data-stock');
       const unit     = selectedOption.getAttribute('data-unit');
       const status   = selectedOption.getAttribute('data-status');
 
       const formatRp = 'Rp ' + parseInt(price).toLocaleString('id-ID');
+      const formatRpJual = 'Rp ' + parseInt(pricejual).toLocaleString('id-ID');
 
       document.getElementById('detProdCode').textContent = code;
       document.getElementById('detProdCategory').textContent = category;
       document.getElementById('detProdUkuran').textContent = ukuran;
       document.getElementById('detProdPrice').textContent = formatRp;
+      document.getElementById('detProdPriceJual').textContent = formatRpJual;
       document.getElementById('detProdStock').textContent = `${stock} ${unit}`;
       
       const statusBadge = document.getElementById('detProdStatus');

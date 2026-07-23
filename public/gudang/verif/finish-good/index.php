@@ -14,8 +14,10 @@ $search    = $_GET['search'] ?? '';
 $status    = $_GET['status'] ?? '';
 $hasFilter = $search || $status;
 
-// Mengambil data barang masuk (Finish Good)
-$list = $verifModel->getAll('finish_good', $search, $status);
+// Mengambil data barang masuk (Finish Good) per item
+$list = $verifModel->getAllItems('finish_good', $search, $status);
+$uniqueDocs = array_unique(array_column($list, 'id'));
+$totalDocs = count($uniqueDocs);
 
 $statusOptions = ['' => 'Semua Status', 'draft' => 'Draft', 'verified' => 'Selesai (Masuk Stok)'];
 
@@ -76,9 +78,9 @@ function fgBadgeLabel($s){ return ($s === 'verified' || $s === 'approved' || $s 
     </div>
 
     <div class="stat-row">
-      <div class="stat-pill"><span class="stat-pill-label">Total Transaksi</span><span class="stat-pill-val"><?= count($list) ?></span></div>
-      <div class="stat-pill"><span class="stat-pill-label">Masuk Stok</span><span class="stat-pill-val ok"><?= count(array_filter($list, fn($r) => in_array($r['status'], ['verified', 'approved', 'completed']))) ?></span></div>
-      <div class="stat-pill"><span class="stat-pill-label">Draft</span><span class="stat-pill-val warn"><?= count(array_filter($list, fn($r) => $r['status']==='draft')) ?></span></div>
+      <div class="stat-pill"><span class="stat-pill-label">Total Transaksi</span><span class="stat-pill-val"><?= $totalDocs ?></span></div>
+      <div class="stat-pill"><span class="stat-pill-label">Masuk Stok</span><span class="stat-pill-val ok"><?= count(array_filter($uniqueDocs, fn($id) => in_array(current(array_filter($list, fn($r) => $r['id'] == $id))['status'], ['verified', 'approved', 'completed']))) ?></span></div>
+      <div class="stat-pill"><span class="stat-pill-label">Draft</span><span class="stat-pill-val warn"><?= count(array_filter($uniqueDocs, fn($id) => current(array_filter($list, fn($r) => $r['id'] == $id))['status'] === 'draft')) ?></span></div>
     </div>
 
     <div class="form-card filter-card">
@@ -116,9 +118,12 @@ function fgBadgeLabel($s){ return ($s === 'verified' || $s === 'approved' || $s 
               <th>No</th>
               <th>No. Finish Good</th>
               <th>Tanggal Masuk</th>
+              <th>Nama Barang</th>
               <th>PIC Gudang</th>
-              <th>Jml Item Masuk</th>
-              <th>Status Stok</th>
+              <th>Jumlah</th>
+              <th>Qty Good</th>
+              <th>Stok</th>
+              <th>Status</th>
               <th style="text-align: center;">Aksi</th>
             </tr>
           </thead>
@@ -131,8 +136,11 @@ function fgBadgeLabel($s){ return ($s === 'verified' || $s === 'approved' || $s 
               <td class="text-muted"><?= $i+1 ?></td>
               <td class="fw-mid"><?= htmlspecialchars($row['nomor_penerimaan'] ?? 'FG-'.$row['id']) ?></td>
               <td class="text-muted"><?= date('d M Y', strtotime($row['tanggal'])) ?></td>
+              <td style="font-weight: 500;"><?= htmlspecialchars($row['nama_barang'] ?? '-') ?></td>
               <td style="font-weight: 500;"><?= htmlspecialchars($row['pic_name']) ?></td>
-              <td style="font-weight: 700; color: #059669;"><?= (int)($row['total_ok'] ?? 0) ?></td>
+              <td style="font-weight: 600; color: #1e293b;"><?= (int)($row['jumlah_masuk'] ?? 0) ?></td>
+              <td style="font-weight: 700; color: #059669;"><?= (int)($row['qty_good'] ?? 0) ?></td>
+              <td style="font-weight: 600; color: #475569;"><?= (int)($row['stok_gudang'] ?? 0) ?></td>
               <td><span class="badge <?= fgBadgeCls($row['status']) ?>"><?= fgBadgeLabel($row['status']) ?></span></td>
               <td style="text-align: center;">
                 <div class="action-btns" style="justify-content: center; gap: 6px;">

@@ -238,7 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
         <div class="breadcrumb">
           <a href="/Inventaris/public/gudang/dashboard.php">Dashboard</a>
           <i class="bi bi-chevron-right"></i>
-          <a href="../index.php">Pengeluaran Barang</a>
+          <a href="../index.php">Pengeluaran</a>
           <i class="bi bi-chevron-right"></i>
           <span>Keluarkan Barang</span>
         </div>

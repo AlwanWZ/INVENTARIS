@@ -90,7 +90,7 @@
           <form method="post" class="pesanan-form" autocomplete="off">
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Nama <span class="required">*</span></label>
+                <label class="form-label">Nama Customer <span class="required">*</span></label>
                 <input type="text" name="nama" class="form-control"
                        placeholder="Nama lengkap customer"
                        value="<?= htmlspecialchars($customer['nama'] ?? $_POST['nama'] ?? '') ?>" required>
@@ -164,7 +164,7 @@
           </div>
           <div class="side-info-list">
             <div class="side-info-item">
-              <span class="side-info-label">Nama</span>
+              <span class="side-info-label">Nama Customer</span>
               <span class="side-info-val fw-mid"><?= htmlspecialchars($customer['nama']) ?></span>
             </div>
             <div class="side-info-item">

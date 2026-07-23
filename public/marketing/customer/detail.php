@@ -86,7 +86,7 @@ $statusLabel = $customer['status'] === 'aktif' ? 'Aktif' : 'Nonaktif';
               <span class="detail-val"><span class="badge <?= $statusCls ?>"><?= $statusLabel ?></span></span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">Nama</span>
+              <span class="detail-label">Nama Customer</span>
               <span class="detail-val"><?= htmlspecialchars($customer['nama']) ?></span>
             </div>
             <div class="detail-item">
@@ -145,7 +145,7 @@ $statusLabel = $customer['status'] === 'aktif' ? 'Aktif' : 'Nonaktif';
               <span class="side-info-val text-muted">#<?= $customer['id'] ?></span>
             </div>
             <div class="side-info-item">
-              <span class="side-info-label">Kode</span>
+              <span class="side-info-label">Kode Customer</span>
               <span class="side-info-val fw-mid"><?= htmlspecialchars($customer['kode_customer']) ?></span>
             </div>
             <div class="side-info-item">

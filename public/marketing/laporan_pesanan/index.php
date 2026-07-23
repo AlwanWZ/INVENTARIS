@@ -264,8 +264,8 @@ $hasFilter = array_filter($filter);
         <hr class="garis-tipis">
         
         <div class="judul-surat">
-            <h2>LAPORAN PESANAN (ORDER)</h2>
-            <p>Tanggal Cetak: <?= date('d F Y') ?></p>
+            <h2>LAPORAN PESANAN</h2>
+            <p>Tanggal Cetak: <?= date('d F Y') ?> <?= $filter['from'] ? ' | Periode: ' . date('d/m/Y', strtotime($filter['from'])) . ' - ' . date('d/m/Y', strtotime($filter['to'])) : '' ?></p>
         </div>
     </div>
 

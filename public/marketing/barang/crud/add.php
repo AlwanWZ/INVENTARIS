@@ -212,10 +212,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">HPP (Rp)</label>
+                <label class="form-label">Harga Pokok Produksi (Rp)</label>
                 <input type="text" name="harga" id="hargaInput" class="form-control" placeholder="0" value="<?= isset($_POST['harga']) ? (int)$_POST['harga'] : '' ?>" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                 <small id="hargaPreview" class="text-muted" style="display:block;margin-top:.25rem;font-weight:600;color:#059669!important;">
-                    Preview HPP : Rp <?= number_format((int)($_POST['harga'] ?? 0),0,',','.') ?>
+                    Preview Harga Pokok Produksi : Rp <?= number_format((int)($_POST['harga'] ?? 0),0,',','.') ?>
                 </small>
               </div>
 
@@ -316,7 +316,7 @@ function applyCurrencyFormat(inputId, previewId, labelPrefix) {
     }
 }
 
-applyCurrencyFormat('hargaInput', 'hargaPreview', 'HPP');
+applyCurrencyFormat('hargaInput', 'hargaPreview', 'Harga Pokok Produksi');
 applyCurrencyFormat('hargaJualInput', 'hargaJualPreview', 'Harga Jual');
 </script>
 

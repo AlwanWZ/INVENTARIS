@@ -85,7 +85,7 @@ $customers = Customer::getAll($search);
       <div id="customerDetail" class="customer-detail-box" style="display: none; margin-top: 16px; padding: 14px; background: var(--bg2); border-radius: var(--radius); border: 1px solid var(--border);">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
           <div>
-            <span style="font-size: 0.72rem; color: var(--text3); text-transform: uppercase; font-weight: 700;">Kode</span>
+            <span style="font-size: 0.72rem; color: var(--text3); text-transform: uppercase; font-weight: 700;">Kode Customer</span>
             <p id="detailCode" style="margin: 4px 0 0; color: var(--text2);">-</p>
           </div>
           <div>
@@ -151,8 +151,8 @@ $customers = Customer::getAll($search);
           <thead>
             <tr>
               <th>No</th>
-              <th>Kode</th>
-              <th>Nama</th>
+              <th>Kode Customer</th>
+              <th>Nama Customer</th>
               <th>Perusahaan</th>
               <th>Email</th>
               <th>No HP</th>

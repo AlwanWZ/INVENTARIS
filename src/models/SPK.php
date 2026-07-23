@@ -52,6 +52,57 @@ class SPK {
     }
 
     // =========================================================================
+    // 1B. MENGAMBIL SEMUA DATA SPK BESERTA ITEM (UNTUK DAFTAR ITEM DI INDEX)
+    // =========================================================================
+    public static function allItems($filter = []) {
+        global $pdo;
+
+        $sql = "SELECT spk.*, pesanan.nomor_pesanan, customers.perusahaan, users.username as pic_username,
+                       si.nama_barang as item_nama, si.qty_schedule as item_qty, si.qty_outstanding as item_sisa,
+                       b.ukuran as item_ukuran
+                FROM spk
+                JOIN spk_items si ON spk.id = si.spk_id
+                LEFT JOIN barang b ON si.barang_id = b.id
+                LEFT JOIN pesanan ON spk.pesanan_id = pesanan.id
+                LEFT JOIN customers ON pesanan.customer_id = customers.id
+                LEFT JOIN users ON spk.pic = users.id
+                WHERE 1=1";
+
+        $params = [];
+
+        if (!empty($filter['tanggal'])) {
+            $sql .= " AND spk.tanggal = :tanggal";
+            $params['tanggal'] = $filter['tanggal'];
+        }
+
+        if (!empty($filter['status'])) {
+            $sql .= " AND spk.status = :status";
+            $params['status'] = trim($filter['status']);
+        }
+
+        if (!empty($filter['pic'])) {
+            $sql .= " AND spk.pic = :pic";
+            $params['pic'] = $filter['pic'];
+        }
+
+        if (!empty($filter['search'])) {
+            $sql .= " AND (spk.nomor_spk LIKE :search1 OR pesanan.nomor_pesanan LIKE :search2 OR customers.perusahaan LIKE :search3 OR si.nama_barang LIKE :search4)";
+            $searchTerm = '%' . $filter['search'] . '%';
+
+            $params['search1'] = $searchTerm;
+            $params['search2'] = $searchTerm;
+            $params['search3'] = $searchTerm;
+            $params['search4'] = $searchTerm;
+        }
+
+        $sql .= " ORDER BY spk.id DESC, si.id ASC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // =========================================================================
     // 2. MENGAMBIL 1 DATA SPK BERDASARKAN ID
     // =========================================================================
     public static function find($id) {

@@ -179,7 +179,7 @@ $pesananList = array_map(function($pesanan) {
 
         <div class="table-actions">
           <select id="filterKirim" class="filter-select">
-            <option value="">Semua Status Kirim</option>
+            <option value="">Semua Status</option>
             <option value="Belum">Belum Kirim</option>
             <option value="Sebagian">Sebagian</option>
             <option value="Selesai">Selesai</option>
@@ -199,9 +199,9 @@ $pesananList = array_map(function($pesanan) {
               <th width="15%">Nomor Pesanan</th>
               <th width="15%">Customer</th>
               <th width="20%">Item Pesanan</th>
-              <th width="12%">Dibuat</th>
+              <th width="12%">Tanggal Pesanan</th>
               <th width="13%">Progres Kirim</th>
-              <th width="10%">Status Kirim</th>
+              <th width="10%">Status</th>
               <th width="10%">Total</th>
               <th width="10%">Aksi</th>
             </tr>

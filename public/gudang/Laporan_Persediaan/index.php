@@ -26,11 +26,10 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
                 <th>Kode Barang</th>
                 <th>Nama Barang</th>
                 <th>Satuan</th>
-                <th>Harga Pokok Produksi (HPP)</th>
-                <th>Harga Jual (Rp)</th>
-                <th>Stok Fisik</th>
-                <th>Qty Tersedia</th>
-                <th>Jumlah Harga HPP (Rp)</th>
+                <th>Harga Pokok Produksi</th>
+                <th>Stok</th>
+                <th>Qty</th>
+                <th>Jumlah Harga (Rp)</th>
                 <th>Jumlah Harga Jual (Rp)</th>
                 <th>Stok Min</th>
                 <th>Status</th>
@@ -365,10 +364,10 @@ function formatRp($n) {
                             <th>Kode Barang</th>
                             <th>Nama Barang</th>
                             <th>Ukuran</th>
-                            <th class="col-right">HPP (Rp)</th>
-                            <th class="col-right">Stok Fisik</th>
-                            <th class="col-right">Qty Tersedia</th>
-                            <th class="col-right">Jumlah Harga HPP</th>
+                            <th class="col-right">Harga Pokok Produksi (Rp)</th>
+                            <th class="col-right">Stok</th>
+                            <th class="col-right">Qty</th>
+                            <th class="col-right">Jumlah Harga</th>
                             <th class="col-center">Status</th>
                         </tr>
                     </thead>
@@ -408,9 +407,8 @@ function formatRp($n) {
                         </tr>
                         <?php endforeach; ?>
                         <tr class="total-row">
-                            <td colspan="5" class="fw-mid" style="text-align: left; padding-left: 20px;">Total Keseluruhan Valuasi Persediaan</td>
+                            <td colspan="7" class="fw-mid" style="text-align: right; padding-right: 20px;">Total Keseluruhan Valuasi Persediaan</td>
                             <td class="col-right fw-mid" style="color: #2563eb; font-weight:700;"><?= number_format($totalValuasiHpp) ?></td>
-                            <td class="col-right fw-mid" style="color: #10b981; font-weight:700;"><?= number_format($totalValuasiJual) ?></td>
                             <td></td>
                         </tr>
                         <?php endif; ?>

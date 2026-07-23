@@ -147,7 +147,7 @@ $statusCls = match(strtolower($barang['status'] ?? '')) {
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Harga (Rp)</label>
+                <label class="form-label">Harga Pokok Produksi (Rp)</label>
                 <input type="text" name="harga" class="form-control"
                        value="<?= $barang['harga'] > 0 ? (int)$barang['harga'] : '' ?>" placeholder="0" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                 <small class="text-muted" style="display: block; margin-top: 0.25rem;">

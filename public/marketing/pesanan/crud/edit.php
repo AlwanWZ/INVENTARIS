@@ -147,7 +147,7 @@ $statusCls = match($pesanan['status']) { 'Disetujui' => 'ok', 'Proses' => 'warn'
                        value="<?= htmlspecialchars($pesanan['nomor_pesanan']) ?>" readonly>
               </div>
               <div class="form-group">
-                <label class="form-label">Tanggal <span class="required">*</span></label>
+                <label class="form-label">Tanggal Pesanan <span class="required">*</span></label>
                 <input type="date" name="tanggal" class="form-control"
                        value="<?= htmlspecialchars($pesanan['tanggal']) ?>" required>
               </div>
@@ -220,7 +220,7 @@ $statusCls = match($pesanan['status']) { 'Disetujui' => 'ok', 'Proses' => 'warn'
               <span class="side-info-val"><?= htmlspecialchars($pesanan['customer'] ?? $pesanan['perusahaan'] ?? '-') ?></span>
             </div>
             <div class="side-info-item">
-              <span class="side-info-label">Tanggal</span>
+              <span class="side-info-label">Tanggal Pesanan</span>
               <span class="side-info-val"><?= htmlspecialchars($pesanan['tanggal']) ?></span>
             </div>
             <div class="side-info-item">

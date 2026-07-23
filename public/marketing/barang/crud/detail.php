@@ -129,9 +129,13 @@ $stokLabel = ($stokAktif <= 0) ? 'Habis' : (($stokAktif <= $batasMin) ? 'Menipis
           <div class="form-card-header">
             <h4><i class="bi bi-cash-stack"></i> Harga &amp; Stok</h4>
           </div>
+          <div class="total-display" style="margin-bottom: 12px; border-bottom: 1px dashed var(--border); padding-bottom: 12px;">
+            <span class="total-label">Harga Pokok Produksi</span>
+            <span class="total-val" style="font-size: 1.1rem; color: var(--text2);">Rp <?= number_format($barang['harga'] ?? 0, 0, ',', '.') ?></span>
+          </div>
           <div class="total-display">
             <span class="total-label">Harga Jual Satuan</span>
-            <span class="total-val">Rp <?= number_format($barang['harga'], 0, ',', '.') ?></span>
+            <span class="total-val">Rp <?= number_format($barang['harga_jual'] ?? 0, 0, ',', '.') ?></span>
           </div>
           <div class="total-divider"></div>
           

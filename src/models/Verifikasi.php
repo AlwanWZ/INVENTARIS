@@ -50,6 +50,51 @@ class Verifikasi {
         return $results;
     }
 
+    public function getAllItems($jenis, $search = '', $status = '') {
+        $conditions = ['v.jenis = ?'];
+        $params = [$jenis];
+        
+        if (!empty($search)) {
+            $conditions[] = "(p.nomor_penerimaan LIKE ? OR s.nomor_spk LIKE ? OR pr.nama LIKE ?)";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+        
+        if (!empty($status)) {
+            $conditions[] = "v.status = ?";
+            $params[] = strtolower($status);
+        }
+        
+        $whereClause = implode(' AND ', $conditions);
+        
+        $sql = "SELECT v.*, 
+                COALESCE(p.nomor_penerimaan, s.nomor_spk) AS nomor_penerimaan, 
+                COALESCE(p.tanggal, s.tanggal) AS tanggal_penerimaan, 
+                u.username AS pic_name,
+                vi.qty_ok AS qty_good,
+                COALESCE(vi.qty_masuk, 0) AS jumlah_masuk,
+                pr.nama AS nama_barang,
+                pr.stok AS stok_gudang
+                FROM verifikasi v
+                LEFT JOIN penerimaan p ON v.penerimaan_id = p.id
+                LEFT JOIN spk s ON v.spk_id = s.id
+                LEFT JOIN users u ON v.pic = u.id
+                JOIN verifikasi_items vi ON v.id = vi.verifikasi_id
+                LEFT JOIN barang pr ON vi.barang_id = pr.id
+                WHERE $whereClause
+                ORDER BY v.id DESC, vi.id ASC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($results as &$row) {
+            $row['status'] = strtolower($row['status'] ?? 'draft');
+        }
+        
+        return $results;
+    }
+
     public function getById($id) {
         $sql = "SELECT v.*, 
                 COALESCE(p.nomor_penerimaan, s.nomor_spk) AS nomor_penerimaan, 

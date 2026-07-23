@@ -25,7 +25,7 @@ $role = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
       <a href="/Inventaris/public/marketing/barang/index.php" class="nav-item"><i class="bi bi-box"></i><span>Barang</span></a>
       <a href="/Inventaris/public/marketing/customer/index.php" class="nav-item"><i class="bi bi-people"></i><span>Customer</span></a>
       <a href="/Inventaris/public/marketing/pesanan/index.php" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Pesanan</span></a>
-      <a href="/Inventaris/public/marketing/laporan_order/index.php" class="nav-item"><i class="bi bi-journal-text"></i><span>Laporan Pesanan</span></a>
+      <a href="/Inventaris/public/marketing/laporan_pesanan/index.php" class="nav-item"><i class="bi bi-journal-text"></i><span>Laporan Pesanan</span></a>
       <a href="/Inventaris/public/marketing/user/index.php" class="nav-item"><i class="bi bi-person-lines-fill"></i><span>User</span></a>
       <a href="/Inventaris/public/marketing/spk/index.php" class="nav-item"><i class="bi bi-file-earmark-check"></i><span>SPK</span></a>
     </div>
@@ -35,7 +35,7 @@ $role = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
     <div class="nav-group">
       <span class="nav-title">Menu Gudang</span>
       <a href="/Inventaris/public/gudang/verif/finish-good/index.php" class="nav-item"><i class="bi bi-check-circle"></i><span>Finish Good</span></a>
-      <a href="/Inventaris/public/gudang/pengeluaran/index.php" class="nav-item"><i class="bi bi-box-arrow-up"></i><span>Pengeluaran Barang</span></a>
+      <a href="/Inventaris/public/gudang/pengeluaran/index.php" class="nav-item"><i class="bi bi-box-arrow-up"></i><span>Pengeluaran</span></a>
       <a href="/Inventaris/public/gudang/laporan_persediaan/index.php" class="nav-item"><i class="bi bi-clipboard-data"></i><span>Laporan Persediaan</span></a>
     </div>
     <?php endif; ?>
@@ -44,8 +44,8 @@ $role = isset($_SESSION['user']['role']) ? $_SESSION['user']['role'] : null;
     <div class="nav-group">
       <span class="nav-title">Menu Manager</span>
       <a href="/Inventaris/public/marketing/pesanan/index.php" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Pesanan</span></a>
+      <a href="/Inventaris/public/marketing/laporan_pesanan/index.php" class="nav-item"><i class="bi bi-journal-text"></i><span>Laporan Pesanan</span></a>
       <a href="/Inventaris/public/gudang/laporan_persediaan/index.php" class="nav-item"><i class="bi bi-clipboard-data"></i><span>Laporan Persediaan</span></a>
-      <a href="/Inventaris/public/marketing/laporan_order/index.php" class="nav-item"><i class="bi bi-journal-text"></i><span>Laporan Pesanan</span></a>
     </div>
     <?php endif; ?>
 

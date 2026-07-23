@@ -7,39 +7,16 @@ if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'gudang') {
 require_once '../../../src/auth.php';
 require_once '../../../src/config.php';
 
+require_once '../../../src/models/Pengeluaran.php';
+
 $search    = trim($_GET['search'] ?? '');
 $status    = $_GET['status'] ?? '';
 $hasFilter = $search || $status;
 
-// 🚀 CUSTOM QUERY TINGKAT DEWA (TANPA pic_name)
-$sql = "SELECT p.id, p.nomor_pengeluaran, p.tanggal, p.status,
-               s.nomor_spk,
-               sj.id AS sj_id, sj.nomor_sj, sj.driver, sj.kendaraan,
-               COALESCE(NULLIF(c.perusahaan, ''), NULLIF(c.nama, ''), '—') AS customer_nama
-        FROM pengeluaran p
-        LEFT JOIN spk s ON p.spk_id = s.id
-        LEFT JOIN pesanan ON pesanan.id = COALESCE(s.pesanan_id, p.pesanan_id)
-        LEFT JOIN customers c ON pesanan.customer_id = c.id
-        LEFT JOIN surat_jalan sj ON sj.pengeluaran_id = p.id
-        WHERE 1=1";
-
-$params = [];
-if ($search) {
-    $sql .= " AND (p.nomor_pengeluaran LIKE ? OR s.nomor_spk LIKE ? OR sj.driver LIKE ? OR sj.nomor_sj LIKE ?)";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
-}
-if ($status) {
-    $sql .= " AND p.status = ?";
-    $params[] = $status;
-}
-$sql .= " ORDER BY p.id DESC";
-
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$pengeluaranModel = new Pengeluaran($pdo);
+$list = $pengeluaranModel->getAllItems($search, $status);
+$uniqueDocs = array_unique(array_column($list, 'id'));
+$totalDocs = count($uniqueDocs);
 
 $statusOptions = [
     '' => 'Semua Status',
@@ -62,7 +39,7 @@ function badgeLabel($s) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pengeluaran Barang & Surat Jalan | Inventory</title>
+  <title>Pengeluaran & Surat Jalan | Inventory</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   <link href="/Inventaris/public/assets/css/nav.css" rel="stylesheet">
@@ -112,17 +89,17 @@ function badgeLabel($s) {
 
     <div class="page-header">
       <div class="page-header-left">
-        <h1 class="page-title-lg">Pengeluaran Barang</h1>
+        <h1 class="page-title-lg">Pengeluaran</h1>
         <p class="page-subtitle">Satu pintu untuk mengeluarkan barang (memotong stok) dan mencetak Surat Jalan.</p>
       </div>
       <a href="crud/add.php" class="btn-primary"><i class="bi bi-plus-lg"></i> Proses Kirim Barang</a>
     </div>
 
     <div class="stat-row">
-      <div class="stat-pill"><span class="stat-pill-label">Total Transaksi</span><span class="stat-pill-val"><?= count($list) ?></span></div>
-      <div class="stat-pill"><span class="stat-pill-label">Completed</span><span class="stat-pill-val ok"><?= count(array_filter($list, fn($p) => $p['status']==='completed')) ?></span></div>
-      <div class="stat-pill"><span class="stat-pill-label">Shipped</span><span class="stat-pill-val blue"><?= count(array_filter($list, fn($p) => $p['status']==='shipped')) ?></span></div>
-      <div class="stat-pill"><span class="stat-pill-label">Draft</span><span class="stat-pill-val warn"><?= count(array_filter($list, fn($p) => $p['status']==='draft')) ?></span></div>
+      <div class="stat-pill"><span class="stat-pill-label">Total Transaksi</span><span class="stat-pill-val"><?= $totalDocs ?></span></div>
+      <div class="stat-pill"><span class="stat-pill-label">Completed</span><span class="stat-pill-val ok"><?= count(array_filter($uniqueDocs, fn($id) => current(array_filter($list, fn($p) => $p['id'] == $id))['status']==='completed')) ?></span></div>
+      <div class="stat-pill"><span class="stat-pill-label">Shipped</span><span class="stat-pill-val blue"><?= count(array_filter($uniqueDocs, fn($id) => current(array_filter($list, fn($p) => $p['id'] == $id))['status']==='shipped')) ?></span></div>
+      <div class="stat-pill"><span class="stat-pill-label">Draft</span><span class="stat-pill-val warn"><?= count(array_filter($uniqueDocs, fn($id) => current(array_filter($list, fn($p) => $p['id'] == $id))['status']==='draft')) ?></span></div>
     </div>
 
     <div class="form-card filter-card">
@@ -151,7 +128,7 @@ function badgeLabel($s) {
 
     <div class="table-card">
       <div class="table-header">
-        <h4><i class="bi bi-truck"></i> Histori Pengiriman <span class="count-badge"><?= count($list) ?></span></h4>
+        <h4><i class="bi bi-truck"></i> Histori Pengiriman <span class="count-badge"><?= $totalDocs ?></span></h4>
         <div class="search-wrap">
           <i class="bi bi-search"></i>
           <input type="text" id="tableSearch" class="search-input" placeholder="Cari cepat di tabel...">
@@ -163,9 +140,12 @@ function badgeLabel($s) {
             <tr>
               <th>No</th>
               <th>Pengiriman & SPK</th>
-              <th>Tujuan (Customer)</th>
+              <th>Tujuan</th>
+              <th>Pesanan</th>
+              <th>Barang</th>
+              <th>Qty Keluar</th>
               <th>Tanggal</th>
-              <th>Kurir / Armada</th>
+              <th>Driver / Armada</th>
               <th>Status</th>
               <th style="text-align: center; min-width: 150px;">Aksi</th>
             </tr>
@@ -187,6 +167,9 @@ function badgeLabel($s) {
               </td>
 
               <td style="font-weight: 500; color: #111827;"><?= htmlspecialchars($row['customer_nama']) ?></td>
+              <td class="text-muted"><?= htmlspecialchars($row['nomor_pesanan'] ?? '—') ?></td>
+              <td style="font-weight: 500;"><?= htmlspecialchars($row['barang_nama'] ?? '-') ?><br><small class="text-muted"><?= htmlspecialchars($row['barang_ukuran'] ?? '-') ?></small></td>
+              <td style="font-weight: 700; color: #b91c1c;" class="col-center"><?= (int)($row['qty_keluar'] ?? 0) ?></td>
               <td class="text-muted"><?= date('d M Y', strtotime($row['tanggal'])) ?></td>
               
               <td>

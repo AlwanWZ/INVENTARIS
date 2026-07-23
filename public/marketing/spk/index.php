@@ -17,10 +17,12 @@ $filter = [
 ];
 $users   = User::getAll();
 
-// Memanggil method all() yang sudah kita perbaiki query-nya di SPK.php
-$spks    = SPK::all($filter);
+// Memanggil method allItems() agar bisa menampilkan detail barang per baris
+$spks    = SPK::allItems($filter);
 
-$totalSPK   = count($spks);
+$uniqueSPKs = array_unique(array_column($spks, 'id'));
+$totalSPK   = count($uniqueSPKs);
+$totalItem  = count($spks);
 $onProgress = count(array_filter($spks, fn($s) => $s['status'] === 'on_progress'));
 $completed  = count(array_filter($spks, fn($s) => $s['status'] === 'completed'));
 $late       = count(array_filter($spks, fn($s) => $s['status'] !== 'completed' && strtotime($s['deadline']) < time()));
@@ -170,11 +172,13 @@ function badgeLabel($s) {
             <tr>
               <th>No</th>
               <th>Nomor SPK</th>
-              <th>Nomor Pesanan</th>
+              <th>Nama Barang</th>
+              <th>Ukuran</th>
+              <th>Sisa Pesanan</th>
+              <th>Jml Produksi</th>
               <th>Customer</th>
               <th>Tanggal</th>
               <th>Deadline</th>
-              <th>PIC</th>
               <th>Progress</th>
               <th>Status</th>
               <th>Aksi</th>
@@ -200,15 +204,17 @@ function badgeLabel($s) {
             ?>
             <tr class="<?= $isLate ? 'row-late' : '' ?>">
               <td class="text-muted"><?= $i + 1 ?></td>
-              <td class="fw-mid"><?= htmlspecialchars($spk['nomor_spk']) ?></td>
-              <td class="text-muted"><?= htmlspecialchars($spk['nomor_pesanan']) ?></td>
+              <td class="fw-mid"><?= htmlspecialchars($spk['nomor_spk']) ?><br><small class="text-muted"><?= htmlspecialchars($spk['nomor_pesanan']) ?></small></td>
+              <td style="font-weight: 500;"><?= htmlspecialchars($spk['item_nama']) ?></td>
+              <td><?= htmlspecialchars($spk['item_ukuran']) ?></td>
+              <td class="col-center"><span class="badge warn"><?= (int)$spk['item_sisa'] ?></span></td>
+              <td class="col-center"><span class="badge neutral" style="font-weight:700;"><?= (int)$spk['item_qty'] ?></span></td>
               <td><?= htmlspecialchars($spk['perusahaan']) ?></td>
               <td class="text-muted"><?= htmlspecialchars($spk['tanggal']) ?></td>
               <td class="<?= $isLate ? 'late-text' : 'text-muted' ?>">
                 <?= htmlspecialchars($spk['deadline']) ?>
                 <?php if ($isLate): ?><i class="bi bi-exclamation-triangle" title="Terlambat"></i><?php endif; ?>
               </td>
-              <td><?= htmlspecialchars($spk['pic_username']) ?></td>
               <td>
                 <div class="progress-wrap">
                   <div class="progress-bar">
@@ -244,7 +250,7 @@ function badgeLabel($s) {
 
       <?php if (!empty($spks)): ?>
       <div class="table-footer">
-        <span class="text-muted" id="tableCount">Menampilkan <?= $totalSPK ?> data</span>
+        <span class="text-muted" id="tableCount">Menampilkan <?= $totalItem ?> item dari <?= $totalSPK ?> dokumen SPK</span>
       </div>
       <?php endif; ?>
     </div>

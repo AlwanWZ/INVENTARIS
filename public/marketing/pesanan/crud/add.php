@@ -433,7 +433,7 @@ if (!empty($dataPO['tanggal_pengiriman']) && $dataPO['tanggal_pengiriman'] < $da
     <small style="color: var(--text3); font-size: 0.8rem;">Format: PCB-MMYY-NNN (Otomatis)</small>
   </div>
   <div class="form-group">
-    <label class="form-label">Tanggal <span class="required">*</span></label>
+    <label class="form-label">Tanggal Pesanan <span class="required">*</span></label>
     <input type="date" name="tanggal" class="form-control"
            value="<?= htmlspecialchars(($_POST['tanggal'] ?? date('Y-m-d')) ?: '') ?>" required>
   </div>
